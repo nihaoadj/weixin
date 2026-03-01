@@ -1,0 +1,231 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.report-container {
+  flex: 1;
+  padding: 20rpx;
+  overflow-y: auto;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #e8e8e8;
+}
+
+.report-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.report-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.section {
+  background-color: white;
+  border-radius: 20rpx;
+  padding: 25rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  padding-bottom: 10rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 分析结果样式 */
+.analysis-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.analysis-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.analysis-label {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5rpx;
+}
+
+.analysis-value {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 错误点分析样式 */
+.error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.error-item {
+  background-color: #fff7e6;
+  border-radius: 15rpx;
+  padding: 20rpx;
+  border-left: 5rpx solid #fa8c16;
+}
+
+.error-label {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #fa8c16;
+  margin-bottom: 5rpx;
+  display: block;
+}
+
+.error-content {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.suggestion-label {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #52c41a;
+  margin-bottom: 5rpx;
+  display: block;
+}
+
+.suggestion-content {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+  display: block;
+}
+
+/* 对话内容预览样式 */
+.conversation-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.message-item {
+  display: flex;
+  max-width: 80%;
+}
+
+.user-message {
+  flex-direction: row-reverse;
+  align-self: flex-end;
+}
+
+.ai-message {
+  align-self: flex-start;
+}
+
+.message-avatar {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  font-weight: bold;
+  margin: 0 10rpx;
+}
+
+.user-message .message-avatar {
+  background-color: #4a90e2;
+  color: white;
+}
+
+.ai-message .message-avatar {
+  background-color: #50e3c2;
+  color: white;
+}
+
+.message-content {
+  flex: 1;
+  padding: 12rpx;
+  border-radius: 12rpx;
+  position: relative;
+}
+
+.user-message .message-content {
+  background-color: #4a90e2;
+  color: white;
+  border-bottom-right-radius: 4rpx;
+}
+
+.ai-message .message-content {
+  background-color: #f0f0f0;
+  color: #333;
+  border-bottom-left-radius: 4rpx;
+}
+
+.message-text {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.more-message {
+  text-align: center;
+  padding: 15rpx;
+  font-size: 24rpx;
+  color: #999;
+  background-color: #f5f5f5;
+  border-radius: 10rpx;
+  margin-top: 10rpx;
+}
+
+/* 操作按钮 */
+.action-container {
+  padding: 20rpx;
+  background-color: white;
+  border-top: 1rpx solid #e8e8e8;
+  display: flex;
+  gap: 15rpx;
+}
+
+.submit-btn {
+  flex: 1;
+  height: 80rpx;
+  background-color: #4a90e2;
+  color: white;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-btn {
+  flex: 1;
+  height: 80rpx;
+  background-color: #f0f0f0;
+  color: #333;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,79 @@
+<view class="container">
+  <!-- 报告内容 -->
+  <scroll-view class="report-container" scroll-y="true">
+    <!-- 报告头部 -->
+    <view class="report-header">
+      <text class="report-title">学生报告详情</text>
+      <text class="report-time">{{report.createdAt}}</text>
+    </view>
+    
+    <!-- 对话内容 -->
+    <view class="section">
+      <text class="section-title">对话内容</text>
+      <view class="conversation-content">
+        <view wx:for="{{report.messages}}" wx:key="{{index}}" class="message-item">
+          <view class="message-avatar">{{item.role === "user" ? "学生" : "AI"}}</view>
+          <view class="message-content">
+            <text class="message-text">{{item.content}}</text>
+            <text class="message-time">{{item.timestamp}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 分析结果 -->
+    <view class="section">
+      <text class="section-title">AI分析结果</text>
+      <view class="analysis-content">
+        <view class="analysis-item">
+          <text class="analysis-label">总分：</text>
+          <text class="analysis-value">{{report.analysis.score}} 分</text>
+        </view>
+        <view class="analysis-item">
+          <text class="analysis-label">总结：</text>
+          <text class="analysis-value">{{report.analysis.summary}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 错误点分析 -->
+    <view class="section">
+      <text class="section-title">错误点分析</text>
+      <view class="error-list">
+        <view wx:for="{{report.analysis.errors}}" wx:key="{{index}}" class="error-item">
+          <text class="error-label">错误 {{index + 1}}：</text>
+          <text class="error-content">{{item.content}}</text>
+          <text class="suggestion-label">改进建议：</text>
+          <text class="suggestion-content">{{item.suggestion}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 教师评分和反馈 -->
+    <view class="section">
+      <text class="section-title">教师评分与反馈</text>
+      <view class="teacher-feedback">
+        <!-- 评分 -->
+        <view class="score-container">
+          <text class="score-label">评分：</text>
+          <view class="score-input">
+            <input type="number" placeholder="请输入评分（0-100）" value="{{teacherScore}}" bindinput="onScoreChange" />
+          </view>
+        </view>
+        
+        <!-- 反馈 -->
+        <view class="feedback-container">
+          <text class="feedback-label">反馈：</text>
+          <textarea placeholder="请输入反馈内容" value="{{teacherFeedback}}" bindinput="onFeedbackChange" />
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+  
+  <!-- 操作按钮 -->
+  <view class="action-container">
+    <button class="submit-btn" bindtap="submitFeedback">
+      提交评分和反馈
+    </button>
+  </view>
+</view>

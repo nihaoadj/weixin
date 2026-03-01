@@ -1,0 +1,39 @@
+<view class="container">
+  <!-- 聊天消息区域 -->
+  <scroll-view class="chat-container" scroll-y="true" scroll-into-view="{{lastMessageId}}" bindscrolltolower="loadMoreHistory">
+    <!-- 系统消息 -->
+    <view class="system-message" wx:if="{{messages.length === 0}}">
+      <text>欢迎使用医学知识问答系统，请输入您的问题</text>
+    </view>
+    
+    <!-- 聊天消息 -->
+    <view wx:for="{{messages}}" wx:key="{{index}}" class="message-item">
+      <view class="message-avatar">{{item.role === "user" ? "我" : "AI"}}</view>
+      <view class="message-content">
+        <text class="message-text">{{item.content}}</text>
+        <text class="message-time">{{item.timestamp}}</text>
+      </view>
+    </view>
+  </scroll-view>
+  
+  <!-- 输入区域 -->
+  <view class="input-container">
+    <input 
+      class="input-field" 
+      placeholder="请输入您的医学问题..." 
+      value="{{inputValue}}" 
+      bindinput="onInputChange"
+      bindconfirm="sendMessage"
+    />
+    <button class="send-btn" bindtap="sendMessage" disabled="{{!inputValue}}">
+      发送
+    </button>
+  </view>
+  
+  <!-- 结束对话按钮 -->
+  <view class="action-container">
+    <button class="end-btn" bindtap="endConversation" disabled="{{messages.length === 0}}" style="position: relative; left: 0rpx; top: -1rpx">
+      结束对话并生成报告
+    </button>
+  </view>
+</view>

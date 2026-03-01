@@ -1,0 +1,14 @@
+{
+  "name": "submitReport",
+  "version": "1.0.0",
+  "description": "提交报告和教师批阅",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "~2.32.3"
+  }
+}
