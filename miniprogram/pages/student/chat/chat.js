@@ -353,6 +353,13 @@ Page({
     // 这里可以实现加载更多历史消息的逻辑
   },
 
+  // 跳转到历史记录页面
+  goToHistory() {
+    wx.navigateTo({
+      url: '/pages/student/history/history'
+    });
+  },
+
   // 格式化时间
   formatTime(date) {
     const hours = date.getHours().toString().padStart(2, '0');

@@ -1,4 +1,9 @@
 <view class="container">
+  <!-- 右上角历史记录按钮 -->
+  <view class="history-btn" bindtap="goToHistory">
+    <text>历史</text>
+  </view>
+  
   <!-- 聊天消息区域 -->
   <scroll-view class="chat-container" scroll-y="true" scroll-into-view="{{lastMessageId}}" bindscrolltolower="loadMoreHistory">
     <!-- 系统消息 -->
