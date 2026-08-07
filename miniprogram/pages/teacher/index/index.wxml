@@ -1,0 +1,25 @@
+<view class="container">
+  <!-- 内容区域 -->
+  <view class="content">
+    <view wx:if="{{currentTab === 'list'}}">
+      <list />
+    </view>
+    <view wx:if="{{currentTab === 'problem'}}">
+      <problem />
+    </view>
+  </view>
+
+  <!-- 底部导航 -->
+  <view class="tab-bar">
+    <view class="tab-item {{currentTab === 'list' ? 'active' : ''}}" bindtap="switchTab" data-tab="list">
+      <text class="tab-icon-text">📋</text>
+      <text class="tab-text">待批阅报告</text>
+      <text class="badge" wx:if="{{pendingReportCount > 0}}">{{pendingReportCount}}</text>
+    </view>
+    <view class="tab-item {{currentTab === 'problem' ? 'active' : ''}}" bindtap="switchTab" data-tab="problem">
+      <text class="tab-icon-text">📝</text>
+      <text class="tab-text">问题发布</text>
+      <text class="badge" wx:if="{{pendingProblemCount > 0}}">{{pendingProblemCount}}</text>
+    </view>
+  </view>
+</view>

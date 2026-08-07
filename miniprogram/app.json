@@ -1,0 +1,24 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/login/login",
+    "pages/report/report",
+    "pages/student/chat/chat",
+    "pages/student/history/history",
+    "pages/student/question/question",
+    "pages/student/question-detail/question-detail",
+    "pages/teacher/index/index",
+    "pages/teacher/list/list",
+    "pages/teacher/detail/detail",
+    "pages/teacher/problem/problem",
+    "pages/teacher/problem-edit/problem-edit"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "医学知识问答",
+    "navigationBarBackgroundColor": "#ffffff"
+  },
+  "style": "v2",
+  "componentFramework": "glass-easel",
+  "lazyCodeLoading": "requiredComponents"
+}

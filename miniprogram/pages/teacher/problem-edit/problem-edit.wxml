@@ -1,0 +1,58 @@
+<view class="container">
+  <!-- 表单内容 -->
+  <scroll-view class="form-container" scroll-y="true">
+    <view class="form-section">
+      <!-- 问题类型 -->
+      <view class="form-item">
+        <text class="form-label">问题类型</text>
+        <picker bindchange="onTypeChange" value="{{typeIndex}}" range="{{typeOptions}}">
+          <view class="picker-display">
+            <text>{{typeOptions[typeIndex] || '请选择问题类型'}}</text>
+            <image src="/resource/下拉.png" class="picker-icon"></image>
+          </view>
+        </picker>
+      </view>
+
+      <!-- 问题标题 -->
+      <view class="form-item">
+        <text class="form-label">问题标题</text>
+        <input 
+          class="form-input" 
+          placeholder="请输入问题标题" 
+          value="{{title}}"
+          bindinput="onTitleInput"
+        />
+      </view>
+
+      <!-- 问题描述 -->
+      <view class="form-item">
+        <text class="form-label">问题描述</text>
+        <textarea 
+          class="form-textarea" 
+          placeholder="请输入问题的详细描述" 
+          value="{{description}}"
+          bindinput="onDescInput"
+          auto-height
+        />
+      </view>
+
+      <!-- 发布对象 -->
+      <view class="form-item">
+        <text class="form-label">发布对象</text>
+        <view class="target-options">
+          <view class="target-option {{target === 'all' ? 'selected' : ''}}" 
+                bindtap="selectTarget" data-target="all">全体学生</view>
+          <view class="target-option {{target === 'class' ? 'selected' : ''}}" 
+                bindtap="selectTarget" data-target="class">指定班级</view>
+          <view class="target-option {{target === 'individual' ? 'selected' : ''}}" 
+                bindtap="selectTarget" data-target="individual">指定学生</view>
+        </view>
+      </view>
+
+      <!-- 保存按钮 -->
+      <view class="form-item">
+        <button class="save-btn" bindtap="saveProblem">保存</button>
+      </view>
+    </view>
+  </scroll-view>
+</view>

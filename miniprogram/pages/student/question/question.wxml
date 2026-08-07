@@ -1,0 +1,40 @@
+<view class="container">
+  <!-- 标题区域 -->
+  <view class="header">
+    <text class="page-title">问题列表</text>
+  </view>
+
+  <!-- 分类列表 -->
+  <scroll-view class="category-list" scroll-y="true" bindscrolltolower="loadMoreQuestions">
+    <block wx:for="{{categories}}" wx:key="name" wx:for-item="category" wx:for-index="catIndex">
+      <!-- 分类标题 -->
+      <view class="category-header" bindtap="toggleCategory" data-index="{{catIndex}}">
+        <view class="category-title-wrapper">
+          <text class="category-title">{{category.name}}</text>
+          <text class="category-count">({{category.questions.length}})</text>
+        </view>
+        <view class="arrow {{category.expanded ? 'expanded' : ''}}">▼</view>
+      </view>
+
+      <!-- 分类内容 -->
+      <view class="category-content {{category.expanded ? 'expanded' : ''}}">
+        <block wx:for="{{category.questions}}" wx:key="id" wx:for-item="question">
+          <view class="question-item" bindtap="selectQuestion" data-id="{{question.id}}">
+            <view class="question-header">
+              <text class="question-title">{{question.title}}</text>
+            </view>
+            <view class="question-meta">
+              <text class="question-time">发布时间：{{question.time}}</text>
+              <text class="question-status {{question.status === '已回答' ? 'answered' : ''}}">{{question.status}}</text>
+            </view>
+          </view>
+        </block>
+      </view>
+    </block>
+
+    <!-- 加载更多提示 -->
+    <view class="loading-more" wx:if="{{isLoading}}">
+      <text>加载中...</text>
+    </view>
+  </scroll-view>
+</view>

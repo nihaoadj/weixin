@@ -1,0 +1,78 @@
+<view class="container">
+  <!-- 聊天消息区域 -->
+  <scroll-view class="chat-container" scroll-y="true" scroll-into-view="{{lastMessageId}}" bindscrolltolower="loadMoreHistory">
+    <!-- 欢迎语 -->
+    <view class="welcome-section" wx:if="{{messages.length === 0}}">
+      <view class="welcome-icon">
+        <image src="/resource/医院.png" class="icon-image"></image>
+      </view>
+      <text class="welcome-title">医学知识问答助手</text>
+      <text class="welcome-desc">我是你的AI医学导师，可以帮助你解答医学相关问题</text>
+      <view class="quick-questions">
+        <text class="quick-title">试试这样问我：</text>
+        <view class="quick-item" bindtap="quickAsk" data-question="给我一个医学案例让我诊断。">给我一个医学案例让我诊断。</view>
+        <view class="quick-item" bindtap="quickAsk" data-question="肺炎的典型症状有哪些？">肺炎的典型症状有哪些？</view>
+        <view class="quick-item" bindtap="quickAsk" data-question="高血压的诊断标准是什么？">高血压的诊断标准是什么？</view>
+      </view>
+    </view>
+
+    <!-- 消息列表 -->
+    <block wx:for="{{messages}}" wx:key="{{index}}">
+      <view class="message-wrapper {{item.role === 'user' ? 'user-wrapper' : 'ai-wrapper'}}" id="msg_{{index}}">
+        <!-- 消息气泡 -->
+        <view class="message-bubble {{item.role === 'user' ? 'user-bubble' : 'ai-bubble'}}">
+          <text class="message-text">{{item.content}}</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- AI 正在输入的提示 -->
+    <view class="message-wrapper ai-wrapper" wx:if="{{isLoading}}">
+      <view class="message-bubble ai-bubble">
+        <view class="typing-indicator">
+          <view class="typing-dot"></view>
+          <view class="typing-dot"></view>
+          <view class="typing-dot"></view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部操作区域 -->
+  <view class="bottom-action-area">
+    <!-- 功能按钮区域 -->
+    <view class="action-buttons-section">
+      <button class="end-btn {{messages.length > 0 ? 'active' : ''}}" bindtap="endConversation" disabled="{{messages.length === 0 || isLoading}}">
+        <text class="end-icon">📄</text>
+        <text class="end-text">生成报告</text>
+      </button>
+      <view class="history-btn-small" bindtap="goToHistory">
+        <image src="/resource/历史记录.png" class="history-icon-small"></image>
+        <text class="history-text-small">历史</text>
+      </view>
+      <view class="question-btn-small" bindtap="goToQuestion">
+        <image src="/resource/问题.png" class="question-icon-small"></image>
+        <text class="question-text-small">问题</text>
+      </view>
+    </view>
+
+    <view class="input-section">
+      <view class="input-container">
+        <view class="input-wrapper">
+          <input
+            class="input-field"
+            placeholder=" 请输入您的医学问题..."
+            placeholder-class="input-placeholder"
+            value="{{inputValue}}"
+            bindinput="onInputChange"
+            bindconfirm="sendMessage"
+            confirm-type="send"
+          />
+        </view>
+        <button class="send-btn {{inputValue ? 'active' : ''}}" bindtap="sendMessage" disabled="{{!inputValue && !isLoading}}">
+          <text class="send-icon">➤</text>
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,41 @@
+/**app.wxss**/
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 200rpx 0;
+  box-sizing: border-box;
+} 
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 6rpx;
+  height: 6rpx;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3rpx;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 确保所有容器正确计算尺寸 */
+page {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* 通用卡片样式优化 */
+.card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  border: 1rpx solid #f0f0f0;
+}

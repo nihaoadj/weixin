@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "list": "/pages/teacher/list/list",
+    "problem": "/pages/teacher/problem/problem"
+  },
+  "navigationBarTitleText": "教师端"
+}

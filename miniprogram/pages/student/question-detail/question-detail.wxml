@@ -1,0 +1,58 @@
+<view class="container">
+  <!-- 问题信息栏 - 导航栏下面，聊天区域上面 -->
+  <view class="question-info-bar">
+    <text class="info-type">类型：{{question.type}}</text>
+    <text class="info-divider">|</text>
+    <text class="info-time">发布时间：{{question.time}}</text>
+  </view>
+
+  <!-- 聊天消息区域 -->
+  <scroll-view class="chat-container" scroll-y="true" scroll-into-view="{{lastMessageId}}">
+    <!-- 问题消息 - 左侧对话框 -->
+    <view class="message-wrapper ai-wrapper">
+      <view class="message-bubble ai-bubble">
+        <text class="message-text">{{question.title}}</text>
+      </view>
+    </view>
+
+    <!-- 消息列表 -->
+    <block wx:for="{{messages}}" wx:key="{{index}}">
+      <view class="message-wrapper {{item.role === 'user' ? 'user-wrapper' : 'ai-wrapper'}}">
+        <view class="message-bubble {{item.role === 'user' ? 'user-bubble' : 'ai-bubble'}}">
+          <text class="message-text">{{item.content}}</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- AI 正在输入的提示 -->
+    <view class="message-wrapper ai-wrapper" wx:if="{{isLoading}}">
+      <view class="message-bubble ai-bubble">
+        <view class="typing-indicator">
+          <view class="typing-dot"></view>
+          <view class="typing-dot"></view>
+          <view class="typing-dot"></view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 输入区域 -->
+  <view class="input-section">
+    <view class="input-container">
+      <view class="input-wrapper">
+        <input
+          class="input-field"
+          placeholder=" 请输入您的回答..."
+          placeholder-class="input-placeholder"
+          value="{{answer}}"
+          bindinput="onAnswerChange"
+          bindconfirm="submitAnswer"
+          confirm-type="send"
+        />
+      </view>
+      <button class="send-btn {{answer ? 'active' : ''}}" bindtap="submitAnswer" disabled="{{!answer && !isLoading}}">
+        <text class="send-icon">➤</text>
+      </button>
+    </view>
+  </view>
+</view>

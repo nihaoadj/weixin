@@ -1,0 +1,24 @@
+<view class="container">
+  <!-- 历史记录列表 -->
+  <scroll-view class="history-container" scroll-y="true">
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{history.length === 0}}">
+      <text>暂无历史记录</text>
+    </view>
+    
+    <!-- 历史记录项 -->
+    <view wx:for="{{history}}" wx:key="{{item.conversationId}}" class="history-item" bindtap="viewHistory" data-conversation-id="{{item.conversationId}}">
+      <view class="history-header">
+        <text class="history-title">对话 {{index + 1}}</text>
+        <text class="history-time">{{item.formattedTime}}</text>
+      </view>
+      <view class="history-content">
+        <text class="history-preview">{{item.messages.length > 0 ? item.messages[0].content : '无内容'}}</text>
+      </view>
+      <view class="history-footer">
+        <text class="message-count">{{item.messages.length}} 条消息</text>
+        <text class="report-status" wx:if="{{item.report}}">已生成报告</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>
