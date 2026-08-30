@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -8,7 +8,11 @@ from app.db import Base
 
 class Conversation(Base):
     __tablename__ = "conversations"
-    __table_args__ = (UniqueConstraint("client_id", "student_id", name="uq_conversation_client_student"),)
+    __table_args__ = (
+        UniqueConstraint("client_id", "student_id", name="uq_conversation_client_student"),
+        Index("ix_conversations_updated_id", "updated_at", "id"),
+        Index("ix_conversations_student_updated_id", "student_id", "updated_at", "id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     client_id: Mapped[str] = mapped_column(String(100), index=True)
@@ -37,7 +41,11 @@ class Message(Base):
 
 class Report(Base):
     __tablename__ = "reports"
-    __table_args__ = (UniqueConstraint("conversation_id", name="uq_report_conversation"),)
+    __table_args__ = (
+        UniqueConstraint("conversation_id", name="uq_report_conversation"),
+        Index("ix_reports_updated_id", "updated_at", "id"),
+        Index("ix_reports_student_updated_id", "student_id", "updated_at", "id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id"), index=True)

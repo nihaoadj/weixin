@@ -12,7 +12,10 @@ describe('remote demo auth', () => {
       expect(options.data).toMatchObject({ role: 'student', class_ids: ['demo_class_1'] })
       options.success?.({
         statusCode: 200,
-        data: { access_token: 'fresh-token' },
+        data: {
+          access_token: 'fresh-token',
+          user: { id: 1, role: 'student', nickname: '学生', created_at: '2026-08-30T00:00:00Z' },
+        },
         header: {},
         cookies: [],
         errMsg: 'request:ok',

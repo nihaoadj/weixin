@@ -1,21 +1,22 @@
+import { AppError } from '@/types/errors'
 import { additionalShowcaseDrafts, showcaseDraft } from '@/data/caseDemo'
+import { z } from 'zod'
+import { storage, storageKeys } from '@/data/storage'
+import {
+  localAttemptSchema,
+  localAssessmentSchema,
+  localDraftSchema,
+  localCaseRecordSchema,
+} from '@/data/localCaseSchemas'
 import { getSession } from '@/services/repository'
 import type { CaseAssessment, CaseAttempt, CaseDraftGenerateResult, CaseStageId, StageAnswer } from '@/types/case'
 import type { Problem } from '@/types/domain'
+import type { MedicalReviewView } from '@/types/review'
 
-const key = (name: string) => `${name}:${encodeURIComponent(getSession()?.openid || 'anonymous')}`
-const read = <T>(name: string): T[] => {
-  const value = uni.getStorageSync(key(name))
-  return Array.isArray(value) ? (value as T[]) : []
-}
-const write = <T>(name: string, value: T[]) => uni.setStorageSync(key(name), value)
-const readGlobal = <T>(name: string): T[] => {
-  const value = uni.getStorageSync(name)
-  return Array.isArray(value) ? (value as T[]) : []
-}
-const writeGlobal = <T>(name: string, value: T[]) => uni.setStorageSync(name, value)
+const key = (name: string) => storage.scopedKey(name, getSession()?.openid || 'anonymous')
+const write = <T>(name: string, value: T[], schema: z.ZodType<T>) => storage.write(key(name), value, z.array(schema))
 const stages: CaseStageId[] = ['history', 'problem_representation', 'differential', 'tests', 'management']
-const guidedDraftKey = 'guidedCaseDrafts'
+const guidedDraftKey = storageKeys.guidedDrafts
 
 interface DemoReview {
   id: string
@@ -107,16 +108,17 @@ function demoCaseDigest(problem: Problem, draft: CaseDraftGenerateResult): strin
 
 function currentDemoUser() {
   const user = getSession()
-  if (!user || user.role !== 'teacher') throw new Error('只有教师可以编排病例')
+  if (!user || user.role !== 'teacher')
+    throw new AppError('只有教师可以编排病例', { code: 'FORBIDDEN', statusCode: 403 })
   return user
 }
 
 function cloneDraft(draft: CaseDraftGenerateResult): CaseDraftGenerateResult {
-  return JSON.parse(JSON.stringify(draft)) as CaseDraftGenerateResult
+  return localDraftSchema.parse(draft)
 }
 
 function normalizedRecords(): DemoCaseRecord[] {
-  return readGlobal<DemoCaseRecord>(guidedDraftKey).map((record) => ({
+  return storage.read(guidedDraftKey, z.array(localCaseRecordSchema), []).map((record) => ({
     ...record,
     authorOpenid: record.authorOpenid || 'demo_teacher',
     reviews: record.reviews || [],
@@ -137,7 +139,7 @@ function normalizedRecords(): DemoCaseRecord[] {
 }
 
 function writeRecords(records: DemoCaseRecord[]) {
-  writeGlobal(guidedDraftKey, records.slice(-30))
+  storage.write(guidedDraftKey, records.slice(-30), z.array(localCaseRecordSchema))
 }
 
 export function demoDraft(topic: string): CaseDraftGenerateResult {
@@ -179,9 +181,12 @@ export function demoSaveCaseDraft(draft: CaseDraftGenerateResult, existingId?: s
   const user = currentDemoUser()
   const records = normalizedRecords()
   const old = existingId ? records.find((item) => item.problem.id === existingId) : undefined
-  if (old && old.authorOpenid !== user.openid) throw new Error('只有病例作者可以编辑')
-  if (old && old.problem.medicalReviewStatus === 'pending') throw new Error('审核中的病例不可编辑')
-  if (old && old.problem.medicalReviewStatus === 'approved') throw new Error('已审核病例不可编辑，请创建新版本')
+  if (old && old.authorOpenid !== user.openid)
+    throw new AppError('只有病例作者可以编辑', { code: 'FORBIDDEN', statusCode: 403 })
+  if (old && old.problem.medicalReviewStatus === 'pending')
+    throw new AppError('审核中的病例不可编辑', { code: 'STATE_CONFLICT', statusCode: 409 })
+  if (old && old.problem.medicalReviewStatus === 'approved')
+    throw new AppError('已审核病例不可编辑，请创建新版本', { code: 'STATE_CONFLICT', statusCode: 409 })
   const problem: Problem = {
     id: existingId || `demo-case-${Date.now()}`,
     type: '病例分析',
@@ -243,13 +248,15 @@ export function demoPublishCase(id: string): Problem | undefined {
   const index = records.findIndex((item) => item.problem.id === id)
   if (index < 0) return id === 'cap-undergraduate-showcase' ? demoCaseProblems()[0] : undefined
   const record = records[index]
-  if (record.authorOpenid !== user.openid) throw new Error('只有病例作者可以发布')
-  if (record.problem.medicalReviewStatus !== 'approved') throw new Error('病例必须先通过医学审核')
+  if (record.authorOpenid !== user.openid)
+    throw new AppError('只有病例作者可以发布', { code: 'FORBIDDEN', statusCode: 403 })
+  if (record.problem.medicalReviewStatus !== 'approved')
+    throw new AppError('病例必须先通过医学审核', { code: 'STATE_CONFLICT', statusCode: 409 })
   const latest = [...record.reviews].reverse().find((review) => review.decision === 'approved')
   if (!latest || latest.caseDigest !== demoCaseDigest(record.problem, record.draft)) {
     record.problem.medicalReviewStatus = 'not_submitted'
     writeRecords(records)
-    throw new Error('审核摘要已变化，请重新提交审核')
+    throw new AppError('审核摘要已变化，请重新提交审核', { code: 'STATE_CONFLICT', statusCode: 409 })
   }
   records[index].problem.status = '已发布'
   records[index].problem.publishTime = new Date().toISOString()
@@ -261,8 +268,10 @@ export function demoSubmitCaseForReview(id: string): Problem | undefined {
   const user = currentDemoUser()
   const records = normalizedRecords()
   const record = records.find((item) => item.problem.id === id)
-  if (!record || record.authorOpenid !== user.openid) throw new Error('只有病例作者可以提交审核')
-  if (record.problem.medicalReviewStatus === 'approved') throw new Error('已审核病例不可重复提交')
+  if (!record || record.authorOpenid !== user.openid)
+    throw new AppError('只有病例作者可以提交审核', { code: 'FORBIDDEN', statusCode: 403 })
+  if (record.problem.medicalReviewStatus === 'approved')
+    throw new AppError('已审核病例不可重复提交', { code: 'STATE_CONFLICT', statusCode: 409 })
   if (record.problem.medicalReviewStatus === 'pending') return record.problem
   record.problem.status = '待审核'
   record.problem.medicalReviewStatus = 'pending'
@@ -276,14 +285,14 @@ export function demoReviewQueue(status = 'pending'): Problem[] {
     .map((record) => record.problem)
 }
 
-export function demoReviewView(id: string): Record<string, unknown> | undefined {
+export function demoReviewView(id: string): MedicalReviewView | undefined {
   const user = getSession()
   if (
     !user ||
     user.role !== 'teacher' ||
     (!user.permissions?.includes('medical_review') && user.openid !== 'demo_reviewer')
   ) {
-    throw new Error('需要医学审核权限')
+    throw new AppError('需要医学审核权限', { code: 'FORBIDDEN', statusCode: 403 })
   }
   const record = normalizedRecords().find((item) => item.problem.id === id)
   if (!record) return undefined
@@ -308,14 +317,17 @@ export function demoDecideCaseReview(
     user.role !== 'teacher' ||
     (!user.permissions?.includes('medical_review') && user.openid !== 'demo_reviewer')
   ) {
-    throw new Error('需要医学审核权限')
+    throw new AppError('需要医学审核权限', { code: 'FORBIDDEN', statusCode: 403 })
   }
-  if (decision === 'rejected' && comment.trim().length < 5) throw new Error('退回意见至少需要 5 个字符')
+  if (decision === 'rejected' && comment.trim().length < 5)
+    throw new AppError('退回意见至少需要 5 个字符', { code: 'VALIDATION_ERROR', statusCode: 422 })
   const records = normalizedRecords()
   const record = records.find((item) => item.problem.id === id)
   if (!record) return undefined
-  if (record.authorOpenid === user.openid) throw new Error('作者不能审核自己的病例')
-  if (record.problem.medicalReviewStatus !== 'pending') throw new Error('病例不在待审核状态')
+  if (record.authorOpenid === user.openid)
+    throw new AppError('作者不能审核自己的病例', { code: 'FORBIDDEN', statusCode: 403 })
+  if (record.problem.medicalReviewStatus !== 'pending')
+    throw new AppError('病例不在待审核状态', { code: 'STATE_CONFLICT', statusCode: 409 })
   const review: DemoReview = {
     id: `review-${Date.now()}`,
     reviewerOpenid: user.openid,
@@ -333,11 +345,11 @@ export function demoDecideCaseReview(
   return record.problem
 }
 export function demoAttempts(): CaseAttempt[] {
-  return read<CaseAttempt>('caseAttempts')
+  return storage.read(key(storageKeys.caseAttempts), z.array(localAttemptSchema), [])
 }
 export function demoStart(problemId: string, retryOfId?: string): CaseAttempt {
   const target = demoDraftForProblem(problemId)
-  if (!target) throw new Error('病例不存在')
+  if (!target) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
   const prior = retryOfId ? demoAttempts().find((item) => item.id === retryOfId) : undefined
   const focus = prior
     ? demoAssessments().find((item) => item.attemptId === prior.id)?.focusStage || 'history'
@@ -356,7 +368,7 @@ export function demoStart(problemId: string, retryOfId?: string): CaseAttempt {
     assessmentReady: false,
     startedAt: new Date().toISOString(),
   }
-  write('caseAttempts', [attempt, ...demoAttempts()].slice(0, 30))
+  write(storageKeys.caseAttempts, [attempt, ...demoAttempts()].slice(0, 30), localAttemptSchema)
   return attempt
 }
 export function demoFind(id: string): CaseAttempt | undefined {
@@ -364,11 +376,12 @@ export function demoFind(id: string): CaseAttempt | undefined {
 }
 export function demoMessage(id: string, content: string): CaseAttempt {
   const attempt = demoFind(id)
-  if (!attempt || attempt.currentStage !== 'history') throw new Error('病史阶段已锁定')
+  if (!attempt || attempt.currentStage !== 'history')
+    throw new AppError('病史阶段已锁定', { code: 'STATE_CONFLICT', statusCode: 409 })
   const target = demoDraftForProblem(attempt.problemId)
-  if (!target) throw new Error('病例不存在')
+  if (!target) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
   const asked = attempt.messages.filter((item) => item.role === 'user').length
-  if (asked >= 30) throw new Error('请先提交病史小结')
+  if (asked >= 30) throw new AppError('请先提交病史小结', { code: 'STATE_CONFLICT', statusCode: 409 })
   const seen = new Set(
     attempt.messages.filter((item) => item.role === 'assistant').flatMap((item) => item.revealedFactIds || []),
   )
@@ -396,7 +409,8 @@ export function demoMessage(id: string, content: string): CaseAttempt {
 }
 export function demoSubmit(id: string, answer: StageAnswer): CaseAttempt {
   const attempt = demoFind(id)
-  if (!attempt || attempt.currentStage !== answer.stageId) throw new Error('训练状态已同步，请重新进入')
+  if (!attempt || attempt.currentStage !== answer.stageId)
+    throw new AppError('训练状态已同步，请重新进入', { code: 'STATE_CONFLICT', statusCode: 409 })
   attempt.submissions.push({
     id: `${Date.now()}`,
     stageId: answer.stageId,
@@ -411,7 +425,7 @@ export function demoSubmit(id: string, answer: StageAnswer): CaseAttempt {
   return attempt
 }
 export function demoAssessments(): CaseAssessment[] {
-  return read<CaseAssessment>('caseAssessments')
+  return storage.read(key(storageKeys.caseAssessments), z.array(localAssessmentSchema), [])
 }
 
 const normalizeAnswerText = (value: string) => value.toLocaleLowerCase().replace(/\s+/g, '')
@@ -472,9 +486,10 @@ export function scoreDemoCase(attempt: CaseAttempt, draft: CaseDraftGenerateResu
 
 export function demoComplete(id: string): CaseAssessment {
   const attempt = demoFind(id)
-  if (!attempt || attempt.status !== 'completed') throw new Error('请先完成五个阶段')
+  if (!attempt || attempt.status !== 'completed')
+    throw new AppError('请先完成五个阶段', { code: 'STATE_CONFLICT', statusCode: 409 })
   const target = demoDraftForProblem(attempt.problemId)
-  if (!target) throw new Error('病例不存在')
+  if (!target) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
   const draft = target.draft
   const dimensions = scoreDemoCase(attempt, draft)
   const focus = dimensions.reduce((lowest, item) => (item.score < lowest.score ? item : lowest)).dimensionId
@@ -514,12 +529,17 @@ export function demoComplete(id: string): CaseAssessment {
   attempt.status = 'assessed'
   attempt.assessmentReady = true
   saveAttempt(attempt)
-  write('caseAssessments', [assessment, ...demoAssessments().filter((item) => item.attemptId !== id)])
+  write(
+    storageKeys.caseAssessments,
+    [assessment, ...demoAssessments().filter((item) => item.attemptId !== id)],
+    localAssessmentSchema,
+  )
   return assessment
 }
 function saveAttempt(attempt: CaseAttempt) {
   write(
-    'caseAttempts',
+    storageKeys.caseAttempts,
     demoAttempts().map((item) => (item.id === attempt.id ? attempt : item)),
+    localAttemptSchema,
   )
 }

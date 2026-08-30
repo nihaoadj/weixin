@@ -5,7 +5,7 @@
 ## 快速运行
 
 ```bash
-npm install
+npm ci --legacy-peer-deps
 npm run backend:install
 npm run backend:migrate
 python backend/scripts/seed_test_data.py
@@ -48,6 +48,7 @@ npm run lint
 npm run test
 npm run test:e2e
 npm run backend:check
+npm run contract:check
 npm run build:mp-weixin
 npm run build:h5
 ```
@@ -68,7 +69,7 @@ npm run build:h5
 
 - 学生端：医学问答、历史记录、练习题、多轮回答、学习报告、提交批阅，以及五阶段结构化病例训练、六维报告和针对性重练。
 - 教师端：报告批阅、评分反馈、题目新建/编辑/审核/发布、班级成员管理、病例与学生学情下钻；病例草稿可由确定性 AI 兜底生成。
-- 工程侧：统一 Vue SFC、TypeScript、repository 数据层、AI 服务边界、uni-app 双端构建。
+- 工程侧：OpenAPI 契约生成、API/Demo Repository adapter、运行时数据校验、内存请求缓存、AI 服务边界和 uni-app 双端构建。
 
 运行前先执行 `npm run backend:migrate` 应用 Alembic 数据库迁移。当前试点身份入口可通过 `ENABLE_DEMO_AUTH=false` 关闭；生产环境默认不应启用 Demo 登录。API 模式下微信小程序通过服务端 `code2Session` 登录，H5 开发仍可使用 Demo 登录。接入真实用户和医学数据前，仍需完成账号授权、隐私合规和医学安全审核。
 

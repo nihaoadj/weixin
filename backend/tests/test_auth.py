@@ -72,4 +72,5 @@ def test_wechat_login_fails_closed_when_not_configured(monkeypatch) -> None:
     response = client.post("/auth/wechat-login", json={"code": "one-time-code"})
 
     assert response.status_code == 503
-    assert "WECHAT_APP_ID" in response.json()["detail"]
+    assert response.json()["detail"]["code"] == "SERVICE_ERROR"
+    assert "WECHAT_APP_ID" in response.json()["detail"]["message"]

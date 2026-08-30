@@ -30,9 +30,9 @@
     <template v-if="!isLoading && !error">
       <view
         v-for="report in reports"
-        :key="report.conversationId"
+        :key="report.id"
         class="report-card card"
-        @click="$emit('select', report.conversationId)"
+        @click="$emit('select', report.id)"
       >
         <view class="header">
           <text class="title">{{ report.studentName || '学生' }} · 报告 {{ report.originalIndex }}</text>
@@ -42,24 +42,32 @@
             >{{ report.status || '待批阅' }}</text
           >
         </view>
-        <text class="preview">{{ report.messages[0]?.content || '无内容' }}</text>
+        <text class="preview">{{ report.messagePreview || '无内容' }}</text>
         <view class="footer">
           <text>{{ formatDateTime(report.createdAt) }}</text>
-          <text>{{ report.messages.length }} 条消息</text>
+          <text>{{ report.messageCount }} 条消息</text>
         </view>
       </view>
     </template>
+    <button
+      v-if="!isLoading && !error && nextOffset < total"
+      class="load-more"
+      :loading="isLoadingMore"
+      @click="loadMore"
+    >
+      加载更多
+    </button>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import MedState from '@/components/ui/MedState.vue'
-import { getReportsAsync } from '@/services/repositoryAsync'
-import type { Report } from '@/types/domain'
+import { getReportSummariesAsync } from '@/services/repositoryAsync'
+import type { ReportSummary } from '@/types/domain'
 import { formatDateTime } from '@/utils/date'
 
-interface IndexedReport extends Report {
+interface IndexedReport extends ReportSummary {
   originalIndex: number
 }
 const emit = defineEmits<{
@@ -69,31 +77,54 @@ const emit = defineEmits<{
   manage: []
 }>()
 const reports = ref<IndexedReport[]>([])
+const total = ref(0)
 const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const error = ref('')
+let revision = 0
+const nextOffset = ref(0)
 
 async function refresh() {
   if (isLoading.value) return
   isLoading.value = true
+  const requestRevision = ++revision
   error.value = ''
   try {
-    reports.value = (await getReportsAsync())
-      .filter((report) => report.status === '待批阅' || report.status === '已批阅')
-      .map((report, index) => ({ ...report, originalIndex: index + 1 }))
-      .sort((a, b) => {
-        const aPending = a.status !== '已批阅'
-        const bPending = b.status !== '已批阅'
-        if (aPending !== bPending) return aPending ? -1 : 1
-        return b.createdAt.localeCompare(a.createdAt)
-      })
+    const page = await getReportSummariesAsync(20, 0)
+    if (requestRevision !== revision) return
+    total.value = page.total
+    nextOffset.value = page.items.length
+    reports.value = page.items.map((report, index) => ({ ...report, originalIndex: index + 1 }))
+    emit('count', page.pendingCount)
+    emit('reviewed', page.reviewedCount)
   } catch (loadError) {
     reports.value = []
     error.value = loadError instanceof Error ? loadError.message : '请稍后重试'
   } finally {
     isLoading.value = false
   }
-  emit('count', reports.value.filter((report) => report.status === '待批阅').length)
-  emit('reviewed', reports.value.filter((report) => report.status === '已批阅').length)
+}
+
+async function loadMore() {
+  if (isLoading.value || isLoadingMore.value || nextOffset.value >= total.value) return
+  isLoadingMore.value = true
+  const requestRevision = revision
+  try {
+    const page = await getReportSummariesAsync(20, nextOffset.value)
+    if (requestRevision !== revision) return
+    total.value = page.total
+    nextOffset.value = page.items.length ? nextOffset.value + page.items.length : page.total
+    const existing = new Set(reports.value.map((report) => report.id))
+    reports.value.push(
+      ...page.items
+        .filter((report) => !existing.has(report.id))
+        .map((report, index) => ({ ...report, originalIndex: reports.value.length + index + 1 })),
+    )
+  } catch (loadError) {
+    uni.showToast({ title: loadError instanceof Error ? loadError.message : '加载失败', icon: 'none' })
+  } finally {
+    isLoadingMore.value = false
+  }
 }
 
 defineExpose({ refresh })
@@ -112,6 +143,12 @@ defineExpose({ refresh })
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+.load-more {
+  margin-top: 24rpx;
+  color: #087f8c;
+  background: transparent;
+  font-size: 24rpx;
 }
 .title {
   font-size: 29rpx;

@@ -1,3 +1,18 @@
+export type StableErrorCode =
+  | 'AUTH_REQUIRED'
+  | 'FORBIDDEN'
+  | 'RESOURCE_NOT_FOUND'
+  | 'STATE_CONFLICT'
+  | 'VALIDATION_ERROR'
+  | 'SERVICE_ERROR'
+  | 'ROLE_REQUIRED'
+  | 'INVALID_DATE_RANGE'
+  | 'CONTRACT_ERROR'
+  | 'NETWORK_ERROR'
+  | 'API_CONFIG_ERROR'
+  | 'STALE_SESSION'
+  | 'UNSUPPORTED_OPERATION'
+
 export class AppError extends Error {
   readonly statusCode?: number
   readonly code: string

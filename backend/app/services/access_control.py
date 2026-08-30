@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import and_, false, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import ClassMember, ClassRoom, Problem, User
@@ -14,6 +14,22 @@ def student_class_codes(db: Session, student: User) -> set[str]:
         ).all()
     )
     return legacy | linked
+
+
+def student_problem_filter(student: User, class_codes: set[str]):
+    """SQL visibility predicate; shared by lists and detail lookups before pagination."""
+    targets = "," + Problem.target_ids + ","
+    class_matches = (
+        or_(*[targets.contains(f",{code},", autoescape=True) for code in class_codes]) if class_codes else false()
+    )
+    return and_(
+        Problem.status == "published",
+        or_(
+            Problem.target == "all",
+            and_(Problem.target == "individual", targets.contains(f",{student.external_id},", autoescape=True)),
+            and_(Problem.target == "class", class_matches),
+        ),
+    )
 
 
 def is_problem_visible_to_student(problem: Problem, student: User, db: Session | None = None) -> bool:

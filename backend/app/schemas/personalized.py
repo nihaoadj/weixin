@@ -124,3 +124,7 @@ class NotificationRead(BaseModel):
 class NotificationListRead(BaseModel):
     items: list[NotificationRead]
     unread_count: int
+
+
+class NotificationMarkRead(BaseModel):
+    marked: int

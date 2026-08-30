@@ -30,27 +30,35 @@
       @secondary-action="refresh"
     />
     <view
-      v-for="(item, index) in items"
+      v-for="(item, index) in !isLoading && !loadError ? items : []"
       :key="item.conversationId"
       class="history-card card"
       @click="openConversation(item.conversationId)"
     >
       <view class="row">
-        <text class="title">对话 {{ items.length - index }}</text>
+        <text class="title">对话 {{ total - index }}</text>
         <text class="time">{{ formatDateTime(item.updatedAt || item.createdAt) }}</text>
       </view>
-      <text class="preview">{{ item.messages[0]?.content || '无内容' }}</text>
+      <text class="preview">{{ item.messagePreview || '无内容' }}</text>
       <view class="row footer">
-        <text>{{ item.messages.length }} 条消息</text>
+        <text>{{ item.messageCount }} 条消息</text>
         <text
-          v-if="reportStatus.has(item.conversationId)"
+          v-if="item.reportStatus"
           class="tag"
           @click.stop="openReport(item.conversationId)"
         >
-          {{ reportStatus.get(item.conversationId) === '已批阅' ? '查看教师反馈' : '查看报告' }}
+          {{ item.reportStatus === '已批阅' ? '查看教师反馈' : '查看报告' }}
         </text>
       </view>
     </view>
+    <button
+      v-if="!isLoading && !loadError && nextOffset < total"
+      class="load-more"
+      :loading="isLoadingMore"
+      @click="loadMore"
+    >
+      加载更多
+    </button>
     <view class="nav-shell"><StudentNav active="history" /></view>
   </view>
 </template>
@@ -62,14 +70,18 @@ import MedState from '@/components/ui/MedState.vue'
 import StudentNav from '@/components/ui/StudentNav.vue'
 import { requireRole } from '@/services/auth'
 import { goDetail, goPrimary, ROUTES } from '@/services/navigation'
-import { getConversationsAsync, getReportsAsync } from '@/services/repositoryAsync'
-import type { Conversation } from '@/types/domain'
+import { getConversationSummariesAsync } from '@/services/repositoryAsync'
+import type { ConversationSummary } from '@/types/domain'
 import { formatDateTime } from '@/utils/date'
 
-const items = ref<Conversation[]>([])
-const reportStatus = ref(new Map<string, string>())
+const PAGE_SIZE = 20
+const items = ref<ConversationSummary[]>([])
+const total = ref(0)
 const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const loadError = ref('')
+let revision = 0
+const nextOffset = ref(0)
 
 onShow(() => {
   if (!requireRole('student')) return
@@ -77,15 +89,38 @@ onShow(() => {
 })
 
 async function refresh() {
+  if (isLoading.value) return
   isLoading.value = true
+  const requestRevision = ++revision
   loadError.value = ''
   try {
-    items.value = await getConversationsAsync()
-    reportStatus.value = new Map((await getReportsAsync()).map((report) => [report.conversationId, report.status]))
+    const page = await getConversationSummariesAsync(PAGE_SIZE, 0)
+    if (requestRevision !== revision) return
+    items.value = page.items
+    nextOffset.value = page.items.length
+    total.value = page.total
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '请检查网络后重试'
   } finally {
     isLoading.value = false
+  }
+}
+
+async function loadMore() {
+  if (isLoading.value || isLoadingMore.value || nextOffset.value >= total.value) return
+  isLoadingMore.value = true
+  const requestRevision = revision
+  try {
+    const page = await getConversationSummariesAsync(PAGE_SIZE, nextOffset.value)
+    if (requestRevision !== revision) return
+    nextOffset.value = page.items.length ? nextOffset.value + page.items.length : page.total
+    const existing = new Set(items.value.map((item) => item.conversationId))
+    items.value.push(...page.items.filter((item) => !existing.has(item.conversationId)))
+    total.value = page.total
+  } catch (error) {
+    uni.showToast({ title: error instanceof Error ? error.message : '加载失败', icon: 'none' })
+  } finally {
+    isLoadingMore.value = false
   }
 }
 
@@ -152,6 +187,12 @@ function openReport(conversationId: string) {
   color: #087f8c;
   background: #e6f7f5;
   border-radius: 99rpx;
+}
+.load-more {
+  margin-top: 24rpx;
+  color: #087f8c;
+  background: transparent;
+  font-size: 24rpx;
 }
 .nav-shell {
   position: fixed;

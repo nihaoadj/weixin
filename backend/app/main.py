@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException
 
 from app.api import (
     ai,
@@ -14,8 +16,10 @@ from app.api import (
     personalized,
     problems,
     reports,
+    student_questions,
 )
 from app.core.config import get_settings
+from app.errors import ErrorResponse, http_exception_handler, unexpected_exception_handler, validation_exception_handler
 
 settings = get_settings()
 
@@ -44,7 +48,13 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Medical QA API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="Medical QA API", version="0.1.0", lifespan=lifespan,
+    responses={code: {"model": ErrorResponse} for code in (400, 401, 403, 404, 409, 422, 500, 503)},
+)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unexpected_exception_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,6 +74,7 @@ app.include_router(auth.router)
 app.include_router(ai.router)
 app.include_router(conversations.router)
 app.include_router(reports.router)
+app.include_router(student_questions.router)
 app.include_router(case_attempts.router)
 app.include_router(classes.router)
 app.include_router(medical_review.router)

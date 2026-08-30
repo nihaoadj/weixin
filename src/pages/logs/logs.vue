@@ -21,10 +21,8 @@
 </template>
 
 <script setup lang="ts">
-const logs =
-  (uni.getStorageSync('logs') as unknown[] | undefined)?.filter(
-    (value): value is number => typeof value === 'number',
-  ) || []
+import { getStartupLogs } from '@/services/logs'
+const logs = getStartupLogs()
 
 function formatLog(value: number): string {
   return new Date(value).toLocaleString('zh-CN', { hour12: false })

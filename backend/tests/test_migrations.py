@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 
 def run_alembic(cwd: Path, database_url: str, *command: str) -> None:
@@ -46,6 +46,16 @@ def test_0005_upgrades_legacy_members_and_downgrade_preserves_data() -> None:
             run_alembic(cwd, database_url, "upgrade", "head")
             with engine.connect() as connection:
                 assert connection.execute(text("SELECT COUNT(*) FROM class_members")).scalar_one() == 1
+            for table in ("conversations", "reports"):
+                names = {index["name"] for index in inspect(engine).get_indexes(table)}
+                assert f"ix_{table}_updated_id" in names
+                assert f"ix_{table}_student_updated_id" in names
+            run_alembic(cwd, database_url, "downgrade", "20260828_0007")
+            for table in ("conversations", "reports"):
+                names = {index["name"] for index in inspect(engine).get_indexes(table)}
+                assert f"ix_{table}_updated_id" not in names
+                assert f"ix_{table}_student_updated_id" not in names
+            run_alembic(cwd, database_url, "upgrade", "head")
             run_alembic(cwd, database_url, "downgrade", "20260823_0004")
             with engine.connect() as connection:
                 assert connection.execute(text("SELECT COUNT(*) FROM class_members")).scalar_one() == 1

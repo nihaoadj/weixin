@@ -11,6 +11,8 @@ from app.schemas.personalized import (
     LearningTaskAttemptRead,
     LearningTaskStartRead,
     LearningTaskSubmit,
+    NotificationListRead,
+    NotificationMarkRead,
 )
 from app.services.personalized import (
     _public_task,
@@ -133,7 +135,7 @@ def finish_plan(plan_id: int, student: User = Depends(require_student), db: Sess
     return serialize_plan(complete_plan(db, plan, student))
 
 
-@router.get("/notifications")
+@router.get("/notifications", response_model=NotificationListRead)
 def notifications(
     unread_only: bool = False,
     limit: int = Query(default=50, ge=1, le=100),
@@ -168,6 +170,6 @@ def read_notification(
     mark_notification_read(db, notification_id, student)
 
 
-@router.post("/notifications/read-all")
+@router.post("/notifications/read-all", response_model=NotificationMarkRead)
 def read_all_notifications(student: User = Depends(require_student), db: Session = Depends(get_db)) -> dict:
     return {"marked": mark_all_notifications_read(db, student)}

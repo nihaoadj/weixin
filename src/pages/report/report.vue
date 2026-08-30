@@ -1,6 +1,30 @@
 <template>
   <view class="safe-page report-page">
-    <template v-if="report">
+    <MedState
+      v-if="isLoading"
+      variant="loading"
+      icon="retry"
+      title="正在加载报告"
+      description="正在获取最新报告内容。"
+    />
+    <MedState
+      v-else-if="loadError"
+      variant="error"
+      icon="retry"
+      title="报告加载失败"
+      :description="loadError"
+      action-label="重新加载"
+      @action="loadReport(reportKey)"
+    />
+    <MedState
+      v-else-if="!report"
+      icon="report"
+      title="报告不存在"
+      description="报告可能尚未生成，请返回聊天继续学习。"
+      action-label="返回聊天"
+      @action="backToChat"
+    />
+    <template v-if="report && !isLoading && !loadError">
       <view class="report-hero card">
         <view class="report-mark"
           ><MedIcon
@@ -72,6 +96,7 @@
       <view class="actions">
         <button
           class="primary-button"
+          :loading="submitting"
           :disabled="report.status !== '草稿'"
           @click="submitToTeacher"
         >
@@ -92,13 +117,18 @@
 import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import MedIcon from '@/components/ui/MedIcon.vue'
+import MedState from '@/components/ui/MedState.vue'
 import SafetyBanner from '@/components/ui/SafetyBanner.vue'
 import { requireRole } from '@/services/auth'
 import { backOrHome, relaunchForRole } from '@/services/navigation'
-import { findReportAsync, submitReportForReviewAsync } from '@/services/repositoryAsync'
+import { findReportByConversationAsync, submitReportForReviewAsync } from '@/services/repositoryAsync'
 import type { Report } from '@/types/domain'
 
 const report = ref<Report | null>(null)
+const isLoading = ref(false)
+const loadError = ref('')
+const submitting = ref(false)
+let reportKey = ''
 const previewMessages = computed(() => report.value?.messages.slice(0, 5) || [])
 const actionLabel = computed(() => {
   if (report.value?.status === '待批阅') return '已提交教师批阅'
@@ -113,23 +143,36 @@ onLoad((options) => {
 })
 
 async function loadReport(id: string) {
-  report.value = (await findReportAsync(id)) || null
-  if (!report.value) {
-    uni.showToast({ title: '报告不存在', icon: 'none' })
-    backOrHome('student')
+  if (isLoading.value) return
+  reportKey = id
+  isLoading.value = true
+  loadError.value = ''
+  try {
+    report.value = (await findReportByConversationAsync(id)) || null
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '请稍后重试'
+  } finally {
+    isLoading.value = false
   }
 }
 
 async function submitToTeacher() {
-  if (!report.value || report.value.status !== '草稿') return
-  const submitted = await submitReportForReviewAsync(report.value.conversationId)
-  if (!submitted) {
-    uni.showToast({ title: '报告状态已变化，请重新打开', icon: 'none' })
-    return
+  if (submitting.value || !report.value || report.value.status !== '草稿') return
+  submitting.value = true
+  try {
+    const submitted = await submitReportForReviewAsync(report.value.conversationId)
+    if (!submitted) {
+      uni.showToast({ title: '报告状态已变化，请重新打开', icon: 'none' })
+      return
+    }
+    report.value = submitted
+    uni.showToast({ title: '报告已提交', icon: 'success' })
+    relaunchForRole('student')
+  } catch (error) {
+    uni.showToast({ title: error instanceof Error ? error.message : '提交失败，请重试', icon: 'none' })
+  } finally {
+    submitting.value = false
   }
-  report.value = submitted
-  uni.showToast({ title: '报告已提交', icon: 'success' })
-  relaunchForRole('student')
 }
 
 function backToChat() {

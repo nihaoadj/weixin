@@ -1,0 +1,37 @@
+import { expect, test } from '@playwright/test'
+
+test('Demo preserves the report workflow and actionable empty states without API requests', async ({ page }) => {
+  const apiRequests: string[] = []
+  page.on('request', (request) => {
+    if (/\/(conversations|reports|student\/questions)(\?|$)/.test(new URL(request.url()).pathname))
+      apiRequests.push(request.url())
+  })
+  await page.goto('/')
+  await page.locator('.role-button.student').click()
+  await page.getByText('肺炎的典型症状有哪些？').click()
+  await expect(page.getByText(/演示反馈/)).toBeVisible()
+  await page.locator('.report-button').click()
+  await expect(page.getByText('AI 形成性评分', { exact: true })).toBeVisible()
+  await page.locator('.actions .primary-button').click()
+  await expect(page.getByText('今天想训练哪项临床思维？')).toBeVisible()
+  await page.getByText('退出', { exact: true }).click()
+  await page.locator('.role-button.teacher').click()
+  await page.locator('.report-card').first().click()
+  await page.getByRole('spinbutton').fill('88')
+  await page.getByRole('textbox').fill('结构完整，请继续复习。')
+  await page.locator('.submit-bar .primary-button').click()
+  await expect(page.getByText('教学协作工作台')).toBeVisible()
+  await page.evaluate(() => {
+    uni.setStorageSync('reports', [])
+    uni.setStorageSync('conversationHistory:demo_student', [])
+  })
+  await page.getByText('退出', { exact: true }).click()
+  await page.locator('.role-button.student').click()
+  await page.locator('.student-nav__item').filter({ hasText: '记录' }).click()
+  await expect(page.getByText('暂无历史记录', { exact: true })).toBeVisible()
+  await page.getByText('开始医学问答', { exact: true }).click()
+  await page.getByText('退出', { exact: true }).click()
+  await page.locator('.role-button.teacher').click()
+  await expect(page.getByText('还没有学生报告', { exact: true })).toBeVisible()
+  expect(apiRequests).toEqual([])
+})

@@ -117,3 +117,5 @@ class AnalyticsStudentRead(BaseModel):
     dimensions: list[dict]
     cases: list[dict]
     timeline: list[dict]
+    learning_plan: dict | None = None
+    practice_mastery: dict = Field(default_factory=dict)

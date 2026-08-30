@@ -1,3 +1,4 @@
+/** Legacy page/view contracts; repositories use types/records.ts with stable state codes. */
 export type UserRole = 'student' | 'teacher'
 export type MessageRole = 'user' | 'assistant'
 export type ReportStatus = '草稿' | '待批阅' | '已批阅'
@@ -29,6 +30,24 @@ export interface Conversation {
   updatedAt: string
 }
 
+export interface Page<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ConversationSummary {
+  id: string
+  conversationId: string
+  messagePreview: string
+  messageCount: number
+  reportId?: string
+  reportStatus?: ReportStatus
+  createdAt: string
+  updatedAt: string
+}
+
 export interface AnalysisIssue {
   content: string
   suggestion: string
@@ -43,6 +62,7 @@ export interface ConversationAnalysis {
 }
 
 export interface Report {
+  updatedAt?: string
   id?: string
   conversationId: string
   messages: ChatMessage[]
@@ -53,6 +73,25 @@ export interface Report {
   status: ReportStatus
   teacherScore?: number
   teacherFeedback?: string
+}
+
+export interface ReportSummary {
+  id: string
+  conversationId: string
+  studentId: string
+  studentName: string
+  status: ReportStatus
+  aiScore: number
+  teacherScore?: number
+  messagePreview: string
+  messageCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ReportSummaryPage extends Page<ReportSummary> {
+  pendingCount: number
+  reviewedCount: number
 }
 
 export interface Problem {

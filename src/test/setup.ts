@@ -10,6 +10,7 @@ beforeEach(() => {
   )
   vi.stubGlobal('uni', {
     getStorageSync: vi.fn((key: string) => storage.get(key)),
+    getStorageInfoSync: vi.fn(() => ({ keys: [...storage.keys()] })),
     setStorageSync: vi.fn((key: string, value: unknown) => storage.set(key, value)),
     removeStorageSync: vi.fn((key: string) => storage.delete(key)),
     reLaunch: vi.fn(),

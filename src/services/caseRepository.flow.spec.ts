@@ -80,7 +80,7 @@ describe('Demo guided case state machine', () => {
     expect(second.messages.at(-1)?.content).toContain('具体了解')
     demoMessage(attempt.id, '还有什么情况？')
     for (const stage of [
-      { stageId: 'history', summary: '病史' },
+      { stageId: 'history', summary: '病史', keyFindings: [] },
       { stageId: 'problem_representation', summary: '问题表征' },
       {
         stageId: 'differential',

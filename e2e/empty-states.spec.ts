@@ -3,8 +3,12 @@ import { expect, test } from '@playwright/test'
 test('fresh student and teacher accounts receive actionable empty states', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'The empty-state workflow runs once in the mobile project.')
 
-  await page.route('**/conversations', (route) => route.fulfill({ json: [] }))
-  await page.route('**/reports', (route) => route.fulfill({ json: [] }))
+  await page.route('**/conversations/summaries?*', (route) =>
+    route.fulfill({ json: { items: [], total: 0, limit: 20, offset: 0 } }),
+  )
+  await page.route('**/reports/summaries?*', (route) =>
+    route.fulfill({ json: { items: [], total: 0, limit: 20, offset: 0, pending_count: 0, reviewed_count: 0 } }),
+  )
 
   await page.goto('/')
   await page.locator('.role-button.student').click()

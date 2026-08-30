@@ -84,7 +84,9 @@ POST /auth/wechat-login
 - `POST /learning-plans/{id}/complete`：三项均完成后幂等完成计划，否则返回 409。
 - `GET /notifications?unread_only=&limit=`、`POST /notifications/{id}/read`、`POST /notifications/read-all`：仅应用内通知，不接微信订阅消息。
 
-错误 detail 使用 `RESOURCE_NOT_FOUND`、`STATE_CONFLICT`、`ROLE_REQUIRED`、`INVALID_DATE_RANGE` 等稳定码，不返回堆栈、SQL、模型原文、API key 或隐藏事实。
+错误统一返回 `{ "detail": { "code": "...", "message": "..." } }`。稳定码包括
+`AUTH_REQUIRED`、`FORBIDDEN`、`RESOURCE_NOT_FOUND`、`STATE_CONFLICT`、`VALIDATION_ERROR`、
+`ROLE_REQUIRED` 和 `SERVICE_ERROR`，不返回堆栈、SQL、模型原文、API key 或隐藏事实。
 
 ## AI 问答
 
@@ -116,14 +118,21 @@ POST /v1/medical-chat
 
 ```http
 GET /conversations
+GET /conversations/summaries?limit=20&offset=0
+GET /conversations/by-client/{client_id}
 POST /conversations
 GET /conversations/{conversation_id}
 ```
+
+`/summaries` 返回 `{items,total,limit,offset}`，每项只含消息数量、首条预览和报告状态，不返回完整消息正文。
 
 ## 报告
 
 ```http
 GET /reports
+GET /reports/summaries?limit=20&offset=0
+GET /reports/{report_id}
+GET /reports/by-conversation/{client_id}
 POST /reports
 POST /reports/{report_id}/submit
 POST /reports/{report_id}/review
@@ -137,12 +146,18 @@ draft → pending_review → reviewed
 
 `POST /reports` 可同时提交 `analysis.errors`、`analysis.strengths` 和 `analysis.general_suggestions`；服务端持久化这些形成性反馈并在 `GET /reports` 和报告详情中返回。报告内容只允许所属学生创建，教师只能批阅已提交报告。
 
+教师报告摘要包含 `pending_count` 与 `reviewed_count`，列表不返回完整消息；完整内容仅在详情接口返回。
+
 ## 题目
 
 ```http
 GET /problems
+GET /student/questions
+GET /student/questions/{problem_id}
 POST /problems
 POST /problems/{problem_id}/publish
 ```
 
 学生只能看到 `published` 题目。教师可以创建和发布题目。
+
+`GET /student/questions` 返回 `StudentQuestionRead[]`，一次获取全部可见普通题目及 `answered/unanswered` 状态，不下载消息。后台以集合查询获得状态，禁止客户端逐题请求作答线程。单题详情通过 `/{problem_id}` 直查；摘要分页的 100 条上限不适用于该轻量题目 feed。

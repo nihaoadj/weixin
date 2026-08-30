@@ -136,18 +136,15 @@ import { backOrHome } from '@/services/navigation'
 import { getReviewView, submitMedicalReview } from '@/services/teacherInsights'
 import type { MedicalReviewView } from '@/services/caseRepositoryAsync'
 
-type Differential = { diagnosis: string; supportingFactIds: string[]; opposingFactIds: string[]; priority: number }
-type ReferenceTest = { name: string; purpose: string; priority: string }
-type ReferenceManagement = { action: string; rationale: string }
 const item = ref<MedicalReviewView>()
 const comment = ref('')
 const deciding = ref(false)
 let id = ''
-const reasoning = computed(() => (item.value?.caseDefinition.referenceReasoning || {}) as Record<string, unknown>)
+const reasoning = computed(() => item.value?.caseDefinition.referenceReasoning || {})
 const referenceProblem = computed(() => String(reasoning.value.problemRepresentation || ''))
-const differentials = computed(() => (reasoning.value.differentials || []) as Differential[])
-const referenceTests = computed(() => (reasoning.value.tests || []) as ReferenceTest[])
-const referenceManagement = computed(() => (reasoning.value.management || []) as ReferenceManagement[])
+const differentials = computed(() => reasoning.value.differentials || [])
+const referenceTests = computed(() => reasoning.value.tests || [])
+const referenceManagement = computed(() => reasoning.value.management || [])
 const statusLabel = computed(() =>
   item.value?.medicalReviewStatus === 'pending'
     ? '待审核'

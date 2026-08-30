@@ -23,8 +23,10 @@ export default defineConfig({
         'src/services/remoteAuth.ts',
         'src/services/caseRepository.ts',
         'src/services/caseRepositoryAsync.ts',
+        'src/data/**/*.ts',
         'src/utils/**/*.ts',
       ],
+      exclude: ['src/**/*.spec.ts', 'src/data/contracts/openapi.generated.ts'],
       thresholds: {
         branches: 80,
         functions: 85,

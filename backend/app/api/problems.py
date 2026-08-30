@@ -27,7 +27,7 @@ from app.schemas import (
     QuestionThreadUpsert,
 )
 from app.schemas.case_training import CaseDraftGenerateRequest, CaseDraftGenerateResponse
-from app.services.access_control import is_problem_visible_to_student
+from app.services.access_control import is_problem_visible_to_student, student_class_codes, student_problem_filter
 from app.services.case_ai import generate_draft
 
 router = APIRouter(prefix="/problems", tags=["problems"])
@@ -73,21 +73,26 @@ def serialize_authoring_problem(problem: Problem, answer_count: int = 0) -> dict
     return data
 
 
-def answer_counts(db: Session) -> dict[int, int]:
-    rows = db.execute(
-        select(QuestionThread.problem_id, func.count(QuestionThread.id)).group_by(QuestionThread.problem_id)
-    ).all()
-    counts = {problem_id: count for problem_id, count in rows}
-    guided_rows = db.execute(
-        select(CaseAttempt.problem_id, func.count(func.distinct(CaseAttempt.id)))
-        .where(
-            or_(
-                exists().where(CaseAttemptMessage.attempt_id == CaseAttempt.id),
-                exists().where(StageSubmission.attempt_id == CaseAttempt.id),
-            )
+def answer_counts(db: Session, problem_ids: list[int] | None = None) -> dict[int, int]:
+    if problem_ids == []:
+        return {}
+    question_statement = select(QuestionThread.problem_id, func.count(QuestionThread.id)).group_by(
+        QuestionThread.problem_id
+    )
+    guided_statement = select(
+        CaseAttempt.problem_id, func.count(func.distinct(CaseAttempt.id))
+    ).where(
+        or_(
+            exists().where(CaseAttemptMessage.attempt_id == CaseAttempt.id),
+            exists().where(StageSubmission.attempt_id == CaseAttempt.id),
         )
-        .group_by(CaseAttempt.problem_id)
-    ).all()
+    )
+    if problem_ids is not None:
+        question_statement = question_statement.where(QuestionThread.problem_id.in_(problem_ids))
+        guided_statement = guided_statement.where(CaseAttempt.problem_id.in_(problem_ids))
+    rows = db.execute(question_statement).all()
+    counts = {problem_id: count for problem_id, count in rows}
+    guided_rows = db.execute(guided_statement.group_by(CaseAttempt.problem_id)).all()
     counts.update({problem_id: count for problem_id, count in guided_rows})
     return counts
 
@@ -95,11 +100,11 @@ def answer_counts(db: Session) -> dict[int, int]:
 @router.get("", response_model=list[ProblemRead])
 def list_problems(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[dict]:
     statement = select(Problem).order_by(Problem.created_at.desc())
+    if user.role == "student":
+        statement = statement.where(student_problem_filter(user, student_class_codes(db, user)))
     problems = list(db.scalars(statement).all())
     problems.sort(key=lambda item: (0 if item.slug == "cap-undergraduate-showcase" else 1, -(item.id or 0)))
-    if user.role == "student":
-        problems = [problem for problem in problems if is_problem_visible_to_student(problem, user, db)]
-    counts = answer_counts(db)
+    counts = answer_counts(db, [problem.id for problem in problems if problem.id is not None])
     return [
         serialize_problem(problem, counts.get(problem.id, 0), public_for_student=user.role == "student")
         for problem in problems
@@ -124,7 +129,7 @@ def get_problem_authoring(
     problem = db.get(Problem, problem_id)
     if problem is None or problem.content_type != "guided_case" or problem.author_id != teacher.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RESOURCE_NOT_FOUND")
-    return serialize_authoring_problem(problem, answer_counts(db).get(problem.id, 0))
+    return serialize_authoring_problem(problem, answer_counts(db, [problem.id]).get(problem.id, 0))
 
 
 @router.get("/{problem_id}", response_model=ProblemRead)
@@ -136,7 +141,11 @@ def get_problem(
     problem = db.get(Problem, problem_id)
     if problem is None or (user.role == "student" and not is_problem_visible_to_student(problem, user, db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
-    return serialize_problem(problem, answer_counts(db).get(problem.id, 0), public_for_student=user.role == "student")
+    return serialize_problem(
+        problem,
+        answer_counts(db, [problem.id]).get(problem.id, 0),
+        public_for_student=user.role == "student",
+    )
 
 
 @router.post("", response_model=ProblemRead)
@@ -222,7 +231,7 @@ def update_problem(
         problem.medical_review_status = "not_submitted"
     db.commit()
     db.refresh(problem)
-    return serialize_problem(problem, answer_counts(db).get(problem.id, 0))
+    return serialize_problem(problem, answer_counts(db, [problem.id]).get(problem.id, 0))
 
 
 @router.post("/{problem_id}/clone-version", response_model=ProblemAuthoringRead)
@@ -304,12 +313,12 @@ def publish_problem(
             db.commit()
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="STATE_CONFLICT")
     if problem.status == "published":
-        return serialize_problem(problem, answer_counts(db).get(problem.id, 0))
+        return serialize_problem(problem, answer_counts(db, [problem.id]).get(problem.id, 0))
     problem.status = "published"
     problem.published_at = datetime.now(UTC)
     db.commit()
     db.refresh(problem)
-    return serialize_problem(problem, answer_counts(db).get(problem.id, 0))
+    return serialize_problem(problem, answer_counts(db, [problem.id]).get(problem.id, 0))
 
 
 @router.post("/{problem_id}/reject", response_model=ProblemRead)
@@ -330,7 +339,7 @@ def reject_problem(
     problem.status = "rejected"
     db.commit()
     db.refresh(problem)
-    return serialize_problem(problem, answer_counts(db).get(problem.id, 0))
+    return serialize_problem(problem, answer_counts(db, [problem.id]).get(problem.id, 0))
 
 
 @router.get("/{problem_id}/thread", response_model=QuestionThreadRead)

@@ -85,3 +85,19 @@ class QuestionThreadRead(BaseModel):
     question_id: int
     messages: list[MessageRead] = []
     updated_at: datetime
+
+
+class StudentQuestionRead(BaseModel):
+    id: int
+    type: str
+    title: str
+    description: str = ""
+    published_at: datetime
+    status: str = Field(pattern="^(answered|unanswered)$")
+
+
+class StudentQuestionPage(BaseModel):
+    items: list[StudentQuestionRead]
+    total: int
+    limit: int
+    offset: int

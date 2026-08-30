@@ -31,20 +31,24 @@ PostgreSQL（生产） / 服务端 AI 网关 / 对象存储（按需）
 src/
 ├── pages/        页面级 Vue SFC，只处理页面状态、跳转和用户交互
 ├── components/   可复用 UI 组件，不直接写业务持久化逻辑
-├── services/     API client、认证、AI、仓储 adapter 和业务服务边界
-├── types/        前端领域类型
+├── data/         OpenAPI 契约、Repository port、API/Demo adapter、存储网关和 Demo 种子
+├── services/     兼容 facade、认证、AI 和业务服务边界
+├── types/        与传输 DTO 解耦的领域/展示类型
 ├── utils/        无状态纯函数
-├── data/         本地 Demo 种子数据
 └── static/       图片等静态资源
 ```
 
 前端数据访问规则：
 
-- `src/services/apiClient.ts` 负责 FastAPI 请求、token 和错误处理。
+- `src/services/apiClient.ts` 只负责 FastAPI 传输、token、错误、请求去重和显式内存缓存。
 - `VITE_APP_MODE=demo|api` 显式决定运行模式，禁止请求失败时自动切换数据源。
-- `src/services/repository.ts` 是本地 Demo adapter。
-- `src/services/repositoryAsync.ts` 是页面层统一仓储 facade；API 模式只访问 FastAPI。
+- `src/data/repositories` 定义 port，`src/data/adapters` 分别实现 API 和 Demo adapter，模式在启动时选择一次。
+- `src/services/repositoryAsync.ts` 保留页面兼容 facade；生成 DTO 不能直接暴露给页面。
+- `src/data/storage.ts` 统一存储 key、用户隔离、版本与运行时校验；API 业务数据不持久缓存。
+- 外部 JSON 先经过 Zod 边界校验，再由显式 mapper 转换为领域类型。
 - 页面不直接散落 `uni.request`、storage key 或后端 URL。
+
+完整的数据流、缓存和错误约定见 [data-layer.md](./data-layer.md)。
 
 ## 后端目录职责
 

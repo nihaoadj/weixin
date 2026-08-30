@@ -243,16 +243,10 @@ const submittingReview = ref(false)
 const referenceText = ref('')
 const currentStatus = ref<Problem['status']>('待审核')
 const reviewStatus = ref<NonNullable<Problem['medicalReviewStatus']>>('not_submitted')
-type ReferenceItem = { diagnosis: string; supportingFactIds?: string[]; opposingFactIds?: string[] }
-type ReferenceTest = { name: string; purpose: string; priority?: string; resultFactId?: string }
-type ReferenceManagement = { action: string; rationale: string; priority?: number; safetyCritical?: boolean }
-type ReferenceEditor = {
-  differentials?: ReferenceItem[]
-  tests?: ReferenceTest[]
-  management?: ReferenceManagement[]
-  problemRepresentation?: string
-}
-const reference = computed(() => draft.value?.caseDefinition.referenceReasoning as ReferenceEditor | undefined)
+const reference = computed(() => draft.value?.caseDefinition.referenceReasoning)
+type ReferenceItem = NonNullable<
+  CaseDraftGenerateResult['caseDefinition']['referenceReasoning']['differentials']
+>[number]
 const differentials = computed(() => reference.value?.differentials || [])
 const referenceTests = computed(() => reference.value?.tests || [])
 const referenceManagement = computed(() => reference.value?.management || [])

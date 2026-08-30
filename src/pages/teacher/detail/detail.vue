@@ -1,6 +1,30 @@
 <template>
   <view class="safe-page detail-page">
-    <template v-if="report">
+    <MedState
+      v-if="isLoading"
+      variant="loading"
+      icon="retry"
+      title="正在加载报告"
+      description="正在获取最新报告内容。"
+    />
+    <MedState
+      v-else-if="loadError"
+      variant="error"
+      icon="retry"
+      title="报告加载失败"
+      :description="loadError"
+      action-label="重新加载"
+      @action="loadReport(reportKey)"
+    />
+    <MedState
+      v-else-if="!report"
+      icon="report"
+      title="报告不存在"
+      description="报告不存在或尚未提交给教师。"
+      action-label="返回工作台"
+      @action="backOrHome('teacher')"
+    />
+    <template v-if="report && !isLoading && !loadError">
       <view class="report-meta card">
         <view
           ><text
@@ -67,6 +91,7 @@
       <view class="submit-bar"
         ><button
           class="primary-button"
+          :loading="submitting"
           @click="submitFeedback"
         >
           提交评分和反馈
@@ -78,6 +103,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import MedState from '@/components/ui/MedState.vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { requireRole } from '@/services/auth'
 import { backOrHome } from '@/services/navigation'
@@ -86,6 +112,10 @@ import type { Report } from '@/types/domain'
 import { formatDateTime } from '@/utils/date'
 
 const report = ref<Report | null>(null)
+const isLoading = ref(false)
+const loadError = ref('')
+const submitting = ref(false)
+let reportKey = ''
 const teacherScore = ref('')
 const teacherFeedback = ref('')
 
@@ -96,22 +126,33 @@ onLoad((options) => {
 })
 
 async function loadReport(id: string) {
-  report.value = (await findReportAsync(id)) || null
-  if (!report.value) {
-    uni.showToast({ title: '报告不存在', icon: 'none' })
-    backOrHome('teacher')
-    return
+  if (isLoading.value) return
+  reportKey = id
+  isLoading.value = true
+  loadError.value = ''
+  try {
+    report.value = (await findReportAsync(id)) || null
+    if (!report.value) {
+      uni.showToast({ title: '报告不存在', icon: 'none' })
+      backOrHome('teacher')
+      return
+    }
+    if (report.value.status === '草稿') {
+      uni.showToast({ title: '该报告尚未提交', icon: 'none' })
+      backOrHome('teacher')
+      return
+    }
+    teacherScore.value = report.value.teacherScore === undefined ? '' : String(report.value.teacherScore)
+    teacherFeedback.value = report.value.teacherFeedback || ''
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '请稍后重试'
+  } finally {
+    isLoading.value = false
   }
-  if (report.value.status === '草稿') {
-    uni.showToast({ title: '该报告尚未提交', icon: 'none' })
-    backOrHome('teacher')
-    return
-  }
-  teacherScore.value = report.value.teacherScore === undefined ? '' : String(report.value.teacherScore)
-  teacherFeedback.value = report.value.teacherFeedback || ''
 }
 
 async function submitFeedback() {
+  if (submitting.value) return
   if (!report.value || teacherScore.value.trim() === '') {
     uni.showToast({ title: '请输入评分', icon: 'none' })
     return
@@ -121,18 +162,25 @@ async function submitFeedback() {
     uni.showToast({ title: '评分必须在 0–100 之间', icon: 'none' })
     return
   }
-  const reviewed = await reviewReportAsync(
-    report.value.id || report.value.conversationId,
-    score,
-    teacherFeedback.value.trim(),
-  )
-  if (!reviewed) {
-    uni.showToast({ title: '报告状态已变化，请刷新后重试', icon: 'none' })
-    return
+  submitting.value = true
+  try {
+    const reviewed = await reviewReportAsync(
+      report.value.id || report.value.conversationId,
+      score,
+      teacherFeedback.value.trim(),
+    )
+    if (!reviewed) {
+      uni.showToast({ title: '报告状态已变化，请刷新后重试', icon: 'none' })
+      return
+    }
+    report.value = reviewed
+    uni.showToast({ title: '批阅已保存', icon: 'success' })
+    backOrHome('teacher')
+  } catch (error) {
+    uni.showToast({ title: error instanceof Error ? error.message : '保存失败，请重试', icon: 'none' })
+  } finally {
+    submitting.value = false
   }
-  report.value = reviewed
-  uni.showToast({ title: '批阅已保存', icon: 'success' })
-  backOrHome('teacher')
 }
 </script>
 

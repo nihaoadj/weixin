@@ -20,7 +20,7 @@ dist/dev/mp-weixin
 cd backend
 python -m venv .venv
 .venv\Scripts\activate
-python -m pip install -r requirements.txt
+python -m pip install --require-hashes -r requirements.txt
 python -m alembic upgrade head
 python scripts/seed_test_data.py  # 仅开发/测试库，需要测试数据时执行
 python -m uvicorn app.main:app --reload

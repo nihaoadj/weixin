@@ -29,3 +29,21 @@ class ConversationRead(BaseModel):
     messages: list[MessageRead] = []
 
     model_config = {"from_attributes": True}
+
+
+class ConversationSummaryRead(BaseModel):
+    id: int
+    client_id: str
+    message_preview: str = ""
+    message_count: int = 0
+    report_id: int | None = None
+    report_status: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationSummaryPage(BaseModel):
+    items: list[ConversationSummaryRead]
+    total: int
+    limit: int
+    offset: int

@@ -22,8 +22,21 @@ export interface CaseDefinition {
   opening: CaseOpening
   stageInstructions: Record<CaseStageId, string>
   facts: CaseFact[]
-  referenceReasoning: Record<string, unknown>
+  referenceReasoning: ReferenceReasoning
   practiceBlueprints?: PracticeBlueprint[]
+}
+
+export interface ReferenceReasoning {
+  // Older Demo cases may have no reference path; API contracts require the complete path.
+  problemRepresentation?: string
+  differentials?: Array<{ diagnosis: string; supportingFactIds: string[]; opposingFactIds: string[]; priority: number }>
+  tests?: Array<{
+    name: string
+    purpose: string
+    priority: 'necessary' | 'optional' | 'avoid'
+    resultFactId?: string | null
+  }>
+  management?: Array<{ action: string; rationale: string; priority: number; safetyCritical: boolean }>
 }
 
 export interface PracticeBlueprint {

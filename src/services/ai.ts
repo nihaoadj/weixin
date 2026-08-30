@@ -1,6 +1,7 @@
+import { z } from 'zod'
 import type { ChatMessage, ProblemType, StudentQuestion } from '@/types/domain'
 import { isDemoMode } from '@/config/runtime'
-import { getApiBaseUrl, getApiToken } from '@/services/apiClient'
+import { apiRequest } from '@/services/apiClient'
 
 const MAX_PROMPT_LENGTH = 4000
 const MAX_HISTORY_MESSAGES = 20
@@ -12,11 +13,9 @@ export interface MedicalChatRequest {
   mode?: ProblemType | '自由问答'
 }
 
-interface MedicalChatResponse {
-  content?: string
-  message?: string
-  data?: { content?: string }
-}
+const medicalChatResponseSchema = z
+  .union([z.object({ content: z.string().min(1) }), z.object({ data: z.object({ content: z.string().min(1) }) })])
+  .transform((value) => ('content' in value ? value.content : value.data.content))
 
 const emergencyPatterns = [
   /胸(口)?(持续|突然|剧烈|压榨|闷)?.{0,8}(痛|疼)/,
@@ -45,13 +44,6 @@ function createDemoResponse(request: MedicalChatRequest): string {
   return `演示反馈：你提出了“${request.prompt.slice(0, 32)}${request.prompt.length > 32 ? '…' : ''}”。建议从定义、常见表现、鉴别要点和处理原则四部分梳理。医学内容仅用于教学，不能替代医生诊断。`
 }
 
-function extractResponseContent(value: unknown): string | null {
-  if (!value || typeof value !== 'object') return null
-  const response = value as MedicalChatResponse
-  const content = response.content ?? response.data?.content
-  return typeof content === 'string' && content.trim() ? content.trim() : null
-}
-
 export async function requestMedicalAssistant(request: MedicalChatRequest): Promise<string> {
   const prompt = request.prompt.trim().slice(0, MAX_PROMPT_LENGTH)
   if (!prompt) throw new Error('问题不能为空')
@@ -61,8 +53,6 @@ export async function requestMedicalAssistant(request: MedicalChatRequest): Prom
     await new Promise((resolve) => setTimeout(resolve, 450))
     return createDemoResponse({ ...request, prompt })
   }
-  const baseUrl = getApiBaseUrl()
-
   const previousHistory = request.history
     .slice(-MAX_HISTORY_MESSAGES)
     .filter((message, index, messages) => {
@@ -72,37 +62,16 @@ export async function requestMedicalAssistant(request: MedicalChatRequest): Prom
     })
     .map(({ role, content }) => ({ role, content: content.slice(0, MAX_PROMPT_LENGTH) }))
 
-  return new Promise<string>((resolve, reject) => {
-    uni.request({
-      url: `${baseUrl}/v1/medical-chat`,
-      method: 'POST',
-      header: {
-        Authorization: getApiToken() ? `Bearer ${getApiToken()}` : '',
-      },
-      data: {
-        prompt,
-        mode: request.mode || request.question?.type || '自由问答',
-        question: request.question,
-        messages: previousHistory,
-      },
-      timeout: 30000,
-      success: (response: UniApp.RequestSuccessCallbackResult) => {
-        try {
-          const content = extractResponseContent(response.data)
-          if (response.statusCode >= 200 && response.statusCode < 300 && content) {
-            resolve(content)
-            return
-          }
-          const message =
-            response.data && typeof response.data === 'object' && 'message' in response.data
-              ? String((response.data as { message?: unknown }).message || '')
-              : ''
-          reject(new Error(message || `问答服务返回 ${response.statusCode}`))
-        } catch (error) {
-          reject(error instanceof Error ? error : new Error('问答服务响应格式错误'))
-        }
-      },
-      fail: (error: UniApp.GeneralCallbackResult) => reject(new Error(error.errMsg || '问答服务不可用')),
-    })
+  const content = await apiRequest({
+    path: '/v1/medical-chat',
+    method: 'POST',
+    schema: medicalChatResponseSchema,
+    body: {
+      prompt,
+      mode: request.mode || request.question?.type || '自由问答',
+      question: request.question,
+      messages: previousHistory,
+    },
   })
+  return content.trim()
 }

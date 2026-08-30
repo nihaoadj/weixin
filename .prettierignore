@@ -1,7 +1,12 @@
+# Generated Python environments and runtime artifacts
+backend/.venv*/
+backend/data/
+backend/**/__pycache__/
+backend/.pytest_cache/
+
+# Build and test outputs
 node_modules/
 dist/
 coverage/
-package-lock.json
-project.private.config.json
-src/static/
-cloudfunctions/**/node_modules/
+test-results/
+playwright-report/

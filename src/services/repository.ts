@@ -1,4 +1,17 @@
 import { builtInQuestions, createDemoConversations, createDemoProblems, createDemoReports } from '@/data/demo'
+import { isApiMode } from '@/config/runtime'
+import { invalidateApiSession, clearApiToken } from '@/services/apiClient'
+import { z, type ZodType } from 'zod'
+import {
+  conversationSchema,
+  problemSchema,
+  questionThreadSchema,
+  reportSchema,
+  sessionSchema,
+  STORAGE_SCHEMA_VERSION,
+  storage,
+  storageKeys,
+} from '@/data/storage'
 import type {
   Conversation,
   Problem,
@@ -9,82 +22,77 @@ import type {
   UserRole,
 } from '@/types/domain'
 
-const STORAGE_SCHEMA_VERSION = 2
 const MAX_CONVERSATION_MESSAGES = 100
 const MAX_CONVERSATIONS = 10
 const MAX_REPORTS = 100
 const MAX_PROBLEMS = 200
 const MAX_QUESTION_THREADS = 50
 
-const keys = {
-  user: 'userInfo',
-  role: 'role',
-  openid: 'openid',
-  conversations: 'conversationHistory',
-  reports: 'reports',
-  problems: 'problems',
-  answeredQuestions: 'answeredQuestionIds',
-  questionThreads: 'questionThreads',
-  schemaVersion: 'storageSchemaVersion',
-} as const
+const keys = storageKeys
 
 type ReportDraftInput = Omit<Report, 'studentId' | 'studentName' | 'status'>
 
-function readArray<T>(key: string): T[] {
-  const value = uni.getStorageSync(key) as unknown
-  return Array.isArray(value) ? (value as T[]) : []
+function readArray<T>(key: string, itemSchema: ZodType<T>): T[] {
+  return storage.read(key, z.array(itemSchema), [])
 }
 
-function writeArray<T>(key: string, value: T[]): void {
-  try {
-    uni.setStorageSync(key, value)
-  } catch (error) {
-    console.error(`写入本地存储失败: ${key}`, error)
-    throw new Error('本地存储空间不足，请清理历史数据后重试', { cause: error })
-  }
+function writeArray<T>(key: string, value: T[], itemSchema: ZodType<T>): void {
+  storage.write(key, value, z.array(itemSchema))
 }
 
 function userScopedKey(baseKey: string, openid?: string): string | null {
   const userId = openid || getSession()?.openid
-  return userId ? `${baseKey}:${encodeURIComponent(userId)}` : null
+  return userId ? storage.scopedKey(baseKey, userId) : null
 }
 
 function migrateLegacyStudentData(user: SessionUser): void {
-  if (user.role !== 'student') return
-  const currentVersion = Number(uni.getStorageSync(keys.schemaVersion) || 0)
+  if (isApiMode() || user.role !== 'student') return
+  const currentVersion = Number(storage.readRaw(keys.schemaVersion) || 0)
   if (currentVersion >= STORAGE_SCHEMA_VERSION) return
 
-  const privateCollections = [keys.conversations, keys.answeredQuestions, keys.questionThreads]
-  for (const legacyKey of privateCollections) {
-    const legacyValue = uni.getStorageSync(legacyKey) as unknown
+  const privateCollections = [
+    [keys.conversations, conversationSchema],
+    [keys.answeredQuestions, z.string()],
+    [keys.questionThreads, questionThreadSchema],
+  ] as const
+  for (const [legacyKey, itemSchema] of privateCollections) {
+    const legacyValue = storage.readRaw(legacyKey)
     const scopedKey = userScopedKey(legacyKey, user.openid)
-    if (scopedKey && Array.isArray(legacyValue) && !readArray<unknown>(scopedKey).length) {
-      writeArray(scopedKey, legacyValue)
+    const parsed = z.array(itemSchema).safeParse(legacyValue)
+    if (scopedKey && parsed.success) {
+      const existing = z.array(itemSchema).safeParse(storage.readRaw(scopedKey))
+      if (!existing.success || existing.data.length === 0) {
+        storage.write(scopedKey, parsed.data, z.array(itemSchema))
+        storage.remove(legacyKey)
+      }
     }
-    uni.removeStorageSync(legacyKey)
   }
 
-  const migratedReports = readArray<Report>(keys.reports).map((report) => ({
-    ...report,
-    studentId: report.studentId || user.openid,
-    studentName: report.studentName || user.nickName,
-    status: report.status || '草稿',
-  }))
-  writeArray(keys.reports, migratedReports)
-  uni.setStorageSync(keys.schemaVersion, STORAGE_SCHEMA_VERSION)
+  const rawReports = z.array(z.record(z.string(), z.unknown())).safeParse(storage.readRaw(keys.reports))
+  if (rawReports.success) {
+    const migratedReports = rawReports.data.map((report) => ({
+      ...report,
+      studentId: report.studentId || user.openid,
+      studentName: report.studentName || user.nickName,
+      status: report.status || '草稿',
+    }))
+    const validated = z.array(reportSchema).safeParse(migratedReports)
+    // Never overwrite invalid legacy data with an empty fallback.
+    if (validated.success) writeArray(keys.reports, validated.data, reportSchema)
+  }
+  storage.write(keys.schemaVersion, STORAGE_SCHEMA_VERSION, z.number().int())
 }
 
 export function saveSession(user: SessionUser): void {
+  invalidateApiSession()
   migrateLegacyStudentData(user)
-  uni.setStorageSync(keys.user, user)
-  uni.setStorageSync(keys.role, user.role)
-  uni.setStorageSync(keys.openid, user.openid)
+  storage.write(keys.user, user, sessionSchema)
+  storage.write(keys.role, user.role, z.enum(['student', 'teacher']))
+  storage.write(keys.openid, user.openid, z.string().min(1))
 }
 
 export function getSession(): SessionUser | null {
-  const value = uni.getStorageSync(keys.user) as SessionUser | undefined
-  if (!value?.openid || (value.role !== 'student' && value.role !== 'teacher')) return null
-  return value
+  return storage.read<SessionUser | null>(keys.user, sessionSchema.nullable(), null)
 }
 
 export function getRole(): UserRole | null {
@@ -92,15 +100,16 @@ export function getRole(): UserRole | null {
 }
 
 export function clearSession(): void {
-  uni.removeStorageSync(keys.user)
-  uni.removeStorageSync(keys.role)
-  uni.removeStorageSync(keys.openid)
-  uni.removeStorageSync('apiAccessToken')
+  clearApiToken()
+  storage.remove(keys.user)
+  storage.remove(keys.role)
+  storage.remove(keys.openid)
+  storage.remove(keys.apiToken)
 }
 
 export function getConversations(): Conversation[] {
   const scopedKey = userScopedKey(keys.conversations)
-  return scopedKey ? readArray<Conversation>(scopedKey) : []
+  return scopedKey ? readArray(scopedKey, conversationSchema) : []
 }
 
 export function findConversation(conversationId: string): Conversation | undefined {
@@ -114,15 +123,15 @@ export function upsertConversation(conversation: Conversation): void {
   const index = history.findIndex((item) => item.conversationId === conversation.conversationId)
   if (index >= 0) history.splice(index, 1)
   history.unshift({ ...conversation, messages: conversation.messages.slice(-MAX_CONVERSATION_MESSAGES) })
-  writeArray(scopedKey, history.slice(0, MAX_CONVERSATIONS))
+  writeArray(scopedKey, history.slice(0, MAX_CONVERSATIONS), conversationSchema)
 }
 
 function getAllReports(): Report[] {
-  return readArray<Report>(keys.reports)
+  return readArray(keys.reports, reportSchema)
 }
 
 function writeReports(reports: Report[]): void {
-  writeArray(keys.reports, reports.slice(-MAX_REPORTS))
+  writeArray(keys.reports, reports.slice(-MAX_REPORTS), reportSchema)
 }
 
 export function getReports(): Report[] {
@@ -149,6 +158,11 @@ export function saveDraftReport(input: ReportDraftInput): Report {
 
   const draft: Report = {
     ...input,
+    id:
+      existing?.id ||
+      input.id ||
+      `demo-report:${encodeURIComponent(session.openid)}:${encodeURIComponent(input.conversationId)}`,
+    updatedAt: new Date().toISOString(),
     messages: input.messages.slice(-MAX_CONVERSATION_MESSAGES),
     createdAt: existing?.createdAt || input.createdAt,
     studentId: session.openid,
@@ -170,7 +184,7 @@ export function submitReportForReview(conversationId: string): Report | null {
   )
   const report = index >= 0 ? reports[index] : undefined
   if (!report || report.status !== '草稿') return null
-  const submitted: Report = { ...report, status: '待批阅' }
+  const submitted: Report = { ...report, status: '待批阅', updatedAt: new Date().toISOString() }
   reports[index] = submitted
   writeReports(reports)
   return submitted
@@ -180,12 +194,13 @@ export function reviewReport(conversationId: string, score: number, feedback: st
   const session = getSession()
   if (!session || session.role !== 'teacher') return null
   const reports = getAllReports()
-  const index = reports.findIndex((report) => report.conversationId === conversationId)
+  const index = reports.findIndex((report) => report.id === conversationId || report.conversationId === conversationId)
   const report = index >= 0 ? reports[index] : undefined
   if (!report || (report.status !== '待批阅' && report.status !== '已批阅')) return null
   const reviewed: Report = {
     ...report,
     status: '已批阅',
+    updatedAt: new Date().toISOString(),
     teacherScore: score,
     teacherFeedback: feedback,
   }
@@ -195,11 +210,11 @@ export function reviewReport(conversationId: string, score: number, feedback: st
 }
 
 export function getProblems(): Problem[] {
-  return readArray<Problem>(keys.problems)
+  return readArray(keys.problems, problemSchema)
 }
 
 export function saveProblems(problems: Problem[]): void {
-  writeArray(keys.problems, problems.slice(0, MAX_PROBLEMS))
+  writeArray(keys.problems, problems.slice(0, MAX_PROBLEMS), problemSchema)
 }
 
 export function findProblem(id: string): Problem | undefined {
@@ -222,7 +237,7 @@ export function resetProblems(): Problem[] {
 
 export function getAnsweredQuestionIds(): string[] {
   const scopedKey = userScopedKey(keys.answeredQuestions)
-  return scopedKey ? readArray<string>(scopedKey) : []
+  return scopedKey ? readArray(scopedKey, z.string()) : []
 }
 
 export function markQuestionAnswered(questionId: string): void {
@@ -230,14 +245,14 @@ export function markQuestionAnswered(questionId: string): void {
   if (!scopedKey) throw new Error('记录作答前必须登录')
   const ids = new Set(getAnsweredQuestionIds())
   ids.add(questionId)
-  writeArray(scopedKey, Array.from(ids))
+  writeArray(scopedKey, Array.from(ids), z.string())
 }
 
 export function getQuestionAnswerCount(questionId: string): number {
-  const storageInfo = uni.getStorageInfoSync()
-  return storageInfo.keys
+  return storage
+    .keys()
     .filter((key) => key.startsWith(`${keys.answeredQuestions}:`))
-    .reduce((count, key) => count + (readArray<string>(key).includes(questionId) ? 1 : 0), 0)
+    .reduce((count, key) => count + (readArray(key, z.string()).includes(questionId) ? 1 : 0), 0)
 }
 
 function isProblemVisibleToStudent(problem: Problem, student: SessionUser): boolean {
@@ -253,7 +268,7 @@ export function getStudentQuestions(): StudentQuestion[] {
   if (!student || student.role !== 'student') return []
   const answered = new Set(getAnsweredQuestionIds())
   const published: StudentQuestion[] = getProblems()
-    .filter((problem) => isProblemVisibleToStudent(problem, student))
+    .filter((problem) => problem.contentType !== 'guided_case' && isProblemVisibleToStudent(problem, student))
     .map((problem) => ({
       id: problem.id,
       type: problem.type,
@@ -276,31 +291,33 @@ export function findStudentQuestion(id: string): StudentQuestion | undefined {
 
 export function getQuestionThread(questionId: string): QuestionThread | undefined {
   const scopedKey = userScopedKey(keys.questionThreads)
-  return scopedKey ? readArray<QuestionThread>(scopedKey).find((thread) => thread.questionId === questionId) : undefined
+  return scopedKey
+    ? readArray(scopedKey, questionThreadSchema).find((thread) => thread.questionId === questionId)
+    : undefined
 }
 
 export function saveQuestionThread(thread: QuestionThread): void {
   const scopedKey = userScopedKey(keys.questionThreads)
   if (!scopedKey) throw new Error('保存作答前必须登录')
-  const threads = readArray<QuestionThread>(scopedKey)
+  const threads = readArray(scopedKey, questionThreadSchema)
   const index = threads.findIndex((item) => item.questionId === thread.questionId)
   const boundedThread = { ...thread, messages: thread.messages.slice(-MAX_CONVERSATION_MESSAGES) }
   if (index >= 0) threads[index] = boundedThread
   else threads.unshift(boundedThread)
-  writeArray(scopedKey, threads.slice(0, MAX_QUESTION_THREADS))
+  writeArray(scopedKey, threads.slice(0, MAX_QUESTION_THREADS), questionThreadSchema)
 }
 
 export function ensureDemoData(): void {
-  const current = uni.getStorageSync(keys.problems) as unknown
+  const current = storage.readRaw(keys.problems)
   if (!Array.isArray(current)) resetProblems()
   const demoConversationKey = userScopedKey(keys.conversations, 'demo_student')
   if (demoConversationKey) {
-    const conversations = readArray<Conversation>(demoConversationKey)
+    const conversations = readArray(demoConversationKey, conversationSchema)
     const fixtures = createDemoConversations()
     const missing = fixtures.filter(
       (fixture) => !conversations.some((conversation) => conversation.conversationId === fixture.conversationId),
     )
-    if (missing.length) writeArray(demoConversationKey, [...conversations, ...missing])
+    if (missing.length) writeArray(demoConversationKey, [...conversations, ...missing], conversationSchema)
   }
   const reports = getAllReports()
   const fixtures = createDemoReports()

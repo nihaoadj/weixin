@@ -12,7 +12,14 @@ from app.schemas.classroom import (
     MedicalReviewViewRead,
     ReviewSubmit,
 )
-from app.schemas.conversation import ConversationRead, ConversationUpsert, MessageIn, MessageRead
+from app.schemas.conversation import (
+    ConversationRead,
+    ConversationSummaryPage,
+    ConversationSummaryRead,
+    ConversationUpsert,
+    MessageIn,
+    MessageRead,
+)
 from app.schemas.medical_ai import MedicalChatRequest, MedicalChatResponse
 from app.schemas.personalized import (
     LearningPlanRead,
@@ -31,11 +38,22 @@ from app.schemas.problem import (
     ProblemUpdate,
     QuestionThreadRead,
     QuestionThreadUpsert,
+    StudentQuestionPage,
+    StudentQuestionRead,
 )
-from app.schemas.report import ReportAnalysis, ReportCreate, ReportRead, ReportReview
+from app.schemas.report import (
+    ReportAnalysis,
+    ReportCreate,
+    ReportRead,
+    ReportReview,
+    ReportSummaryPage,
+    ReportSummaryRead,
+)
 
 __all__ = [
     "ConversationRead",
+    "ConversationSummaryRead",
+    "ConversationSummaryPage",
     "ConversationUpsert",
     "LoginRequest",
     "LoginResponse",
@@ -50,10 +68,14 @@ __all__ = [
     "ProblemUpdate",
     "QuestionThreadRead",
     "QuestionThreadUpsert",
+    "StudentQuestionRead",
+    "StudentQuestionPage",
     "ReportCreate",
     "ReportAnalysis",
     "ReportRead",
     "ReportReview",
+    "ReportSummaryRead",
+    "ReportSummaryPage",
     "UserRead",
     "ClassCreate",
     "ClassUpdate",

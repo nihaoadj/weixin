@@ -4,13 +4,11 @@ import {
   cloneCaseVersionAsync,
   completeCaseAttemptAsync,
   generateCaseDraftAsync,
-  getDemoCaseProblemsAsync,
   getCaseAssessmentAsync,
   getCaseAttemptAsync,
   getCaseAuthoringAsync,
   getCaseAttemptsAsync,
   getGuidedCasesAsync,
-  getMedicalReviewViewAsync,
   publishGuidedCaseAsync,
   saveGuidedCaseAsync,
   sendPatientMessageAsync,
@@ -116,44 +114,98 @@ describe('Demo case adapter', () => {
   it('maps all API adapter calls without loading Demo facts', async () => {
     vi.stubEnv('VITE_APP_MODE', 'api')
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com')
+    vi.resetModules()
+    const api = await import('./caseRepositoryAsync')
+    const draftResponse = (await import('@/test/fixtures/case-draft.json')).default
+    const now = '2026-01-01T00:00:00Z'
+    const problem = {
+      id: 7,
+      type: '病例分析',
+      title: '病例',
+      target: 'all',
+      target_label: '全体学生',
+      status: 'published',
+      content_type: 'guided_case',
+      created_at: now,
+    }
+    const authoring = { ...problem, ...draftResponse }
+    const attempt = {
+      id: 7,
+      problem_id: 7,
+      problem_version: 1,
+      status: 'in_progress',
+      current_stage: 'history',
+      opening: draftResponse.case_definition.opening,
+      started_at: now,
+    }
+    const assessment = {
+      attempt_id: 7,
+      total_score: 0,
+      dimensions: [],
+      summary: '摘要',
+      focus_stage: 'history',
+      model_name: 'fallback',
+      prompt_version: 'v1',
+      fallback_used: true,
+    }
+
     vi.mocked(uni.request).mockImplementation((options) => {
       const path = String(options.url)
-      const response = path.endsWith('/problems')
-        ? [{ id: 7, type: '病例分析', title: '病例', target: 'all', status: 'published', content_type: 'guided_case' }]
-        : path.includes('/review-queue')
-          ? []
-          : path.includes('/medical-review-view')
-            ? {
-                id: 7,
-                title: '病例',
-                status: 'draft',
-                content_type: 'guided_case',
-                case_definition: {},
-                rubric: {},
-                reviews: [],
-              }
-            : { id: 7, problem_id: 7, status: 'completed', current_stage: 'history', dimensions: [], total_score: 0 }
+      const response =
+        path.endsWith('/problems') && options.method === 'GET'
+          ? [problem]
+          : path.endsWith('/problems')
+            ? problem
+            : path.includes('/review-queue')
+              ? []
+              : path.includes('/medical-review-view')
+                ? { ...authoring, current_digest: 'digest', reviews: [] }
+                : path.includes('/case-drafts/generate')
+                  ? draftResponse
+                  : path.includes('/authoring') || path.includes('/clone-version')
+                    ? authoring
+                    : path.includes('/assessment') || path.includes('/complete')
+                      ? assessment
+                      : path.includes('/messages')
+                        ? { id: 7, role: 'assistant', content: '发热', created_at: now }
+                        : path.includes('/stages/')
+                          ? {
+                              id: 7,
+                              stage_id: 'problem_representation',
+                              answer: { stage_id: 'problem_representation', summary: '发热' },
+                              feedback: '反馈',
+                              created_at: now,
+                            }
+                          : path.endsWith('/attempts') && options.method === 'GET'
+                            ? [attempt]
+                            : path.includes('/attempts')
+                              ? attempt
+                              : problem
       options.success?.({ statusCode: 200, data: response, header: {}, cookies: [], errMsg: 'request:ok' })
       return undefined as never
     })
-    const draft = await generateCaseDraftAsync({ topic: '主题', learnerLevel: '本科', learningObjectives: ['目标'] })
-    await getCaseAttemptsAsync()
-    await getDemoCaseProblemsAsync()
-    await getGuidedCasesAsync()
-    await getCaseAuthoringAsync('7')
-    await cloneCaseVersionAsync('7')
-    await publishGuidedCaseAsync('7')
-    await submitGuidedCaseForReviewAsync('7')
-    await getMedicalReviewQueueAsync()
-    await getMedicalReviewViewAsync('7')
-    await decideGuidedCaseReviewAsync('7', 'approved', '')
-    await getCaseAttemptAsync('7')
-    await startCaseAttemptAsync('7', '6')
-    await sendPatientMessageAsync('7', '发热')
-    await submitCaseStageAsync('7', { stageId: 'problem_representation', summary: '发热' })
-    await completeCaseAttemptAsync('7')
-    await getCaseAssessmentAsync('7')
-    const saved = await saveGuidedCaseAsync(draft, '7', { slug: 'case-v1' })
+    const draft = await api.generateCaseDraftAsync({
+      topic: '主题',
+      learnerLevel: '本科',
+      learningObjectives: ['目标'],
+    })
+    await api.getCaseAttemptsAsync()
+    await api.getDemoCaseProblemsAsync()
+    await api.getGuidedCasesAsync()
+    await api.getCaseAuthoringAsync('7')
+    await api.cloneCaseVersionAsync('7')
+    await api.publishGuidedCaseAsync('7')
+    await api.submitGuidedCaseForReviewAsync('7')
+    await api.getMedicalReviewQueueAsync()
+    await api.getMedicalReviewViewAsync('7')
+    await api.decideGuidedCaseReviewAsync('7', 'approved', '')
+    await api.getCaseAttemptAsync('7')
+    await api.startCaseAttemptAsync('7', '6')
+    await api.sendPatientMessageAsync('7', '发热')
+    await api.submitCaseStageAsync('7', { stageId: 'problem_representation', summary: '发热' })
+    await api.completeCaseAttemptAsync('7')
+    await api.getCaseAssessmentAsync('7')
+    const saved = await api.saveGuidedCaseAsync(draft, '7', { slug: 'case-v1' })
     expect(saved).toBeTruthy()
   })
 })

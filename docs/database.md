@@ -157,3 +157,7 @@ student_notifications
 计划以 `source_assessment_id` 唯一，学生最多一个 active 计划；任务以 `(plan_id, position)` 唯一，微训练 attempt 以 `task_id` 唯一。降级只移除 0006 对象和新增字段，不删除 legacy class_ids、班级或病例内容。`0007` 为 reports 增加 `ai_analysis`，回滚只移除该列。
 
 迁移测试覆盖空库/0004 旧库升级、legacy class_ids 回填以及从 head 回滚到 0004；SQLite 回滚会先清理早期动态建表遗留索引。
+
+## 摘要分页索引
+
+`20260830_0008_data_layer_indexes.py` 接在 0007 后，为 conversations/reports 增加 `(updated_at, id)` 和 `(student_id, updated_at, id)` 索引。升级和降级均检查索引存在性，降级只移除这四个索引，不删除业务记录。会话消息更新显式更新父会话时间，确保分页排序反映最近活动。

@@ -6,7 +6,7 @@
 
 ## 当前策略
 
-CI 使用 `audit-ci` 阻止新出现的高危和严重生产依赖漏洞。`audit-ci.json` 中的条目是当前 DCloud/uni-app 构建链无法单独升级消除的临时例外，不代表漏洞已被忽略。
+CI 分别执行 `npm run audit:prod` 与 `npm run audit:all`，两者均不允许 high 或 critical 漏洞，也不使用 advisory 白名单。后端从带哈希的锁文件安装，并使用 `python -m pip_audit -r requirements.txt` 审计。
 
 当前客户端不处理真实患者身份数据，不加载不受信任的 ZIP/JPEG 文件，也不向用户暴露 Vite 开发服务器。生产部署只发布构建后的静态资源与微信小程序包。
 
@@ -16,12 +16,11 @@ CI 使用 `audit-ci` 阻止新出现的高危和严重生产依赖漏洞。`audi
 
 旧版同时暴露了 AppID 和云环境 ID；这些是项目标识，不等同于 AppSecret，但仍应核对云数据库权限和合法域名。当前实现不再把模型密钥放在小程序端，微信 AppSecret 仅由后端环境变量读取。
 
-## 临时例外
+## 依赖升级约束
 
-- 例外仅限 `audit-ci.json` 中列出的 advisory。
-- 每次升级整组 DCloud 依赖后重新运行 `npm audit --omit=dev` 并删除已修复条目。
-- 下次强制复查日期：2026-09-20。
-- 如任一例外进入实际运行时攻击面，必须停止发布，不能继续依赖白名单。
+- `@dcloudio/*` 必须以同一发布批次升级；不得单独升级其中一个运行时或编译包。
+- 当前 DCloud 插件的 peer 元数据仍声明 Vite 5.2.8，但项目已在 Vite 7.3.6 下完成类型检查、H5 和微信小程序构建。安装使用 `npm ci --legacy-peer-deps`，每次 DCloud 或 Vite 升级必须重新完成双端构建与 API/Demo 回归。
+- low/moderate 告警不得通过 allowlist 隐藏；它们记录在依赖升级报告中，并在下次依赖批次升级时复查。
 
 # 第二阶段安全边界
 

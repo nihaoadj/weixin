@@ -1,0 +1,7 @@
+{
+  "high": true,
+  "critical": true,
+  "skip-dev": true,
+  "allowlist": [],
+  "report-type": "summary"
+}

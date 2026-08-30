@@ -1,20 +1,8 @@
 import { apiRequest, clearApiToken, isRemoteApiEnabled, saveApiToken } from '@/services/apiClient'
+import { apiLoginResponseSchema, type ValidatedLoginResponse } from '@/data/contracts/auth'
 import type { SessionUser, UserRole } from '@/types/domain'
 
-interface LoginResponse {
-  access_token: string
-  user?: {
-    id: number
-    role: UserRole
-    nickname: string
-    avatar_url: string
-    class_ids: string[]
-    permissions: string[]
-    created_at: string
-  }
-}
-
-type LoginUser = NonNullable<LoginResponse['user']>
+type LoginUser = NonNullable<ValidatedLoginResponse['user']>
 
 export function isWechatMiniProgram(): boolean {
   // #ifdef MP-WEIXIN
@@ -43,10 +31,11 @@ export async function syncDemoLoginWithBackend(params: {
 }): Promise<string[]> {
   if (!isRemoteApiEnabled()) return []
   clearApiToken()
-  const response = await apiRequest<LoginResponse>({
+  const response = await apiRequest({
     path: '/auth/demo-login',
     method: 'POST',
     auth: false,
+    schema: apiLoginResponseSchema,
     body: {
       role: params.role,
       external_id: params.openid,
@@ -68,10 +57,11 @@ export async function syncWechatLoginWithBackend(params: {
   const loginResult = await uni.login({ provider: 'weixin' })
   if (!loginResult.code) throw new Error('未获取到微信登录凭证')
   clearApiToken()
-  const response = await apiRequest<LoginResponse>({
+  const response = await apiRequest({
     path: '/auth/wechat-login',
     method: 'POST',
     auth: false,
+    schema: apiLoginResponseSchema,
     body: {
       code: loginResult.code,
       nickname: params.nickName,

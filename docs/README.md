@@ -5,15 +5,19 @@
 | 文档                                                                         | 职责                                            |
 | ---------------------------------------------------------------------------- | ----------------------------------------------- |
 | [architecture.md](./architecture.md)                                         | 总体架构、技术栈、目录边界和端侧支持            |
+| [data-layer.md](./data-layer.md)                                             | 数据访问分层、契约、缓存、存储和错误规范        |
 | [features.md](./features.md)                                                 | 当前功能、角色流程和后续功能规划                |
 | [api.md](./api.md)                                                           | FastAPI 接口契约、认证方式和主要请求响应        |
 | [database.md](./database.md)                                                 | SQLite 开发库、核心表结构和未来 PostgreSQL 迁移 |
 | [deployment.md](./deployment.md)                                             | 本地运行、构建、环境变量和部署路径              |
 | [migration.md](./migration.md)                                               | 从微信云函数/本地 Demo 迁移到 FastAPI 的路线    |
 | [development.md](./development.md)                                           | 开发规范、质量门禁、测试和 Git 注意事项         |
+| [dependency-upgrade.md](./dependency-upgrade.md)                             | 依赖安全基线、兼容矩阵与升级维护流程            |
 | [audit/initial-version-comparison.md](./audit/initial-version-comparison.md) | 初始版本功能映射、安全泄露和迁移差异            |
 
 当前路线：
+
+数据层关键决策见 [ADR 0001](./adr/0001-data-layer-contracts.md)；生成契约快照见 [openapi.json](./openapi.json)。
 
 ```text
 前端：uni-app + Vue 3 + TypeScript + Vite
