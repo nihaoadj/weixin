@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+package-lock.json
+project.private.config.json
+src/static/
+cloudfunctions/**/node_modules/

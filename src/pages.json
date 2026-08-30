@@ -1,0 +1,118 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": { "navigationBarTitleText": "医学知识问答" }
+    },
+    {
+      "path": "pages/logs/logs",
+      "style": { "navigationBarTitleText": "启动日志" }
+    },
+    {
+      "path": "pages/login/login",
+      "style": { "navigationBarTitleText": "身份登录" }
+    },
+    {
+      "path": "pages/student/chat/chat",
+      "style": { "navigationBarTitleText": "医学问答助手" }
+    },
+    {
+      "path": "pages/student/history/history",
+      "style": { "navigationBarTitleText": "历史记录" }
+    },
+    {
+      "path": "pages/student/question/question",
+      "style": { "navigationBarTitleText": "练习问题" }
+    },
+    {
+      "path": "pages/student/question-detail/question-detail",
+      "style": { "navigationBarTitleText": "问题详情" }
+    },
+    {
+      "path": "pages/student/case-training/case-training",
+      "style": { "navigationBarTitleText": "病例训练" }
+    },
+    {
+      "path": "pages/student/case-report/case-report",
+      "style": { "navigationBarTitleText": "训练报告" }
+    },
+    {
+      "path": "pages/student/learning/index",
+      "style": { "navigationBarTitleText": "个性化学习" }
+    },
+    {
+      "path": "pages/student/learning/plan",
+      "style": { "navigationBarTitleText": "训练计划" }
+    },
+    {
+      "path": "pages/student/learning/drill",
+      "style": { "navigationBarTitleText": "动态微训练" }
+    },
+    {
+      "path": "pages/student/learning/review",
+      "style": { "navigationBarTitleText": "训练复盘" }
+    },
+    {
+      "path": "pages/report/report",
+      "style": { "navigationBarTitleText": "问答报告" }
+    },
+    {
+      "path": "pages/teacher/list/list",
+      "style": { "navigationBarTitleText": "学生报告" }
+    },
+    {
+      "path": "pages/teacher/index/index",
+      "style": { "navigationBarTitleText": "教师工作台" }
+    },
+    {
+      "path": "pages/teacher/detail/detail",
+      "style": { "navigationBarTitleText": "报告批阅" }
+    },
+    {
+      "path": "pages/teacher/problem-edit/problem-edit",
+      "style": { "navigationBarTitleText": "编辑问题" }
+    },
+    {
+      "path": "pages/teacher/case-edit/case-edit",
+      "style": { "navigationBarTitleText": "病例编排" }
+    },
+    {
+      "path": "pages/teacher/problem-detail/problem-detail",
+      "style": { "navigationBarTitleText": "问题详情" }
+    },
+    {
+      "path": "pages/teacher/problem-stats/problem-stats",
+      "style": { "navigationBarTitleText": "问题统计" }
+    },
+    {
+      "path": "pages/teacher/analytics/index",
+      "style": { "navigationBarTitleText": "教学学情" }
+    },
+    {
+      "path": "pages/teacher/analytics/case-detail",
+      "style": { "navigationBarTitleText": "病例分析" }
+    },
+    {
+      "path": "pages/teacher/analytics/student-detail",
+      "style": { "navigationBarTitleText": "学生档案" }
+    },
+    {
+      "path": "pages/teacher/medical-review/review-list",
+      "style": { "navigationBarTitleText": "医学审核" }
+    },
+    {
+      "path": "pages/teacher/medical-review/review-detail",
+      "style": { "navigationBarTitleText": "审核详情" }
+    },
+    {
+      "path": "pages/teacher/classes/classes",
+      "style": { "navigationBarTitleText": "班级管理" }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "医学知识问答",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f3f7fb"
+  }
+}

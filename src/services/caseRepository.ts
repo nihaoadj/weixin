@@ -1,0 +1,525 @@
+import { additionalShowcaseDrafts, showcaseDraft } from '@/data/caseDemo'
+import { getSession } from '@/services/repository'
+import type { CaseAssessment, CaseAttempt, CaseDraftGenerateResult, CaseStageId, StageAnswer } from '@/types/case'
+import type { Problem } from '@/types/domain'
+
+const key = (name: string) => `${name}:${encodeURIComponent(getSession()?.openid || 'anonymous')}`
+const read = <T>(name: string): T[] => {
+  const value = uni.getStorageSync(key(name))
+  return Array.isArray(value) ? (value as T[]) : []
+}
+const write = <T>(name: string, value: T[]) => uni.setStorageSync(key(name), value)
+const readGlobal = <T>(name: string): T[] => {
+  const value = uni.getStorageSync(name)
+  return Array.isArray(value) ? (value as T[]) : []
+}
+const writeGlobal = <T>(name: string, value: T[]) => uni.setStorageSync(name, value)
+const stages: CaseStageId[] = ['history', 'problem_representation', 'differential', 'tests', 'management']
+const guidedDraftKey = 'guidedCaseDrafts'
+
+interface DemoReview {
+  id: string
+  reviewerOpenid: string
+  reviewerName: string
+  decision: 'approved' | 'rejected'
+  comment: string
+  problemVersion: number
+  caseDigest: string
+  createdAt: string
+}
+
+interface DemoCaseRecord {
+  problem: Problem
+  draft: CaseDraftGenerateResult
+  authorOpenid: string
+  reviews: DemoReview[]
+}
+
+function builtInProblem(id: string): Problem | undefined {
+  const draft = id === 'cap-undergraduate-showcase' ? showcaseDraft : additionalShowcaseDrafts[id]
+  if (!draft) return undefined
+  return {
+    id,
+    type: '病例分析',
+    title: draft.title,
+    description: draft.description,
+    target: 'all',
+    status: '已发布',
+    time: new Date(0).toISOString(),
+    contentType: 'guided_case',
+    slug: id,
+    specialty: draft.specialty,
+    difficulty: draft.difficulty,
+    estimatedMinutes: draft.estimatedMinutes,
+    version: 1,
+    opening: draft.caseDefinition.opening,
+    medicalReviewStatus: 'approved',
+  }
+}
+
+function demoDraftForProblem(id: string): { problem: Problem; draft: CaseDraftGenerateResult } | undefined {
+  const builtIn = builtInProblem(id)
+  if (builtIn) {
+    const draft = id === 'cap-undergraduate-showcase' ? showcaseDraft : additionalShowcaseDrafts[id]
+    return draft ? { problem: builtIn, draft } : undefined
+  }
+  const record = normalizedRecords().find((item) => item.problem.id === id)
+  return record ? { problem: record.problem, draft: record.draft } : undefined
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, item]) => `${JSON.stringify(name)}:${stableStringify(item)}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+function demoCaseDigest(problem: Problem, draft: CaseDraftGenerateResult): string {
+  const input = {
+    title: problem.title,
+    description: problem.description,
+    specialty: problem.specialty,
+    difficulty: problem.difficulty,
+    estimatedMinutes: problem.estimatedMinutes,
+    target: problem.target,
+    targetIds: problem.targetIds || [],
+    caseDefinition: draft.caseDefinition,
+    rubric: draft.rubric,
+    capabilityTags: problem.capabilityTags || [],
+    schemaVersion: draft.caseDefinition.schemaVersion,
+  }
+  const seed = 2166136261
+  const parts: string[] = []
+  for (let round = 0; round < 8; round += 1) {
+    let hash = (seed + round * 374761393) >>> 0
+    for (const char of stableStringify(input)) {
+      hash ^= char.charCodeAt(0)
+      hash = Math.imul(hash, 16777619) >>> 0
+    }
+    parts.push(hash.toString(16).padStart(8, '0'))
+  }
+  return parts.join('')
+}
+
+function currentDemoUser() {
+  const user = getSession()
+  if (!user || user.role !== 'teacher') throw new Error('只有教师可以编排病例')
+  return user
+}
+
+function cloneDraft(draft: CaseDraftGenerateResult): CaseDraftGenerateResult {
+  return JSON.parse(JSON.stringify(draft)) as CaseDraftGenerateResult
+}
+
+function normalizedRecords(): DemoCaseRecord[] {
+  return readGlobal<DemoCaseRecord>(guidedDraftKey).map((record) => ({
+    ...record,
+    authorOpenid: record.authorOpenid || 'demo_teacher',
+    reviews: record.reviews || [],
+    problem: {
+      ...record.problem,
+      medicalReviewStatus:
+        record.problem.medicalReviewStatus ||
+        (record.reviews?.some((review) => review.decision === 'approved') ? 'approved' : 'not_submitted'),
+      status:
+        record.problem.medicalReviewStatus === 'approved' &&
+        record.reviews?.some((review) => review.decision === 'approved')
+          ? record.problem.status
+          : record.problem.status === '已发布'
+            ? '待审核'
+            : record.problem.status,
+    },
+  }))
+}
+
+function writeRecords(records: DemoCaseRecord[]) {
+  writeGlobal(guidedDraftKey, records.slice(-30))
+}
+
+export function demoDraft(topic: string): CaseDraftGenerateResult {
+  const source = topic.includes('胸痛')
+    ? additionalShowcaseDrafts['acute-chest-pain-undergraduate-showcase']
+    : topic.includes('右下腹') || topic.includes('阑尾')
+      ? additionalShowcaseDrafts['right-lower-quadrant-pain-undergraduate-showcase']
+      : showcaseDraft
+  const draft = cloneDraft(source)
+  if (!['肺炎', '胸痛', '右下腹', '阑尾'].some((keyword) => topic.includes(keyword))) {
+    draft.title = `${topic}：结构化临床推理（示例）`
+  }
+  return draft
+}
+export function demoCaseProblems(): Problem[] {
+  const stored = normalizedRecords()
+  const builtIns = ['cap-undergraduate-showcase', ...Object.keys(additionalShowcaseDrafts)]
+    .map(builtInProblem)
+    .filter((item): item is Problem => Boolean(item))
+  const session = getSession()
+  const visibleStored = stored
+    .filter((item) => item.problem.id !== 'cap-undergraduate-showcase')
+    .filter((item) => session?.role !== 'student' || item.problem.status === '已发布')
+    .map((item) => item.problem)
+  return [...builtIns, ...visibleStored]
+}
+export function demoGuidedCases(): Problem[] {
+  return demoCaseProblems()
+}
+export function demoAuthoring(id: string): CaseDraftGenerateResult | undefined {
+  const user = getSession()
+  if (!user || user.role !== 'teacher') return undefined
+  if (id === 'cap-undergraduate-showcase' || additionalShowcaseDrafts[id]) {
+    return user.openid === 'demo_teacher' ? demoDraftForProblem(id)?.draft : undefined
+  }
+  return normalizedRecords().find((item) => item.problem.id === id && item.authorOpenid === user.openid)?.draft
+}
+export function demoSaveCaseDraft(draft: CaseDraftGenerateResult, existingId?: string): Problem {
+  const user = currentDemoUser()
+  const records = normalizedRecords()
+  const old = existingId ? records.find((item) => item.problem.id === existingId) : undefined
+  if (old && old.authorOpenid !== user.openid) throw new Error('只有病例作者可以编辑')
+  if (old && old.problem.medicalReviewStatus === 'pending') throw new Error('审核中的病例不可编辑')
+  if (old && old.problem.medicalReviewStatus === 'approved') throw new Error('已审核病例不可编辑，请创建新版本')
+  const problem: Problem = {
+    id: existingId || `demo-case-${Date.now()}`,
+    type: '病例分析',
+    title: draft.title,
+    description: draft.description,
+    target: old?.problem.target || 'all',
+    status: '待审核',
+    time: old?.problem.time || new Date().toISOString(),
+    contentType: 'guided_case',
+    slug: old?.problem.slug || `demo-case-${Date.now()}`,
+    specialty: draft.specialty,
+    difficulty: draft.difficulty,
+    estimatedMinutes: draft.estimatedMinutes,
+    version: old?.problem.version || 1,
+    opening: draft.caseDefinition.opening,
+    medicalReviewStatus: 'not_submitted',
+    authorId: old?.problem.authorId,
+  }
+  writeRecords([
+    ...records.filter((item) => item.problem.id !== problem.id),
+    {
+      problem,
+      draft,
+      authorOpenid: user.openid,
+      reviews: old?.reviews || [],
+    },
+  ])
+  return problem
+}
+export function demoCloneCase(id: string): Problem | undefined {
+  currentDemoUser()
+  const source = demoGuidedCases().find((item) => item.id === id)
+  const sourceRecord = normalizedRecords().find((item) => item.problem.id === id)
+  const draft = sourceRecord?.draft || demoDraftForProblem(id)?.draft
+  if (source && (source.status !== '已发布' || source.medicalReviewStatus !== 'approved')) return undefined
+  if (!source || !draft) return undefined
+  const version =
+    Math.max(
+      ...demoGuidedCases()
+        .filter((item) => item.slug === source.slug)
+        .map((item) => item.version || 1),
+    ) + 1
+  const cloneId = `demo-case-${Date.now()}-${version}`
+  const clone = demoSaveCaseDraft(cloneDraft(draft), cloneId)
+  const records = normalizedRecords()
+  const record = records.find((item) => item.problem.id === clone.id)
+  if (record) {
+    record.problem.slug = source.slug
+    record.problem.version = version
+    record.problem.medicalReviewStatus = 'not_submitted'
+    record.reviews = []
+    writeRecords(records)
+  }
+  return record?.problem || clone
+}
+export function demoPublishCase(id: string): Problem | undefined {
+  const user = currentDemoUser()
+  const records = normalizedRecords()
+  const index = records.findIndex((item) => item.problem.id === id)
+  if (index < 0) return id === 'cap-undergraduate-showcase' ? demoCaseProblems()[0] : undefined
+  const record = records[index]
+  if (record.authorOpenid !== user.openid) throw new Error('只有病例作者可以发布')
+  if (record.problem.medicalReviewStatus !== 'approved') throw new Error('病例必须先通过医学审核')
+  const latest = [...record.reviews].reverse().find((review) => review.decision === 'approved')
+  if (!latest || latest.caseDigest !== demoCaseDigest(record.problem, record.draft)) {
+    record.problem.medicalReviewStatus = 'not_submitted'
+    writeRecords(records)
+    throw new Error('审核摘要已变化，请重新提交审核')
+  }
+  records[index].problem.status = '已发布'
+  records[index].problem.publishTime = new Date().toISOString()
+  writeRecords(records)
+  return records[index].problem
+}
+
+export function demoSubmitCaseForReview(id: string): Problem | undefined {
+  const user = currentDemoUser()
+  const records = normalizedRecords()
+  const record = records.find((item) => item.problem.id === id)
+  if (!record || record.authorOpenid !== user.openid) throw new Error('只有病例作者可以提交审核')
+  if (record.problem.medicalReviewStatus === 'approved') throw new Error('已审核病例不可重复提交')
+  if (record.problem.medicalReviewStatus === 'pending') return record.problem
+  record.problem.status = '待审核'
+  record.problem.medicalReviewStatus = 'pending'
+  writeRecords(records)
+  return record.problem
+}
+
+export function demoReviewQueue(status = 'pending'): Problem[] {
+  return normalizedRecords()
+    .filter((record) => record.problem.medicalReviewStatus === status)
+    .map((record) => record.problem)
+}
+
+export function demoReviewView(id: string): Record<string, unknown> | undefined {
+  const user = getSession()
+  if (
+    !user ||
+    user.role !== 'teacher' ||
+    (!user.permissions?.includes('medical_review') && user.openid !== 'demo_reviewer')
+  ) {
+    throw new Error('需要医学审核权限')
+  }
+  const record = normalizedRecords().find((item) => item.problem.id === id)
+  if (!record) return undefined
+  return {
+    ...record.problem,
+    caseDefinition: record.draft.caseDefinition,
+    rubric: record.draft.rubric,
+    currentDigest: demoCaseDigest(record.problem, record.draft),
+    authorNickname: record.authorOpenid,
+    reviews: record.reviews,
+  }
+}
+
+export function demoDecideCaseReview(
+  id: string,
+  decision: 'approved' | 'rejected',
+  comment: string,
+): Problem | undefined {
+  const user = getSession()
+  if (
+    !user ||
+    user.role !== 'teacher' ||
+    (!user.permissions?.includes('medical_review') && user.openid !== 'demo_reviewer')
+  ) {
+    throw new Error('需要医学审核权限')
+  }
+  if (decision === 'rejected' && comment.trim().length < 5) throw new Error('退回意见至少需要 5 个字符')
+  const records = normalizedRecords()
+  const record = records.find((item) => item.problem.id === id)
+  if (!record) return undefined
+  if (record.authorOpenid === user.openid) throw new Error('作者不能审核自己的病例')
+  if (record.problem.medicalReviewStatus !== 'pending') throw new Error('病例不在待审核状态')
+  const review: DemoReview = {
+    id: `review-${Date.now()}`,
+    reviewerOpenid: user.openid,
+    reviewerName: user.nickName,
+    decision,
+    comment,
+    problemVersion: record.problem.version || 1,
+    caseDigest: demoCaseDigest(record.problem, record.draft),
+    createdAt: new Date().toISOString(),
+  }
+  record.reviews.push(review)
+  record.problem.medicalReviewStatus = decision
+  record.problem.status = decision === 'approved' ? '待审核' : '已拒绝'
+  writeRecords(records)
+  return record.problem
+}
+export function demoAttempts(): CaseAttempt[] {
+  return read<CaseAttempt>('caseAttempts')
+}
+export function demoStart(problemId: string, retryOfId?: string): CaseAttempt {
+  const target = demoDraftForProblem(problemId)
+  if (!target) throw new Error('病例不存在')
+  const prior = retryOfId ? demoAttempts().find((item) => item.id === retryOfId) : undefined
+  const focus = prior
+    ? demoAssessments().find((item) => item.attemptId === prior.id)?.focusStage || 'history'
+    : 'history'
+  const attempt: CaseAttempt = {
+    id: `case-${Date.now()}`,
+    problemId,
+    problemVersion: target.problem.version || 1,
+    status: 'in_progress',
+    currentStage: focus,
+    focusStage: prior ? focus : undefined,
+    retryOfId,
+    opening: target.draft.caseDefinition.opening,
+    messages: [],
+    submissions: prior ? prior.submissions.filter((item) => stages.indexOf(item.stageId) < stages.indexOf(focus)) : [],
+    assessmentReady: false,
+    startedAt: new Date().toISOString(),
+  }
+  write('caseAttempts', [attempt, ...demoAttempts()].slice(0, 30))
+  return attempt
+}
+export function demoFind(id: string): CaseAttempt | undefined {
+  return demoAttempts().find((item) => item.id === id)
+}
+export function demoMessage(id: string, content: string): CaseAttempt {
+  const attempt = demoFind(id)
+  if (!attempt || attempt.currentStage !== 'history') throw new Error('病史阶段已锁定')
+  const target = demoDraftForProblem(attempt.problemId)
+  if (!target) throw new Error('病例不存在')
+  const asked = attempt.messages.filter((item) => item.role === 'user').length
+  if (asked >= 30) throw new Error('请先提交病史小结')
+  const seen = new Set(
+    attempt.messages.filter((item) => item.role === 'assistant').flatMap((item) => item.revealedFactIds || []),
+  )
+  const matching = target.draft.caseDefinition.facts
+    .filter(
+      (fact) =>
+        fact.triggers.some((trigger) => content.toLowerCase().includes(trigger.toLowerCase())) && !seen.has(fact.id),
+    )
+    .slice(0, 2)
+  const reply = matching.length
+    ? matching.map((item) => item.value).join(' ')
+    : '您想具体了解症状经过、伴随表现还是既往情况？'
+  attempt.messages.push(
+    { id: `${Date.now()}u`, role: 'user', content, createdAt: new Date().toISOString() },
+    {
+      id: `${Date.now()}a`,
+      role: 'assistant',
+      content: reply,
+      revealedFactIds: matching.map((fact) => fact.id),
+      createdAt: new Date().toISOString(),
+    },
+  )
+  saveAttempt(attempt)
+  return attempt
+}
+export function demoSubmit(id: string, answer: StageAnswer): CaseAttempt {
+  const attempt = demoFind(id)
+  if (!attempt || attempt.currentStage !== answer.stageId) throw new Error('训练状态已同步，请重新进入')
+  attempt.submissions.push({
+    id: `${Date.now()}`,
+    stageId: answer.stageId,
+    answer,
+    feedback: '已保存。请继续下一阶段。',
+    createdAt: new Date().toISOString(),
+  })
+  const index = stages.indexOf(answer.stageId)
+  attempt.currentStage = index === 4 ? 'completed' : stages[index + 1]
+  if (index === 4) attempt.status = 'completed'
+  saveAttempt(attempt)
+  return attempt
+}
+export function demoAssessments(): CaseAssessment[] {
+  return read<CaseAssessment>('caseAssessments')
+}
+
+const normalizeAnswerText = (value: string) => value.toLocaleLowerCase().replace(/\s+/g, '')
+
+function answerTexts(attempt: CaseAttempt, stageIds: string[]): string[] {
+  const values: string[] = []
+  for (const message of attempt.messages) {
+    if (message.role === 'user') values.push(message.content)
+  }
+  for (const submission of attempt.submissions) {
+    if (!stageIds.includes(submission.stageId)) continue
+    const collect = (value: unknown) => {
+      if (typeof value === 'string' && value.trim()) values.push(value)
+      else if (Array.isArray(value)) value.forEach(collect)
+      else if (value && typeof value === 'object') Object.values(value).forEach(collect)
+    }
+    collect(submission.answer)
+  }
+  return values
+}
+
+function evidenceForKeyword(texts: string[], keyword: string): string | undefined {
+  const normalizedKeyword = normalizeAnswerText(keyword)
+  const candidates = texts.flatMap((text) =>
+    text
+      .split(/[。！？；\n]/u)
+      .map((part) => part.trim())
+      .filter((part) => normalizeAnswerText(part).includes(normalizedKeyword)),
+  )
+  return candidates.sort((left, right) => left.length - right.length)[0]?.slice(0, 160)
+}
+
+export function scoreDemoCase(attempt: CaseAttempt, draft: CaseDraftGenerateResult): CaseAssessment['dimensions'] {
+  return draft.rubric.dimensions.map((dimension) => {
+    const texts = answerTexts(attempt, dimension.stageIds)
+    const normalized = texts.map(normalizeAnswerText).join('|')
+    const hit = dimension.criteria.filter((criterion) =>
+      criterion.keywords.some((keyword) => normalized.includes(normalizeAnswerText(keyword))),
+    )
+    const missing = dimension.criteria.filter((criterion) => !hit.includes(criterion))
+    let score = Math.round((hit.length / dimension.criteria.length) * 1000) / 10
+    if (missing.some((criterion) => criterion.critical)) score = Math.min(score, 69)
+    const evidence = hit
+      .flatMap((criterion) => criterion.keywords.map((keyword) => evidenceForKeyword(texts, keyword)))
+      .filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index)
+      .slice(0, 3)
+    return {
+      dimensionId: dimension.id,
+      label: dimension.label,
+      score,
+      weightedScore: Math.round((score * dimension.weight) / 1000) / 10,
+      evidence: evidence.length ? evidence : ['尚未发现对应的学生原文证据'],
+      feedback: missing.length ? missing[0].feedback : '已覆盖该维度的关键评价点。',
+      nextStep: missing.length ? missing[0].feedback : '继续保持并补充更明确的原文依据。',
+    }
+  })
+}
+
+export function demoComplete(id: string): CaseAssessment {
+  const attempt = demoFind(id)
+  if (!attempt || attempt.status !== 'completed') throw new Error('请先完成五个阶段')
+  const target = demoDraftForProblem(attempt.problemId)
+  if (!target) throw new Error('病例不存在')
+  const draft = target.draft
+  const dimensions = scoreDemoCase(attempt, draft)
+  const focus = dimensions.reduce((lowest, item) => (item.score < lowest.score ? item : lowest)).dimensionId
+  const focusStage = draft.rubric.dimensions.find((item) => item.id === focus)?.stageIds[0] || 'history'
+  const previous = attempt.retryOfId
+    ? demoAssessments().find((item) => item.attemptId === attempt.retryOfId)
+    : undefined
+  const assessment: CaseAssessment = {
+    attemptId: id,
+    totalScore: Math.round(dimensions.reduce((sum, item) => sum + item.weightedScore, 0)),
+    dimensions,
+    strengths: dimensions.filter((item) => item.score >= 70).map((item) => item.label),
+    weaknesses: dimensions.filter((item) => item.score < 70).map((item) => item.label),
+    nextSteps: ['针对最低分维度进行强化练习。'],
+    summary: '本结果仅用于教学训练，不构成诊断或治疗建议。',
+    focusStage,
+    modelName: 'deterministic-fallback',
+    promptVersion: 'case-v2',
+    fallbackUsed: true,
+    comparison: previous
+      ? {
+          totalDelta:
+            Math.round((dimensions.reduce((sum, item) => sum + item.weightedScore, 0) - previous.totalScore) * 10) / 10,
+          dimensions: dimensions.map((item) => ({
+            dimensionId: item.dimensionId,
+            previousScore: previous.dimensions.find((old) => old.dimensionId === item.dimensionId)?.score || 0,
+            currentScore: item.score,
+            delta:
+              Math.round(
+                (item.score - (previous.dimensions.find((old) => old.dimensionId === item.dimensionId)?.score || 0)) *
+                  10,
+              ) / 10,
+          })),
+        }
+      : undefined,
+  }
+  attempt.status = 'assessed'
+  attempt.assessmentReady = true
+  saveAttempt(attempt)
+  write('caseAssessments', [assessment, ...demoAssessments().filter((item) => item.attemptId !== id)])
+  return assessment
+}
+function saveAttempt(attempt: CaseAttempt) {
+  write(
+    'caseAttempts',
+    demoAttempts().map((item) => (item.id === attempt.id ? attempt : item)),
+  )
+}

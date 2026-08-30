@@ -1,0 +1,23 @@
+{
+  "name": "医学知识问答",
+  "appid": "__UNI__MEDICAL_QA",
+  "description": "医学教学场景的 AI 辅助问答与形成性评价 Demo",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "h5": {
+    "title": "医学知识问答"
+  },
+  "uniStatistics": {
+    "enable": false
+  },
+  "mp-weixin": {
+    "appid": "wxedbfb5d4dfb78c80",
+    "setting": {
+      "urlCheck": true,
+      "es6": true,
+      "minified": true
+    },
+    "usingComponents": true
+  }
+}
