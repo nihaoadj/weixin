@@ -1,7 +1,25 @@
 <template>
   <view class="safe-page page">
+    <MedState
+      v-if="loading"
+      variant="loading"
+      icon="retry"
+      title="正在加载审核详情"
+      description="正在读取病例版本与审核记录。"
+    />
+    <MedState
+      v-else-if="loadError"
+      variant="error"
+      icon="retry"
+      title="审核详情加载失败"
+      :description="loadError"
+      :action-label="id ? '重新加载' : '返回工作台'"
+      :secondary-action-label="id ? '返回工作台' : ''"
+      @action="id ? load : back"
+      @secondary-action="back"
+    />
     <view
-      v-if="item"
+      v-else-if="item"
       class="card"
     >
       <text class="title">{{ item.title }}</text>
@@ -130,15 +148,18 @@
 </template>
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { requireRole } from '@/services/auth'
-import { backOrHome } from '@/services/navigation'
-import { getReviewView, submitMedicalReview } from '@/services/teacherInsights'
-import type { MedicalReviewView } from '@/services/caseRepositoryAsync'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
+import MedState from '@/components/ui/MedState.vue'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
+import { getReviewView, submitMedicalReview } from '@/features/content/public'
+import type { MedicalReviewView } from '@/types/review'
 
 const item = ref<MedicalReviewView>()
 const comment = ref('')
 const deciding = ref(false)
+const loading = ref(false)
+const loadError = ref('')
 let id = ''
 const reasoning = computed(() => item.value?.caseDefinition.referenceReasoning || {})
 const referenceProblem = computed(() => String(reasoning.value.problemRepresentation || ''))
@@ -153,17 +174,33 @@ const statusLabel = computed(() =>
       : '已退回',
 )
 
+function back() {
+  backOrRoute(ROUTES.teacherReviewList)
+}
+
+async function load() {
+  if (loading.value) return
+  if (!id) {
+    loadError.value = '缺少病例编号，无法打开审核详情。'
+    return
+  }
+  loading.value = true
+  loadError.value = ''
+  try {
+    item.value = await getReviewView(id)
+    if (!item.value) loadError.value = '病例版本不存在，或当前身份无权查看。'
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '加载失败，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
+}
 onLoad((query) => {
   if (!requireRole('teacher')) return
-  id = String(query?.id || '')
-  void (async () => {
-    try {
-      item.value = await getReviewView(id)
-    } catch (error) {
-      uni.showToast({ title: error instanceof Error ? error.message : '加载失败', icon: 'none' })
-    }
-  })()
+  id = typeof query?.id === 'string' ? query.id : ''
+  void load()
 })
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherReviewList))
 async function decide(decision: 'approved' | 'rejected') {
   if (deciding.value || !item.value) return
   if (decision === 'rejected' && comment.value.trim().length < 5) {
@@ -184,7 +221,7 @@ async function decide(decision: 'approved' | 'rejected') {
   try {
     await submitMedicalReview(id, decision, comment.value.trim())
     uni.showToast({ title: decision === 'approved' ? '已通过' : '已退回', icon: 'success' })
-    backOrHome('teacher')
+    back()
   } catch (error) {
     uni.showToast({ title: error instanceof Error ? error.message : '提交失败', icon: 'none' })
   } finally {
@@ -196,7 +233,7 @@ async function decide(decision: 'approved' | 'rejected') {
 .page {
   min-height: 100vh;
   padding: 28rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
 }
 .card {
   padding: 28rpx;
@@ -210,14 +247,14 @@ async function decide(decision: 'approved' | 'rejected') {
 .body {
   display: block;
   margin-top: 10rpx;
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
   line-height: 1.55;
 }
 .section {
   display: block;
   margin-top: 28rpx;
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 27rpx;
   font-weight: 700;
 }
@@ -236,8 +273,8 @@ async function decide(decision: 'approved' | 'rejected') {
   display: block;
   margin-top: 12rpx;
   padding: 12rpx;
-  color: #087f8c;
-  background: #e8f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
   word-break: break-all;
   font-size: 20rpx;
 }
@@ -246,7 +283,7 @@ textarea {
   min-height: 220rpx;
   margin-top: 22rpx;
   padding: 18rpx;
-  border: 1rpx solid #dbe7eb;
+  border: 1rpx solid var(--med-border);
   border-radius: 14rpx;
 }
 .actions {
@@ -260,10 +297,10 @@ textarea {
 .primary,
 .secondary {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 </style>

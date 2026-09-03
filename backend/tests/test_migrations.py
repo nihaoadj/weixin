@@ -61,3 +61,38 @@ def test_0005_upgrades_legacy_members_and_downgrade_preserves_data() -> None:
                 assert connection.execute(text("SELECT COUNT(*) FROM class_members")).scalar_one() == 1
         finally:
             engine.dispose()
+
+
+def test_actual_head_0009_upgrades_empty_and_0008_databases() -> None:
+    """Exercise the current worktree head, including 0008 -> 0009 additions."""
+    cwd = Path(__file__).parents[1]
+    with TemporaryDirectory(prefix="medical-qa-migration-head-") as directory:
+        db_path = Path(directory) / "head.db"
+        database_url = f"sqlite:///{db_path.as_posix()}"
+        run_alembic(cwd, database_url, "upgrade", "head")
+        engine = create_engine(database_url)
+        try:
+            inspector = inspect(engine)
+            assert "reviewer_id" in {column["name"] for column in inspector.get_columns("reports")}
+            assert "auth_provider" in {column["name"] for column in inspector.get_columns("users")}
+            assert "ix_reports_reviewer_id" in {index["name"] for index in inspector.get_indexes("reports")}
+            assert "ix_users_auth_provider" in {index["name"] for index in inspector.get_indexes("users")}
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO users (external_id, role, nickname, avatar_url, class_ids, permissions, "
+                        "auth_provider) "
+                        "VALUES ('head-user', 'teacher', '迁移教师', '', '[]', '[]', 'wechat')"
+                    )
+                )
+            run_alembic(cwd, database_url, "upgrade", "head")
+            run_alembic(cwd, database_url, "downgrade", "20260830_0008")
+            assert "auth_provider" not in {column["name"] for column in inspect(engine).get_columns("users")}
+            run_alembic(cwd, database_url, "upgrade", "head")
+            with engine.connect() as connection:
+                assert (
+                    connection.execute(text("SELECT COUNT(*) FROM users WHERE external_id = 'head-user'")).scalar_one()
+                    == 1
+                )
+        finally:
+            engine.dispose()

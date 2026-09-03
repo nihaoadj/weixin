@@ -35,7 +35,9 @@
       title="班级加载失败"
       :description="loadError"
       action-label="重新加载"
+      secondary-action-label="返回工作台"
       @action="load"
+      @secondary-action="back"
     />
     <MedState
       v-else-if="!classes.length"
@@ -119,9 +121,10 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onBackPress, onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/services/auth'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
 import {
   addStudentToClass,
   createTeacherClass,
@@ -131,7 +134,7 @@ import {
   updateTeacherClass,
   type TeacherClass,
   type TeacherStudent,
-} from '@/services/teacherInsights'
+} from '@/features/classroom/public'
 
 const classes = ref<TeacherClass[]>([])
 const selected = ref<TeacherClass>()
@@ -142,6 +145,10 @@ const memberExternalId = ref('')
 const saving = ref(false)
 const loading = ref(false)
 const loadError = ref('')
+
+function back() {
+  backOrRoute(ROUTES.teacherWorkspace)
+}
 
 async function load() {
   if (loading.value) return
@@ -260,12 +267,13 @@ function removeMember(classroom: TeacherClass, studentId: number) {
 onShow(() => {
   if (requireRole('teacher')) void load()
 })
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace))
 </script>
 <style scoped>
 .page {
   min-height: 100vh;
   padding: 28rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
 }
 .card {
   margin-bottom: 18rpx;
@@ -283,7 +291,7 @@ onShow(() => {
 .muted {
   display: block;
   margin-top: 10rpx;
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .form {
@@ -294,18 +302,18 @@ onShow(() => {
 input {
   min-height: 70rpx;
   padding: 0 16rpx;
-  border: 1rpx solid #dbe7eb;
+  border: 1rpx solid var(--med-border);
   border-radius: 12rpx;
 }
 .primary,
 .secondary,
 .small {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 .full {
   width: 100%;
@@ -352,7 +360,7 @@ input {
   font-size: 23rpx;
 }
 .empty {
-  color: #718096;
+  color: var(--med-muted);
   text-align: center;
 }
 </style>

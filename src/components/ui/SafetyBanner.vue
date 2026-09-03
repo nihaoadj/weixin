@@ -1,5 +1,9 @@
 <template>
-  <view class="safety-banner">
+  <view
+    class="safety-banner"
+    role="note"
+    aria-label="医学学习安全提示"
+  >
     <view class="safety-icon"
       ><MedIcon
         name="brand"
@@ -21,10 +25,11 @@ import MedIcon from '@/components/ui/MedIcon.vue'
   display: flex;
   padding: 20rpx 22rpx;
   align-items: flex-start;
-  color: #315568;
-  background: #e9f7f5;
-  border: 1rpx solid #c8e9e3;
-  border-radius: 20rpx;
+  color: var(--med-safety);
+  background: var(--med-safety-soft);
+  border: 1rpx solid var(--med-safety-border);
+  border-left: 6rpx solid var(--med-safety);
+  border-radius: var(--med-radius-md);
 }
 .safety-icon {
   display: flex;
@@ -32,8 +37,8 @@ import MedIcon from '@/components/ui/MedIcon.vue'
   height: 48rpx;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border-radius: 14rpx;
+  background: var(--med-surface);
+  border-radius: var(--med-radius-sm);
 }
 .safety-copy {
   display: flex;
@@ -43,14 +48,14 @@ import MedIcon from '@/components/ui/MedIcon.vue'
   flex-direction: column;
 }
 .safety-title {
-  color: #0b5d61;
+  color: var(--med-safety);
   font-size: 24rpx;
   font-weight: 700;
 }
 .safety-description {
   margin-top: 4rpx;
-  color: #55717e;
-  font-size: 21rpx;
+  color: var(--med-safety-text);
+  font-size: 24rpx;
   line-height: 1.55;
 }
 </style>

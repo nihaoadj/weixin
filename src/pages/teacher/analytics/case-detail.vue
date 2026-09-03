@@ -5,8 +5,10 @@
       icon="retry"
       title="病例分析加载失败"
       :description="error"
-      action-label="重新加载"
-      @action="load"
+      :action-label="routeInvalid ? '返回工作台' : '重新加载'"
+      :secondary-action-label="routeInvalid ? '' : '返回工作台'"
+      @action="handleErrorAction"
+      @secondary-action="back"
     /><view
       v-if="data.problem"
       class="card panel"
@@ -75,10 +77,11 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/services/auth'
-import { getAnalyticsCase, type AnalyticsCase } from '@/services/teacherInsights'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, goDetail, handleBackPress, ROUTES } from '@/platform/navigation'
+import { getAnalyticsCase, type AnalyticsCase } from '@/features/analytics/public'
 const iso = (date: Date) => date.toISOString().slice(0, 10)
 const today = new Date()
 const dateTo = ref(iso(today))
@@ -98,9 +101,11 @@ const data = ref<AnalyticsCase>({
 })
 const error = ref('')
 const loading = ref(false)
+const routeInvalid = ref(false)
 let problemId = 0
 let classId: number | undefined
 async function load() {
+  if (routeInvalid.value || loading.value) return
   loading.value = true
   try {
     error.value = ''
@@ -112,21 +117,39 @@ async function load() {
   }
 }
 function openStudent(id: number) {
-  uni.navigateTo({
-    url: `/pages/teacher/analytics/student-detail?studentId=${id}${classId ? `&classId=${classId}` : ''}`,
-  })
+  goDetail(ROUTES.teacherAnalyticsStudentDetail, { studentId: id, classId: classId })
+}
+function back() {
+  backOrRoute(ROUTES.teacherAnalytics)
+}
+function handleErrorAction() {
+  if (routeInvalid.value) {
+    back()
+    return
+  }
+  void load()
 }
 onLoad((query) => {
   if (!requireRole('teacher')) return
   problemId = Number(query?.problemId || 0)
   classId = query?.classId ? Number(query.classId) : undefined
+  if (
+    !Number.isSafeInteger(problemId) ||
+    problemId <= 0 ||
+    (classId !== undefined && (!Number.isSafeInteger(classId) || classId <= 0))
+  ) {
+    routeInvalid.value = true
+    error.value = '缺少或无效的病例编号，无法打开病例分析。'
+    return
+  }
   void load()
 })
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherAnalytics))
 </script>
 <style scoped>
 .page {
   padding: 28rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
   min-height: 100vh;
 }
 .panel {
@@ -145,7 +168,7 @@ onLoad((query) => {
   font-weight: 750;
 }
 .muted {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .dates {
@@ -157,18 +180,18 @@ onLoad((query) => {
   flex: 1;
   min-height: 62rpx;
   padding: 0 12rpx;
-  border: 1rpx solid #dbe7eb;
+  border: 1rpx solid var(--med-border);
   border-radius: 10rpx;
   font-size: 21rpx;
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 .row {
   display: flex;
   padding: 14rpx 0;
   justify-content: space-between;
-  border-bottom: 1rpx solid #e5edf0;
+  border-bottom: 1rpx solid var(--med-divider);
 }
 </style>

@@ -1,42 +1,72 @@
 <script setup lang="ts">
 import { onLaunch } from '@dcloudio/uni-app'
-import { ensureDemoData } from '@/services/repository'
-import { isDemoMode } from '@/config/runtime'
+import { ensureDemoData } from '@/features/qa/public'
+import { recordStartupLog } from '@/platform/logs'
 
 onLaunch(() => {
-  const logs = uni.getStorageSync('logs')
-  const nextLogs = Array.isArray(logs) ? logs : []
-  nextLogs.unshift(Date.now())
-  uni.setStorageSync('logs', nextLogs.slice(0, 50))
-  if (isDemoMode()) ensureDemoData()
+  recordStartupLog()
+  ensureDemoData()
 })
 </script>
 
 <style>
 page {
-  --med-navy: #0b2239;
-  --med-text: #193246;
-  --med-muted: #637985;
-  --med-brand: #0f8b8d;
-  --med-brand-deep: #0b5d61;
-  --med-accent: #35b7a8;
-  --med-page: #f4f8fa;
-  --med-surface: #ffffff;
-  --med-border: #dbe7eb;
-  --med-warning: #b36528;
-  --med-danger: #c64753;
-  --med-radius-sm: 14rpx;
+  --med-paper: #f6f8f6;
+  --med-ink: #102a43;
+  --med-clinical: #0a6b66;
+  --med-wash: #e4f1ee;
+  --med-safety: #9a5618;
+  --med-safety-soft: #fef3e8;
+  --med-safety-border: #efd1aa;
+  --med-safety-text: #71502f;
+  --med-alert: #b8454f;
+  --med-alert-soft: #fff0f2;
+  --med-font-body: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', sans-serif;
+  --med-font-display: var(--med-font-body);
+  --med-font-utility: 'DIN Alternate', 'SFMono-Regular', Consolas, monospace;
+  --med-navy: var(--med-ink);
+  --med-text: #243b53;
+  --med-text-secondary: #526174;
+  --med-muted: #5e7382;
+  --med-brand: var(--med-clinical);
+  --med-brand-deep: #075753;
+  --med-brand-soft: var(--med-wash);
+  --med-accent: #2f8f87;
+  --med-page: var(--med-paper);
+  --med-surface: #fbfdfd;
+  --med-border: #d4e0dc;
+  --med-divider: #e7eeeb;
+  --med-warning: var(--med-safety);
+  --med-danger: var(--med-alert);
+  --med-radius-sm: 12rpx;
   --med-radius-md: 20rpx;
-  --med-radius-lg: 28rpx;
-  --med-shadow-card: 0 16rpx 42rpx rgba(11, 34, 57, 0.08);
+  --med-radius-lg: 20rpx;
+  --med-space-1: 16rpx;
+  --med-space-2: 24rpx;
+  --med-space-3: 32rpx;
+  --med-space-4: 48rpx;
+  --med-space-5: 64rpx;
+  --med-shadow-card: none;
+  --med-motion-press: 70ms;
+  --med-motion-settle: 180ms;
+  --med-motion-enter: 200ms;
+  --med-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   min-height: 100%;
   color: var(--med-text);
   background: var(--med-page);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: var(--med-font-body);
   font-size: 28rpx;
 }
 
-button::after {
+button {
+  box-sizing: border-box;
+  font-family: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(10, 107, 102, 0.14);
+}
+
+button::after,
+.safe-page button::after {
   border: 0;
 }
 
@@ -55,7 +85,7 @@ button::after {
 .primary-button {
   min-height: 88rpx;
   color: #fff;
-  background: linear-gradient(135deg, var(--med-brand-deep), var(--med-brand));
+  background: var(--med-clinical);
   border-radius: 20rpx;
   font-size: 30rpx;
   font-weight: 600;
@@ -70,6 +100,15 @@ button[disabled] {
   opacity: 0.48;
 }
 
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+input:focus-within,
+textarea:focus-within {
+  outline: 4rpx solid var(--med-clinical);
+  outline-offset: 4rpx;
+}
+
 .muted {
   color: var(--med-muted);
 }
@@ -82,21 +121,99 @@ button[disabled] {
 }
 
 .eyebrow-label {
-  color: var(--med-brand);
-  font-size: 20rpx;
+  color: var(--med-clinical);
+  font-family: var(--med-font-utility);
+  font-size: 22rpx;
   font-weight: 700;
   letter-spacing: 3rpx;
 }
 
+button,
 .pressable {
   transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
+    opacity var(--med-motion-settle) var(--med-ease-out),
+    transform var(--med-motion-settle) var(--med-ease-out);
+  transform-origin: center;
 }
 
-.pressable:active {
-  opacity: 0.76;
-  transform: scale(0.985);
+button:not([disabled]):active,
+button.is-pressed,
+.pressable:active,
+.pressable.is-pressed {
+  opacity: 0.86;
+  transform: translateY(1px);
+  transition-duration: var(--med-motion-press);
+}
+
+button.motion-card:not([disabled]):active,
+button.motion-card.is-pressed {
+  transform: scale(0.992);
+}
+
+/* 入场不移动页面根节点，避免改变固定操作栏的定位参照。 */
+/* #ifdef H5 */
+.page-enter {
+  animation: med-page-enter var(--med-motion-enter) var(--med-ease-out);
+}
+/* #endif */
+
+.step-enter {
+  animation: med-step-enter var(--med-motion-enter) var(--med-ease-out);
+}
+
+@keyframes med-page-enter {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes med-step-enter {
+  from {
+    opacity: 0.72;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .pressable {
+    transition: none;
+  }
+
+  button:not([disabled]):active,
+  button.is-pressed,
+  .pressable:active,
+  .pressable.is-pressed,
+  button.motion-card:not([disabled]):active,
+  button.motion-card.is-pressed {
+    transform: none;
+    transition: none;
+  }
+
+  .page-enter,
+  .step-enter {
+    animation: none;
+  }
+}
+
+@media (hover: hover) {
+  button:not([disabled]):hover {
+    opacity: 0.92;
+  }
+}
+
+@media screen and (min-width: 600px) and (max-width: 899px) {
+  .eyebrow-label {
+    font-size: 14px;
+    letter-spacing: 2px;
+  }
 }
 
 @media screen and (min-width: 900px) {

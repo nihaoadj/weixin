@@ -5,3 +5,4 @@ alembic==1.19.1
 pydantic-settings==2.15.0
 PyJWT[crypto]==2.13.0
 httpx==0.28.1
+cozepy==0.20.0

@@ -69,3 +69,35 @@ def test_structured_call_disabled_and_http_error(monkeypatch) -> None:
     monkeypatch.setattr("app.services.case_ai.httpx.post", lambda *args, **kwargs: FakeResponse({}, 500))
     failed = call_structured("patient_reply", [], PatientReplyModel, 0.2)
     assert failed.failure_reason == "http_error"
+
+
+def test_structured_call_classifies_missing_config_timeout_empty_and_schema_errors(monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "ai_enabled", True)
+    monkeypatch.setattr(settings, "ai_base_url", "")
+    assert call_structured("patient_reply", [], PatientReplyModel, 0.2).failure_reason == "config_missing"
+
+    _enable_ai(monkeypatch)
+    calls = []
+
+    def timeout(*_args, **kwargs):
+        calls.append(kwargs["json"])
+        raise httpx.TimeoutException("timeout")
+
+    monkeypatch.setattr("app.services.case_ai.httpx.post", timeout)
+    assert (
+        call_structured("patient_reply", [{"role": "user", "content": "x"}], PatientReplyModel, 0.2).failure_reason
+        == "timeout"
+    )
+    assert calls[1]["messages"][-1]["content"] == '{"retry_reason": "timeout"}'
+
+    monkeypatch.setattr(
+        "app.services.case_ai.httpx.post",
+        lambda *_args, **_kwargs: FakeResponse({"choices": [{"message": {"content": ""}}]}),
+    )
+    assert call_structured("patient_reply", [], PatientReplyModel, 0.2).failure_reason == "empty_response"
+    monkeypatch.setattr(
+        "app.services.case_ai.httpx.post",
+        lambda *_args, **_kwargs: FakeResponse({"choices": [{"message": {"content": "{}"}}]}),
+    )
+    assert call_structured("patient_reply", [], PatientReplyModel, 0.2).failure_reason == "schema_error"

@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
 
+const apiPort = Number(process.env.E2E_API_PORT ?? 8001)
+
 async function loginAsReviewer(page: import('@playwright/test').Page) {
-  const response = await page.request.post('http://127.0.0.1:8001/auth/demo-login', {
+  const response = await page.request.post(`http://127.0.0.1:${apiPort}/auth/demo-login`, {
     data: {
       role: 'teacher',
       external_id: 'demo_reviewer',
@@ -37,8 +39,9 @@ test('teacher manages a class and completes the guided-case review flow', async 
 
   await page.goto('/')
   await page.locator('.role-button.teacher').click()
-  await expect(page.getByText('教学协作工作台')).toBeVisible()
+  await expect(page.getByText('教学查房')).toBeVisible()
 
+  await page.locator('.teacher-nav__item').filter({ hasText: '工作台' }).click()
   await page.getByText('班级管理', { exact: true }).click()
   await expect(page.getByText('班级管理', { exact: true }).first()).toBeVisible()
   await page.locator('input').nth(0).fill('E2E 春季班')
@@ -52,8 +55,8 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await expect(page.getByText(/demo_student/)).toBeVisible()
 
   await page.goBack()
-  await page.locator('.tab').filter({ hasText: '问题' }).click()
-  await page.getByText('✦ AI 生成病例', { exact: true }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '问题' }).click()
+  await page.getByText('生成病例', { exact: true }).click()
   await expect(page.getByText('病例五步编排器')).toBeVisible()
   await page.locator('input').first().fill('急性胸痛')
   await page.getByText('生成病例草稿', { exact: true }).click()
@@ -64,12 +67,13 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await page.getByText('保存草稿', { exact: true }).click()
   await expect(page.getByText('提交医学审核', { exact: true })).toBeVisible()
   await page.getByText('提交医学审核', { exact: true }).click()
-  await expect(page.getByText('医学审核中')).toBeVisible()
+  await expect(page.getByText('医学审核中', { exact: true })).toBeVisible()
 
   await page.goBack()
   await page.getByText('退出', { exact: true }).click()
   await loginAsReviewer(page)
-  await expect(page.getByText('教学协作工作台')).toBeVisible()
+  await expect(page.getByText('教学查房')).toBeVisible()
+  await page.locator('.teacher-nav__item').filter({ hasText: '工作台' }).click()
   await page
     .locator('.quick-links')
     .getByText(/医学审核/)
@@ -83,7 +87,7 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await page.goBack()
   await page.getByText('退出', { exact: true }).click()
   await page.locator('.role-button.teacher').click()
-  await page.locator('.tab').filter({ hasText: '问题' }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '问题' }).click()
   const card = page.locator('.problem-card').filter({ hasText: title })
   await card.getByText('发布', { exact: true }).click()
   await page.getByText('OK', { exact: true }).click()

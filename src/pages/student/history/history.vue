@@ -3,6 +3,26 @@
     <view class="page-heading"
       ><text class="eyebrow-label">LEARNING TIMELINE</text><text class="heading-title">学习记录</text></view
     >
+    <view class="topic-filter card">
+      <text class="filter-label">按学习主题筛选</text>
+      <view class="filter-actions">
+        <picker
+          v-if="topicOptions.length"
+          :range="topicOptions"
+          range-key="label"
+          @change="selectTopic"
+        >
+          <button class="filter-select">{{ activeTopicLabel || '全部主题' }}</button>
+        </picker>
+        <button
+          v-if="activeTopicCode"
+          class="filter-clear"
+          @click="clearTopic"
+        >
+          清除筛选
+        </button>
+      </view>
+    </view>
     <MedState
       v-if="isLoading"
       variant="loading"
@@ -40,6 +60,18 @@
         <text class="time">{{ formatDateTime(item.updatedAt || item.createdAt) }}</text>
       </view>
       <text class="preview">{{ item.messagePreview || '无内容' }}</text>
+      <view
+        v-if="item.topicCodes?.length"
+        class="topic-tags"
+      >
+        <text
+          v-for="code in item.topicCodes"
+          :key="code"
+          class="topic-tag"
+        >
+          {{ topicName(code) }}
+        </text>
+      </view>
       <view class="row footer">
         <text>{{ item.messageCount }} 条消息</text>
         <text
@@ -64,14 +96,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import StudentNav from '@/components/ui/StudentNav.vue'
-import { requireRole } from '@/services/auth'
-import { goDetail, goPrimary, ROUTES } from '@/services/navigation'
-import { getConversationSummariesAsync } from '@/services/repositoryAsync'
+import { requireRole } from '@/features/identity/public'
+import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
+import { getConversationSummariesAsync } from '@/features/qa/public'
+import { getKnowledgeCatalog } from '@/features/learning/public'
 import type { ConversationSummary } from '@/types/domain'
+import type { KnowledgePoint } from '@/types/knowledge'
 import { formatDateTime } from '@/utils/date'
 
 const PAGE_SIZE = 20
@@ -80,13 +114,29 @@ const total = ref(0)
 const isLoading = ref(false)
 const isLoadingMore = ref(false)
 const loadError = ref('')
+const points = ref<KnowledgePoint[]>([])
+const activeTopicCode = ref('')
 let revision = 0
 const nextOffset = ref(0)
+const topicOptions = computed(() => [
+  { label: '全部主题', code: '' },
+  ...points.value.map((point) => ({ label: `${point.systemLabel} · ${point.title}`, code: point.code })),
+])
+const activeTopicLabel = computed(() => points.value.find((point) => point.code === activeTopicCode.value)?.title || '')
 
 onShow(() => {
   if (!requireRole('student')) return
+  void loadTopics()
   void refresh()
 })
+
+async function loadTopics() {
+  try {
+    points.value = await getKnowledgeCatalog()
+  } catch {
+    points.value = []
+  }
+}
 
 async function refresh() {
   if (isLoading.value) return
@@ -94,7 +144,7 @@ async function refresh() {
   const requestRevision = ++revision
   loadError.value = ''
   try {
-    const page = await getConversationSummariesAsync(PAGE_SIZE, 0)
+    const page = await getConversationSummariesAsync(PAGE_SIZE, 0, activeTopicCode.value || undefined)
     if (requestRevision !== revision) return
     items.value = page.items
     nextOffset.value = page.items.length
@@ -111,7 +161,7 @@ async function loadMore() {
   isLoadingMore.value = true
   const requestRevision = revision
   try {
-    const page = await getConversationSummariesAsync(PAGE_SIZE, nextOffset.value)
+    const page = await getConversationSummariesAsync(PAGE_SIZE, nextOffset.value, activeTopicCode.value || undefined)
     if (requestRevision !== revision) return
     nextOffset.value = page.items.length ? nextOffset.value + page.items.length : page.total
     const existing = new Set(items.value.map((item) => item.conversationId))
@@ -124,6 +174,21 @@ async function loadMore() {
   }
 }
 
+function selectTopic(event: { detail: { value: string | number } }) {
+  const topic = topicOptions.value[Number(event.detail.value)]
+  activeTopicCode.value = topic?.code || ''
+  void refresh()
+}
+
+function clearTopic() {
+  activeTopicCode.value = ''
+  void refresh()
+}
+
+function topicName(code: string) {
+  return points.value.find((point) => point.code === code)?.title || code
+}
+
 function openConversation(conversationId: string) {
   goDetail(ROUTES.studentChat, { conversationId })
 }
@@ -133,7 +198,7 @@ function openChat() {
 }
 
 function openReport(conversationId: string) {
-  goDetail('/pages/report/report', { conversationId })
+  goDetail(ROUTES.studentReport, { conversationId })
 }
 </script>
 
@@ -148,13 +213,57 @@ function openReport(conversationId: string) {
 }
 .heading-title {
   margin-top: 8rpx;
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 42rpx;
   font-weight: 800;
 }
 .history-card {
   margin-bottom: 22rpx;
   padding: 28rpx;
+}
+.topic-filter {
+  display: flex;
+  margin-bottom: 22rpx;
+  padding: 18rpx 22rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.filter-label {
+  color: var(--med-muted);
+  font-size: 23rpx;
+}
+.filter-actions,
+.topic-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+.filter-select,
+.filter-clear {
+  min-height: 48rpx;
+  margin: 0;
+  padding: 0 14rpx;
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  border-radius: var(--med-radius-sm);
+  font-size: 22rpx;
+  line-height: 48rpx;
+}
+.filter-clear {
+  color: var(--med-muted);
+  background: transparent;
+}
+.topic-tags {
+  margin: -4rpx 0 16rpx;
+}
+.topic-tag {
+  padding: 5rpx 10rpx;
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  border-radius: 99rpx;
+  font-size: 20rpx;
 }
 .row {
   display: flex;
@@ -173,24 +282,24 @@ function openReport(conversationId: string) {
   display: -webkit-box;
   margin: 20rpx 0;
   overflow: hidden;
-  color: #526174;
+  color: var(--med-text-secondary);
   line-height: 1.55;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 .footer {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .tag {
   padding: 7rpx 14rpx;
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
   border-radius: 99rpx;
 }
 .load-more {
   margin-top: 24rpx;
-  color: #087f8c;
+  color: var(--med-brand);
   background: transparent;
   font-size: 24rpx;
 }
@@ -201,8 +310,17 @@ function openReport(conversationId: string) {
   left: 24rpx;
   padding: 8rpx;
   background: #fff;
-  border: 1rpx solid #dbe7eb;
+  border: 1rpx solid var(--med-border);
   border-radius: 24rpx;
   box-shadow: 0 14rpx 40rpx rgba(11, 34, 57, 0.12);
+}
+@media screen and (min-width: 900px) {
+  .nav-shell {
+    right: auto;
+    left: 50%;
+    width: calc(1080px - 48rpx);
+    max-width: calc(100% - 48rpx);
+    transform: translateX(-50%);
+  }
 }
 </style>

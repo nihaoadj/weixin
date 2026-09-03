@@ -1,0 +1,37 @@
+{
+  "sourceRoot": "src",
+  "featureLayers": ["public", "presentation", "application", "domain", "infrastructure"],
+  "presentationRoots": ["src/pages", "src/components", "src/App.vue"],
+  "sharedRoots": ["src/shared", "src/types", "src/utils"],
+  "allowedOtherPaths": ["src/main.ts"],
+  "legacyRoots": ["src/services", "src/data", "src/config"],
+  "generatedPaths": ["src/data/contracts/openapi.generated.ts"],
+  "aliases": { "@/": "src/" },
+  "frameworkModules": [
+    "vue",
+    "@dcloudio/uni-app",
+    "@dcloudio/uni-components",
+    "@dcloudio/uni-h5",
+    "@dcloudio/uni-mp-weixin"
+  ],
+  "platformIoMembers": [
+    "request",
+    "getStorage",
+    "setStorage",
+    "removeStorage",
+    "clearStorage",
+    "getStorageInfo",
+    "getStorageSync",
+    "setStorageSync",
+    "removeStorageSync",
+    "clearStorageSync",
+    "getStorageInfoSync"
+  ],
+  "platformIoRoots": ["src/platform"],
+  "browserNetworkGlobals": ["fetch", "XMLHttpRequest"],
+  "browserGlobalObjects": ["window", "globalThis", "self"],
+  "browserNetworkRoots": ["src/platform/http"],
+  "presentationPlatformRoots": ["src/platform/navigation", "src/platform/logs"],
+  "implementationExtensions": [".ts", ".vue"],
+  "testFileMarkers": [".spec.", ".test."]
+}

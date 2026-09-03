@@ -1,42 +1,62 @@
 <template>
-  <view class="safe-page page"
-    ><view class="card panel"
-      ><text class="eyebrow-label">REFLECTION</text><text class="title">训练复盘</text
-      ><text class="muted">正式能力变化与练习掌握度分开显示。</text
-      ><view
-        v-for="item in profile.formalDimensions"
-        :key="String(item.dimension_id)"
-        class="row"
-        ><text>{{ item.label || item.dimension_id }}</text
-        ><text>{{ item.score || 0 }}</text></view
-      ></view
-    ><view class="card panel"
-      ><text class="section-title">微训练掌握度</text
-      ><view
-        v-for="(item, key) in profile.practiceMastery"
-        :key="key"
-        class="row"
-        ><text>{{ key }}</text
-        ><text>{{ item.averageScore }} 分 · {{ item.attemptCount }} 次</text></view
-      ><text
-        v-if="!Object.keys(profile.practiceMastery).length"
-        class="muted"
-        >完成微训练后显示掌握度。</text
-      ><button
-        class="secondary"
-        @click="back"
-      >
-        返回学习首页
-      </button></view
-    ></view
-  >
+  <view class="safe-page page">
+    <MedState
+      v-if="error"
+      variant="error"
+      icon="retry"
+      title="训练复盘加载失败"
+      :description="error"
+      action-label="重新加载"
+      secondary-action-label="返回学习首页"
+      @action="load"
+      @secondary-action="back"
+    />
+    <template v-else>
+      <view class="card panel">
+        <text class="eyebrow-label">REFLECTION</text>
+        <text class="title">训练复盘</text>
+        <text class="muted">正式能力变化与练习掌握度分开显示。</text>
+        <view
+          v-for="item in profile.formalDimensions"
+          :key="String(item.dimension_id)"
+          class="row"
+        >
+          <text>{{ item.label || item.dimension_id }}</text>
+          <text>{{ item.score || 0 }}</text>
+        </view>
+      </view>
+      <view class="card panel">
+        <text class="section-title">微训练掌握度</text>
+        <view
+          v-for="(item, key) in profile.practiceMastery"
+          :key="key"
+          class="row"
+        >
+          <text>{{ key }}</text>
+          <text>{{ item.averageScore }} 分 · {{ item.attemptCount }} 次</text>
+        </view>
+        <text
+          v-if="!Object.keys(profile.practiceMastery).length"
+          class="muted"
+          >完成微训练后显示掌握度。</text
+        >
+        <button
+          class="secondary"
+          @click="back"
+        >
+          返回学习首页
+        </button>
+      </view>
+    </template>
+  </view>
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { requireRole } from '@/services/auth'
-import { backOrHome } from '@/services/navigation'
-import { getLearningProfile } from '@/services/personalizedLearning'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
+import MedState from '@/components/ui/MedState.vue'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
+import { getLearningProfile } from '@/features/learning/public'
 import type { LearningProfile } from '@/types/learning'
 const profile = ref<LearningProfile>({
   formalDimensions: [],
@@ -44,18 +64,29 @@ const profile = ref<LearningProfile>({
   practiceMastery: {},
   unreadCount: 0,
 })
+const error = ref('')
+async function load() {
+  error.value = ''
+  try {
+    profile.value = await getLearningProfile()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '请稍后重试'
+  }
+}
 function back() {
-  backOrHome('student')
+  backOrRoute(ROUTES.studentLearning)
 }
 onLoad(async () => {
   if (!requireRole('student')) return
-  profile.value = await getLearningProfile()
+  await load()
 })
+
+onBackPress(({ from }) => handleBackPress(from, ROUTES.studentLearning))
 </script>
 <style scoped>
 .page {
   padding: 28rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
 }
 .panel {
   display: flex;
@@ -65,7 +96,7 @@ onLoad(async () => {
   gap: 16rpx;
 }
 .title {
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 38rpx;
   font-weight: 800;
 }
@@ -74,17 +105,17 @@ onLoad(async () => {
   font-weight: 750;
 }
 .muted {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 23rpx;
 }
 .row {
   display: flex;
   padding: 16rpx 0;
   justify-content: space-between;
-  border-bottom: 1rpx solid #e5edf0;
+  border-bottom: 1rpx solid var(--med-divider);
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 </style>

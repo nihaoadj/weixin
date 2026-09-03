@@ -1,7 +1,18 @@
 <template>
   <view class="safe-page detail-page">
+    <MedState
+      v-if="loadError"
+      variant="error"
+      icon="retry"
+      title="问题加载失败"
+      :description="loadError"
+      action-label="重新加载"
+      secondary-action-label="返回病例列表"
+      @action="loadQuestion(questionId)"
+      @secondary-action="back"
+    />
     <view
-      v-if="question"
+      v-else-if="question"
       class="question-card card"
     >
       <view class="meta"
@@ -17,6 +28,7 @@
     </view>
 
     <scroll-view
+      v-if="!loadError"
       class="thread"
       scroll-y
       :scroll-into-view="lastMessageId"
@@ -38,7 +50,10 @@
       <view class="thread-spacer" />
     </scroll-view>
 
-    <view class="answer-bar">
+    <view
+      v-if="!loadError"
+      class="answer-bar"
+    >
       <input
         v-model="answer"
         class="answer-input"
@@ -61,11 +76,12 @@
 
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { requireRole } from '@/services/auth'
-import { backOrHome } from '@/services/navigation'
-import { requestMedicalAssistant } from '@/services/ai'
-import { findStudentQuestionAsync, getQuestionThreadAsync, saveQuestionThreadAsync } from '@/services/repositoryAsync'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
+import MedState from '@/components/ui/MedState.vue'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
+import { requestMedicalAssistant } from '@/features/qa/public'
+import { findStudentQuestionAsync, getQuestionThreadAsync, saveQuestionThreadAsync } from '@/features/qa/public'
 import type { ChatMessage, StudentQuestion } from '@/types/domain'
 import { formatClock } from '@/utils/date'
 
@@ -74,22 +90,33 @@ const messages = ref<ChatMessage[]>([])
 const answer = ref('')
 const isLoading = ref(false)
 const lastMessageId = ref('')
+const loadError = ref('')
+let questionId = ''
 
 onLoad((options) => {
   if (!requireRole('student')) return
-  const id = typeof options?.id === 'string' ? options.id : ''
-  void loadQuestion(id)
+  questionId = typeof options?.id === 'string' ? options.id : ''
+  void loadQuestion(questionId)
 })
 
 async function loadQuestion(id: string) {
-  question.value = (await findStudentQuestionAsync(id)) || null
-  if (!question.value) {
-    uni.showToast({ title: '问题不存在', icon: 'none' })
-    backOrHome('student')
-    return
+  loadError.value = ''
+  try {
+    question.value = (await findStudentQuestionAsync(id)) || null
+    if (!question.value) {
+      uni.showToast({ title: '问题不存在', icon: 'none' })
+      back()
+      return
+    }
+    messages.value = (await getQuestionThreadAsync(id))?.messages || []
+    void scrollBottom()
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '请检查网络后重试'
   }
-  messages.value = (await getQuestionThreadAsync(id))?.messages || []
-  void scrollBottom()
+}
+
+function back() {
+  backOrRoute(ROUTES.studentCases)
 }
 
 function newMessage(role: ChatMessage['role'], content: string): ChatMessage {
@@ -129,6 +156,7 @@ async function submitAnswer() {
       history: messages.value,
       question: question.value,
       mode: question.value.type,
+      topicCodes: question.value.topicCodes || [],
     })
     messages.value.push(newMessage('assistant', response))
   } catch (error) {
@@ -140,6 +168,8 @@ async function submitAnswer() {
     await scrollBottom()
   }
 }
+
+onBackPress(({ from }) => handleBackPress(from, ROUTES.studentCases))
 </script>
 
 <style scoped>
@@ -166,8 +196,8 @@ async function submitAnswer() {
 }
 .type {
   padding: 6rpx 14rpx;
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
   border-radius: 99rpx;
 }
 .question-title {
@@ -235,7 +265,7 @@ async function submitAnswer() {
   padding: 0;
   line-height: 80rpx;
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
   border-radius: 22rpx;
 }
 .send[disabled] {

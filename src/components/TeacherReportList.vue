@@ -28,11 +28,20 @@
       @secondary-action="$emit('manage')"
     />
     <template v-if="!isLoading && !error">
-      <view
+      <button
         v-for="report in reports"
         :key="report.id"
-        class="report-card card"
+        hover-class="is-pressed"
+        :hover-start-time="0"
+        :hover-stay-time="80"
+        class="report-card card motion-card"
+        :data-report-id="report.id"
+        :aria-label="`查看${report.studentName || '学生'}的报告 ${report.originalIndex}，${report.status || '待批阅'}`"
+        role="button"
+        tabindex="0"
         @click="$emit('select', report.id)"
+        @keydown.enter.prevent="$emit('select', report.id)"
+        @keydown.space.prevent="$emit('select', report.id)"
       >
         <view class="header">
           <text class="title">{{ report.studentName || '学生' }} · 报告 {{ report.originalIndex }}</text>
@@ -47,12 +56,18 @@
           <text>{{ formatDateTime(report.createdAt) }}</text>
           <text>{{ report.messageCount }} 条消息</text>
         </view>
-      </view>
+      </button>
     </template>
     <button
       v-if="!isLoading && !error && nextOffset < total"
+      hover-class="is-pressed"
+      :hover-start-time="0"
+      :hover-stay-time="80"
+      tabindex="0"
+      role="button"
       class="load-more"
       :loading="isLoadingMore"
+      @keydown="activateButtonOnKey"
       @click="loadMore"
     >
       加载更多
@@ -61,9 +76,10 @@
 </template>
 
 <script setup lang="ts">
+import { activateButtonOnKey } from '@/components/ui/keyboard'
 import { ref } from 'vue'
 import MedState from '@/components/ui/MedState.vue'
-import { getReportSummariesAsync } from '@/services/repositoryAsync'
+import { getReportSummariesAsync } from '@/features/reports/public'
 import type { ReportSummary } from '@/types/domain'
 import { formatDateTime } from '@/utils/date'
 
@@ -132,50 +148,101 @@ defineExpose({ refresh })
 
 <style scoped>
 .report-list {
-  padding: 24rpx 24rpx 170rpx;
+  padding: 24rpx 0 40rpx;
 }
 .report-card {
+  display: block;
+  width: 100%;
+  min-height: 88rpx;
   margin-bottom: 20rpx;
   padding: 28rpx;
+  color: var(--med-text);
+  border-radius: var(--med-radius-md);
+  font-size: 28rpx;
+  text-align: left;
 }
 .header,
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16rpx;
 }
 .load-more {
+  min-height: 88rpx;
   margin-top: 24rpx;
-  color: #087f8c;
+  color: var(--med-brand);
   background: transparent;
   font-size: 24rpx;
 }
 .title {
-  font-size: 29rpx;
+  min-width: 0;
+  flex: 1;
+  font-size: 30rpx;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .status {
+  flex: none;
   padding: 7rpx 14rpx;
-  color: #b7791f;
-  background: #fff7df;
+  color: var(--med-safety);
+  background: var(--med-safety-soft);
   border-radius: 99rpx;
   font-size: 21rpx;
 }
 .status.reviewed {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 .preview {
   display: -webkit-box;
   margin: 20rpx 0;
   overflow: hidden;
-  color: #526174;
+  color: var(--med-text-secondary);
+  font-size: 28rpx;
   line-height: 1.55;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 .footer {
-  color: #8795a8;
+  color: var(--med-muted);
   font-size: 21rpx;
+}
+@media screen and (max-width: 360px) {
+  .title {
+    font-size: 14px;
+  }
+
+  .preview {
+    font-size: 13px;
+  }
+
+  .status,
+  .footer {
+    font-size: 11px;
+  }
+}
+@media screen and (min-width: 600px) {
+  .report-list {
+    padding: 20px 0 32px;
+  }
+
+  .report-card {
+    padding: 24px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .status,
+  .footer {
+    font-size: 13px;
+  }
+
+  .preview {
+    margin: 16px 0;
+    font-size: 16px;
+  }
 }
 </style>

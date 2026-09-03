@@ -2,6 +2,9 @@
   <view
     class="med-state card"
     :class="`med-state--${variant}`"
+    :role="variant === 'error' ? 'alert' : 'status'"
+    :aria-live="variant === 'error' ? 'assertive' : 'polite'"
+    :aria-busy="variant === 'loading' ? 'true' : undefined"
   >
     <view
       class="med-state__icon"
@@ -16,14 +19,26 @@
     <text class="med-state__description">{{ description }}</text>
     <button
       v-if="actionLabel"
+      hover-class="is-pressed"
+      :hover-start-time="0"
+      :hover-stay-time="80"
+      tabindex="0"
+      role="button"
       class="med-state__action"
+      @keydown="activateButtonOnKey"
       @click="$emit('action')"
     >
       {{ actionLabel }}
     </button>
     <button
       v-if="secondaryActionLabel"
+      hover-class="is-pressed"
+      :hover-start-time="0"
+      :hover-stay-time="80"
+      tabindex="0"
+      role="button"
       class="med-state__secondary"
+      @keydown="activateButtonOnKey"
       @click="$emit('secondaryAction')"
     >
       {{ secondaryActionLabel }}
@@ -32,6 +47,7 @@
 </template>
 
 <script setup lang="ts">
+import { activateButtonOnKey } from '@/components/ui/keyboard'
 import MedIcon from '@/components/ui/MedIcon.vue'
 
 withDefaults(
@@ -63,47 +79,59 @@ defineEmits<{ action: []; secondaryAction: [] }>()
   height: 96rpx;
   align-items: center;
   justify-content: center;
-  background: #eaf7f5;
+  background: var(--med-brand-soft);
   border-radius: 28rpx;
 }
 .med-state--error .med-state__icon {
-  background: #fff1f2;
+  background: var(--med-alert-soft);
 }
 .med-state__icon--loading {
-  animation: med-state-spin 1.2s linear infinite;
+  animation: med-state-pulse 1.2s ease-in-out infinite alternate;
 }
 .med-state__title {
   margin-top: 24rpx;
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 31rpx;
   font-weight: 750;
 }
 .med-state__description {
   max-width: 520rpx;
   margin-top: 10rpx;
-  color: #637985;
-  font-size: 23rpx;
+  color: var(--med-muted);
+  font-size: 24rpx;
   line-height: 1.6;
 }
 .med-state__action {
   min-width: 180rpx;
+  min-height: 88rpx;
   margin-top: 24rpx;
   color: #fff;
-  background: #0f8b8d;
+  background: var(--med-brand);
   border-radius: 18rpx;
   font-size: 24rpx;
 }
 .med-state__secondary {
   min-width: 180rpx;
+  min-height: 88rpx;
   margin-top: 12rpx;
-  color: #0f777b;
-  background: #eaf7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
   border-radius: 18rpx;
   font-size: 24rpx;
 }
-@keyframes med-state-spin {
+@keyframes med-state-pulse {
+  from {
+    opacity: 0.58;
+  }
+
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .med-state__icon--loading {
+    animation: none;
   }
 }
 </style>

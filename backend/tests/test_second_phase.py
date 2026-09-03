@@ -1,20 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
-from app.db import Base, SessionLocal, engine
 from app.main import app
-from app.services.case_seed import seed_showcase_case
 
 client = TestClient(app)
-
-
-def setup_function() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        seed_showcase_case(db)
-    finally:
-        db.close()
+pytestmark = pytest.mark.seed_showcase
 
 
 def login(role: str, external_id: str, class_ids: list[str] | None = None) -> str:
@@ -233,6 +223,6 @@ def test_showcase_cases_have_distinct_target_facts_and_reference_paths() -> None
     }
     assert chest_fact_ids.isdisjoint(abdomen_fact_ids)
     assert "优先危险分层" in chest_authoring["case_definition"]["reference_reasoning"]["problem_representation"]
-    assert "需结合适用性选择检查" in abdomen_authoring["case_definition"]["reference_reasoning"][
-        "problem_representation"
-    ]
+    assert (
+        "需结合适用性选择检查" in abdomen_authoring["case_definition"]["reference_reasoning"]["problem_representation"]
+    )

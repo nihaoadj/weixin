@@ -3,7 +3,7 @@
 ## 前端运行
 
 ```bash
-npm install
+npm ci --legacy-peer-deps
 npm run dev:h5
 npm run dev:mp-weixin
 ```
@@ -20,9 +20,10 @@ dist/dev/mp-weixin
 cd backend
 python -m venv .venv
 .venv\Scripts\activate
-python -m pip install --require-hashes -r requirements.txt
+python -m pip install --require-hashes -r requirements-dev.txt
+# 仅确认 DATABASE_URL 是受管的开发/测试库后：
 python -m alembic upgrade head
-python scripts/seed_test_data.py  # 仅开发/测试库，需要测试数据时执行
+# seed_test_data.py 会迁移数据库；只可用于受管非生产库。
 python -m uvicorn app.main:app --reload
 ```
 
@@ -72,13 +73,17 @@ npm run build:h5
 
 ```bash
 npm run check
-cd backend
-python -m pytest
+npm run backend:test:safety
+npm run backend:test:migrations
+npm run backend:check
+npm run contract:check
 ```
+
+结构调整还应直接运行 `node scripts/frontend-boundaries.mjs` 与 `python backend/scripts/check_boundaries.py`；这些脚本尚未拥有 `package.json` 的别名。测试与 E2E 使用受管随机临时 SQLite，不能连接开发、共享或生产数据库。
 
 ## 生产部署建议
 
-开发阶段可以用 SQLite。本地或测试环境可直接运行 Uvicorn。生产阶段建议：
+开发阶段使用 SQLite；本地或测试环境可直接运行 Uvicorn。以下生产拓扑只是目标建议，尚无受管生产配置、PostgreSQL 兼容、远程 CI/分支保护、微信真机/域名、真实 AI 或医学审核的验收证据：
 
 ```text
 Nginx / 云负载均衡
@@ -91,3 +96,5 @@ PostgreSQL
 ```
 
 微信小程序上线时，需要在微信公众平台配置后端 HTTPS 合法请求域名。
+
+# T09：`PBL_AI_ENABLED=true` 时必须显式配置 provider。生产只允许 Coze 且需要 token、mode 和相应资源 ID；切换 provider/mode 需重启，禁止自动 fallback。

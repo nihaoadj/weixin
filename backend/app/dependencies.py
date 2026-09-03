@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
 from app.db import get_db
-from app.models import User
+from app.modules.identity.infrastructure.models import User
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -33,7 +33,8 @@ def require_teacher(user: User = Depends(get_current_user)) -> User:
 def require_permission(permission: str):
     def dependency(user: User = Depends(require_teacher)) -> User:
         if permission not in (user.permissions or []):
-            raise HTTPException(status_code=403, detail="ROLE_REQUIRED")
+            # 角色正确但缺少权限点，按稳定码表应返回 FORBIDDEN 而非 ROLE_REQUIRED。
+            raise HTTPException(status_code=403, detail="FORBIDDEN")
         return user
 
     return dependency

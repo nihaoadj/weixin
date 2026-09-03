@@ -1,44 +1,72 @@
 <template>
-  <view class="problem-list-page">
-    <view class="toolbar card">
-      <view class="tabs">
-        <view
+  <view
+    id="teacher-problem-list"
+    class="problem-list-page"
+  >
+    <view class="toolbar">
+      <view class="toolbar-buttons">
+        <button
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
+          class="small-button add"
+          @keydown="activateButtonOnKey"
+          @click="addProblem"
+        >
+          新建问题
+        </button>
+        <button
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
+          class="small-button assist"
+          @keydown="activateButtonOnKey"
+          @click="addCase"
+        >
+          生成病例
+        </button>
+      </view>
+      <view
+        class="tabs"
+        role="group"
+        aria-label="教学内容状态"
+      >
+        <button
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
           class="tab"
           :class="{ active: currentStatus === 'pending' }"
+          :aria-pressed="currentStatus === 'pending'"
+          @keydown="activateButtonOnKey"
           @click="switchStatus('pending')"
-          >待审核
+        >
+          待审核
           <text
             v-if="pendingCount"
             class="count"
             >{{ pendingCount }}</text
-          ></view
-        >
-        <view
+          >
+        </button>
+        <button
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
           class="tab"
           :class="{ active: currentStatus === 'published' }"
+          :aria-pressed="currentStatus === 'published'"
+          @keydown="activateButtonOnKey"
           @click="switchStatus('published')"
-          >已发布</view
         >
-      </view>
-      <view class="toolbar-buttons">
-        <button
-          class="small-button add"
-          @click="addCase"
-        >
-          ✦ AI 生成病例
-        </button>
-        <button
-          class="small-button add"
-          @click="addProblem"
-        >
-          ＋ 新建
-        </button>
-        <button
-          v-if="isDemoMode()"
-          class="small-button"
-          @click="resetData"
-        >
-          ↻ 示例
+          已发布
         </button>
       </view>
     </view>
@@ -61,14 +89,15 @@
     />
     <MedState
       v-else-if="visibleProblems.length === 0"
-      variant="first-use"
+      class="content-state"
+      variant="empty"
       icon="book"
       :title="currentStatus === 'pending' ? '还没有待处理内容' : '还没有已发布内容'"
-      description="创建一个练习问题，或生成结构化病例作为新的教学任务。"
-      action-label="新建问题"
-      secondary-action-label="生成病例"
-      @action="addProblem"
-      @secondary-action="addCase"
+      :description="
+        currentStatus === 'pending'
+          ? '可以用上方的新建问题或生成病例开始，也可以查看已发布内容。'
+          : '完成审核并发布后，学生就能在练习列表中看到对应内容。'
+      "
     />
     <template v-if="!isRefreshing && !loadError">
       <view
@@ -76,51 +105,84 @@
         :key="problem.id"
         class="problem-card card"
       >
-        <view class="header">
-          <view
-            ><text class="type">{{ problem.type }}</text
-            ><text class="target">{{ targetText(problem) }}</text></view
-          >
-          <text class="time">{{ problem.time }}</text>
-        </view>
-        <text
-          class="title"
+        <button
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
+          class="problem-open motion-card"
+          :aria-label="`查看问题详情：${problem.title}`"
+          @keydown="activateButtonOnKey"
           @click="viewDetail(problem.id)"
-          >{{ problem.title }}</text
         >
-        <text
-          v-if="problem.description"
-          class="description"
-          >{{ problem.description }}</text
-        >
-        <text
-          v-if="problem.contentType === 'guided_case'"
-          class="case-meta"
-          >病例 · {{ problem.specialty }} · {{ problem.difficulty }} · {{ problem.estimatedMinutes }}分钟 · V{{
-            problem.version
-          }}</text
-        >
+          <view class="header">
+            <view class="target-group"
+              ><text class="type">{{ problem.type }}</text
+              ><text class="target">{{ targetText(problem) }}</text></view
+            >
+            <text class="time">{{ problem.time }}</text>
+          </view>
+          <view class="title-row">
+            <text class="title">{{ problem.title }}</text>
+            <text
+              class="detail-arrow"
+              aria-hidden="true"
+              >›</text
+            >
+          </view>
+          <text
+            v-if="problem.description"
+            class="description"
+            >{{ problem.description }}</text
+          >
+          <text
+            v-if="problem.contentType === 'guided_case'"
+            class="case-meta"
+            >病例 · {{ problem.specialty }} · {{ problem.difficulty }} · {{ problem.estimatedMinutes }}分钟 · V{{
+              problem.version
+            }}</text
+          >
+        </button>
         <view
           v-if="currentStatus === 'pending'"
           class="actions"
         >
           <template v-if="problem.contentType === 'guided_case'">
             <button
+              hover-class="is-pressed"
+              :hover-start-time="0"
+              :hover-stay-time="80"
+              tabindex="0"
+              role="button"
               class="action edit"
+              @keydown="activateButtonOnKey"
               @click="editCase(problem.id)"
             >
               {{ problem.medicalReviewStatus === 'pending' ? '查看' : '编辑' }}
             </button>
             <button
               v-if="problem.medicalReviewStatus === 'not_submitted' || problem.medicalReviewStatus === 'rejected'"
+              hover-class="is-pressed"
+              :hover-start-time="0"
+              :hover-stay-time="80"
+              tabindex="0"
+              role="button"
               class="action publish"
+              @keydown="activateButtonOnKey"
               @click="submitReview(problem.id)"
             >
               提交审核
             </button>
             <button
               v-else-if="problem.medicalReviewStatus === 'approved'"
+              hover-class="is-pressed"
+              :hover-start-time="0"
+              :hover-stay-time="80"
+              tabindex="0"
+              role="button"
               class="action publish"
+              @keydown="activateButtonOnKey"
               @click="publishProblem(problem.id)"
             >
               发布
@@ -133,19 +195,37 @@
           </template>
           <template v-else>
             <button
+              hover-class="is-pressed"
+              :hover-start-time="0"
+              :hover-stay-time="80"
+              tabindex="0"
+              role="button"
               class="action reject"
+              @keydown="activateButtonOnKey"
               @click="rejectProblem(problem.id)"
             >
               拒绝
             </button>
             <button
+              hover-class="is-pressed"
+              :hover-start-time="0"
+              :hover-stay-time="80"
+              tabindex="0"
+              role="button"
               class="action edit"
+              @keydown="activateButtonOnKey"
               @click="editProblem(problem.id)"
             >
               编辑
             </button>
             <button
+              hover-class="is-pressed"
+              :hover-start-time="0"
+              :hover-stay-time="80"
+              tabindex="0"
+              role="button"
               class="action publish"
+              @keydown="activateButtonOnKey"
               @click="publishProblem(problem.id)"
             >
               发布
@@ -158,7 +238,13 @@
         >
           <text class="publish-time">{{ problem.publishTime || '已发布' }}</text>
           <button
+            hover-class="is-pressed"
+            :hover-start-time="0"
+            :hover-stay-time="80"
+            tabindex="0"
+            role="button"
             class="action stats"
+            @keydown="activateButtonOnKey"
             @click="problem.contentType === 'guided_case' ? editCase(problem.id) : viewStats(problem.id)"
           >
             {{ problem.contentType === 'guided_case' ? '创建新版本' : '查看统计' }}
@@ -168,31 +254,46 @@
     </template>
     <button
       v-if="hasMore"
+      hover-class="is-pressed"
+      :hover-start-time="0"
+      :hover-stay-time="80"
+      tabindex="0"
+      role="button"
       class="load-more"
-      :loading="isLoading"
+      @keydown="activateButtonOnKey"
       @click="loadMore"
     >
       加载更多
+    </button>
+    <button
+      v-if="isDemoRuntime()"
+      hover-class="is-pressed"
+      :hover-start-time="0"
+      :hover-stay-time="80"
+      tabindex="0"
+      role="button"
+      class="reset-data"
+      @keydown="activateButtonOnKey"
+      @click="resetData"
+    >
+      恢复示例内容
     </button>
   </view>
 </template>
 
 <script setup lang="ts">
+import { activateButtonOnKey } from '@/components/ui/keyboard'
 import { computed, ref } from 'vue'
 import MedState from '@/components/ui/MedState.vue'
-import { isDemoMode } from '@/config/runtime'
-import { goDetail } from '@/services/navigation'
+import { isDemoRuntime } from '@/features/identity/public'
+import { goDetail, ROUTES } from '@/platform/navigation'
 import {
   getProblemsAsync,
   publishProblemAsync,
   rejectProblemAsync,
   resetProblemsAsync,
-} from '@/services/repositoryAsync'
-import {
-  getGuidedCasesAsync,
-  publishGuidedCaseAsync,
-  submitGuidedCaseForReviewAsync,
-} from '@/services/caseRepositoryAsync'
+} from '@/features/content/public'
+import { getGuidedCasesAsync, publishGuidedCaseAsync, submitGuidedCaseForReviewAsync } from '@/features/content/public'
 import type { Problem } from '@/types/domain'
 
 type StatusTab = 'pending' | 'published'
@@ -201,7 +302,6 @@ const currentStatus = ref<StatusTab>('pending')
 const allProblems = ref<Problem[]>([])
 const page = ref(1)
 const pageSize = 10
-const isLoading = ref(false)
 const isRefreshing = ref(false)
 const loadError = ref('')
 const pendingCount = computed(
@@ -256,12 +356,7 @@ function targetText(problem: Problem) {
 }
 
 function loadMore() {
-  if (!hasMore.value || isLoading.value) return
-  isLoading.value = true
-  setTimeout(() => {
-    page.value += 1
-    isLoading.value = false
-  }, 250)
+  if (hasMore.value) page.value += 1
 }
 
 async function updateStatus(id: string, status: Problem['status']) {
@@ -325,22 +420,22 @@ function publishProblem(id: string) {
 }
 
 function editProblem(id: string) {
-  goDetail('/pages/teacher/problem-edit/problem-edit', { id })
+  goDetail(ROUTES.teacherProblemEdit, { id })
 }
 function addProblem() {
-  uni.navigateTo({ url: '/pages/teacher/problem-edit/problem-edit' })
+  goDetail(ROUTES.teacherProblemEdit)
 }
 function addCase() {
-  uni.navigateTo({ url: '/pages/teacher/case-edit/case-edit' })
+  goDetail(ROUTES.teacherCaseEdit)
 }
 function editCase(id: string) {
-  goDetail('/pages/teacher/case-edit/case-edit', { id })
+  goDetail(ROUTES.teacherCaseEdit, { id })
 }
 function viewDetail(id: string) {
-  goDetail('/pages/teacher/problem-detail/problem-detail', { id })
+  goDetail(ROUTES.teacherProblemDetail, { id })
 }
 function viewStats(id: string) {
-  goDetail('/pages/teacher/problem-stats/problem-stats', { id })
+  goDetail(ROUTES.teacherProblemStats, { id })
 }
 function resetData() {
   uni.showModal({
@@ -361,100 +456,162 @@ defineExpose({ refresh })
 
 <style scoped>
 .problem-list-page {
-  padding: 24rpx 24rpx 180rpx;
+  padding: 24rpx 0 40rpx;
 }
 .toolbar {
+  position: sticky;
+  z-index: 2;
+  top: 0;
   margin-bottom: 20rpx;
-  padding: 24rpx;
+  padding: 0;
+  background: var(--med-page);
 }
 .tabs {
   display: flex;
-  border-bottom: 1rpx solid #e8eef4;
+  margin-top: 16rpx;
+  border-bottom: 1rpx solid var(--med-border);
 }
 .tab {
-  position: relative;
-  padding: 12rpx 24rpx 22rpx;
-  color: #718096;
+  display: flex;
+  min-height: 88rpx;
+  min-height: 44px;
+  margin: 0;
+  padding: 16rpx 24rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  color: var(--med-muted);
+  background: transparent;
+  border-bottom: 4rpx solid transparent;
+  border-radius: 0;
+  font-size: 28rpx;
+  line-height: 1.4;
 }
 .tab.active {
-  color: #087f8c;
+  color: var(--med-brand);
+  border-bottom-color: var(--med-brand);
   font-weight: 700;
-}
-.tab.active::after {
-  position: absolute;
-  right: 20rpx;
-  bottom: 0;
-  left: 20rpx;
-  height: 5rpx;
-  content: '';
-  background: #087f8c;
-  border-radius: 99rpx;
 }
 .count {
   margin-left: 6rpx;
   padding: 2rpx 9rpx;
   color: #fff;
-  background: #e35d6a;
+  background: var(--med-danger);
   border-radius: 99rpx;
-  font-size: 19rpx;
+  font-size: 22rpx;
 }
 .toolbar-buttons {
-  display: flex;
-  margin-top: 22rpx;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14rpx;
 }
 .small-button {
-  height: 64rpx;
+  display: flex;
+  min-height: 88rpx;
+  min-height: 44px;
   margin: 0;
   padding: 0 24rpx;
-  line-height: 64rpx;
-  color: #526174;
-  background: #edf2f7;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  color: var(--med-text-secondary);
+  background: var(--med-divider);
   border-radius: 14rpx;
-  font-size: 23rpx;
+  font-size: 26rpx;
 }
 .small-button.add {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
+}
+.small-button.assist {
+  color: var(--med-brand-deep);
+  background: var(--med-brand-soft);
+}
+.content-state {
+  padding: 48rpx 28rpx;
+}
+.reset-data {
+  min-height: 44px;
+  margin: 24rpx auto 0;
+  color: var(--med-muted);
+  background: transparent;
+  font-size: 23rpx;
 }
 .problem-card {
   margin-bottom: 20rpx;
-  padding: 28rpx;
+  padding: 0;
+}
+.problem-open {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 24rpx 28rpx 20rpx;
+  color: var(--med-text);
+  background: transparent;
+  border-radius: var(--med-radius-md);
+  line-height: 1.5;
+  text-align: left;
 }
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.target-group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
 }
 .type {
   padding: 6rpx 13rpx;
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
   border-radius: 10rpx;
-  font-size: 21rpx;
+  font-size: 23rpx;
 }
 .target {
-  margin-left: 12rpx;
-  color: #718096;
-  font-size: 21rpx;
+  overflow-wrap: anywhere;
+  color: var(--med-muted);
+  font-size: 23rpx;
 }
 .time {
-  color: #94a3b8;
-  font-size: 21rpx;
+  color: var(--med-muted);
+  font-size: 23rpx;
+  font-variant-numeric: tabular-nums;
 }
 .title {
   display: block;
-  margin-top: 22rpx;
-  font-size: 30rpx;
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  color: var(--med-text);
+  background: transparent;
+  font-size: 32rpx;
   font-weight: 700;
   line-height: 1.5;
+  text-align: left;
+}
+.title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.detail-arrow {
+  flex: none;
+  color: var(--med-brand);
+  font-size: 36rpx;
 }
 .description {
   display: -webkit-box;
-  margin-top: 14rpx;
+  margin-top: 10rpx;
   overflow: hidden;
-  color: #64748b;
-  font-size: 24rpx;
+  color: var(--med-text-secondary);
+  font-size: 28rpx;
   line-height: 1.55;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -462,48 +619,170 @@ defineExpose({ refresh })
 .case-meta {
   display: block;
   margin-top: 12rpx;
-  color: #087f8c;
-  font-size: 21rpx;
+  color: var(--med-brand);
+  font-size: 23rpx;
 }
 .actions {
   display: flex;
-  margin-top: 24rpx;
+  margin: 0 28rpx;
+  padding: 16rpx 0;
+  border-top: 1rpx solid var(--med-divider);
   justify-content: flex-end;
   gap: 12rpx;
 }
 .action {
-  height: 60rpx;
+  display: flex;
+  min-height: 88rpx;
+  min-height: 44px;
   margin: 0;
   padding: 0 24rpx;
-  line-height: 60rpx;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
   border-radius: 13rpx;
-  font-size: 22rpx;
+  font-size: 26rpx;
 }
 .reject {
-  color: #b8323d;
-  background: #fff0f1;
+  margin-right: auto;
+  padding-left: 0;
+  color: var(--med-danger);
+  background: transparent;
 }
 .edit {
-  color: #526174;
-  background: #edf2f7;
+  color: var(--med-text-secondary);
+  background: transparent;
+  border: 1rpx solid var(--med-border);
 }
 .publish,
 .stats {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 .published-actions {
   align-items: center;
   justify-content: space-between;
 }
 .publish-time {
-  color: #718096;
-  font-size: 22rpx;
+  color: var(--med-muted);
+  font-size: 23rpx;
 }
 .load-more {
+  min-height: 88rpx;
   margin-top: 24rpx;
-  color: #087f8c;
+  color: var(--med-brand);
   background: transparent;
   font-size: 24rpx;
+}
+@media screen and (max-width: 360px) {
+  .tab,
+  .small-button,
+  .action {
+    font-size: 12px;
+  }
+
+  .description {
+    font-size: 14px;
+  }
+
+  .type,
+  .target,
+  .time,
+  .case-meta,
+  .publish-time {
+    font-size: 12px;
+  }
+
+  .title {
+    font-size: 16px;
+  }
+}
+@media screen and (min-width: 600px) {
+  .problem-list-page {
+    padding: 20px 0 32px;
+  }
+
+  .problem-card {
+    margin-bottom: 16px;
+  }
+
+  .problem-open {
+    padding: 20px 24px 16px;
+  }
+
+  .toolbar {
+    margin-bottom: 16px;
+  }
+
+  .tabs {
+    margin-top: 12px;
+  }
+
+  .toolbar-buttons,
+  .actions {
+    gap: 12px;
+  }
+
+  .tab,
+  .small-button,
+  .action {
+    min-height: 48px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .tab {
+    border-radius: 0;
+    border-bottom-width: 2px;
+  }
+
+  .count {
+    margin-left: 6px;
+    padding: 2px 7px;
+    font-size: 12px;
+  }
+
+  .type {
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+
+  .type,
+  .target,
+  .time,
+  .case-meta,
+  .publish-time {
+    font-size: 12px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .title-row {
+    margin-top: 12px;
+    gap: 12px;
+  }
+  .detail-arrow {
+    font-size: 24px;
+  }
+
+  .description {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .case-meta {
+    margin-top: 8px;
+  }
+
+  .actions {
+    margin: 0 24px;
+    padding: 12px 0;
+  }
+
+  .reset-data {
+    font-size: 13px;
+  }
 }
 </style>

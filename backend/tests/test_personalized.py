@@ -1,20 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
-from app.db import Base, SessionLocal, engine
 from app.main import app
-from app.services.case_seed import seed_showcase_case
 
 client = TestClient(app)
-
-
-def setup_function() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        seed_showcase_case(db)
-    finally:
-        db.close()
+pytestmark = pytest.mark.seed_showcase
 
 
 def login(external_id: str = "personalized_student") -> dict[str, str]:
@@ -89,7 +79,13 @@ def test_plan_tasks_notifications_and_idempotency() -> None:
     first = data["tasks"][0]
     started = client.post(f"/learning-tasks/{first['id']}/start", headers=headers)
     assert started.status_code == 200
-    retry_id = started.json()["attempt"]["id"]
+    # 契约要求 start 返回完整 CaseAttemptRead 形状，而不是精简 dict。
+    started_attempt = started.json()["attempt"]
+    assert started_attempt["problem_id"] == case["id"]
+    assert isinstance(started_attempt["problem_version"], int)
+    assert started_attempt["opening"]["chief_complaint"]
+    assert started_attempt["started_at"]
+    retry_id = started_attempt["id"]
     assert client.post(f"/learning-tasks/{first['id']}/start", headers=headers).json()["attempt"]["id"] == retry_id
     assert (
         client.post(
@@ -134,11 +130,19 @@ def test_plan_tasks_notifications_and_idempotency() -> None:
         ).status_code
         == 200
     )
+    # 重复调用 /complete 模拟评估提交后重试：副作用必须幂等补齐（任务标记完成）。
     assert client.post(f"/attempts/{retry_id}/complete", headers=headers).status_code == 200
+    assert client.post(f"/attempts/{retry_id}/complete", headers=headers).status_code == 200
+    plan_after_retry = client.get("/learning-plans/current", headers=headers).json()
+    assert plan_after_retry["tasks"][0]["status"] == "completed"
 
     second = client.get("/learning-plans/current", headers=headers).json()["tasks"][1]
     assert client.post(f"/learning-tasks/{second['id']}/start", headers=headers).status_code == 200
-    micro_id = client.post(f"/learning-tasks/{second['id']}/start", headers=headers).json()["attempt"]["id"]
+    micro_started = client.post(f"/learning-tasks/{second['id']}/start", headers=headers).json()
+    # 微训练 start 返回完整 LearningTaskAttemptRead 形状。
+    assert micro_started["attempt"]["task_id"] == second["id"]
+    assert micro_started["attempt"]["created_at"]
+    micro_id = micro_started["attempt"]["id"]
     submitted = client.post(
         f"/learning-task-attempts/{micro_id}/submit",
         headers=headers,

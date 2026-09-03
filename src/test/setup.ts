@@ -17,6 +17,7 @@ beforeEach(() => {
     redirectTo: vi.fn(),
     navigateTo: vi.fn(),
     navigateBack: vi.fn(),
+    showModal: vi.fn(),
     showToast: vi.fn(),
     request: vi.fn(),
   })

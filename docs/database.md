@@ -1,6 +1,8 @@
 # 数据库设计
 
-## 结构化病例迁移
+## 当前数据库与迁移边界
+
+开发数据库默认是 `backend/data/dev.db`（不进入 Git）。测试不得使用它：pytest 与本地 E2E 启动器在应用导入前创建带 marker/token 的随机临时 SQLite，并在每次清表、迁移和清理前校验规范临时路径、所有权与链接边界。
 
 `20260823_0002_structured_cases` 为 `problems` 增加内容类型、版本和 JSON 病例字段，并创建 `case_attempts`、`case_attempt_messages`、`stage_submissions`、`case_assessments`、`ai_call_logs`。迁移按 inspector 检查对象，兼容初始迁移已按最新 metadata 建表的空库。
 
@@ -125,19 +127,36 @@ class_members
 problems.target/target_ids
 ```
 
-## 生产迁移
+## 当前迁移链、验证和回退
 
-上线前建议迁移到 PostgreSQL。保持 SQLAlchemy 模型和 Alembic 迁移后，数据库连接只需要从：
+当前工作树的 Alembic head 是 `20260830_0009`，其 `down_revision` 为 `20260830_0008`。0008 为摘要分页索引；0009 为 `reports.reviewer_id` 及 `users.auth_provider` 新增列/索引。0009 的 downgrade 只移除这些列和索引，须先说明数据丢失与回退条件。
+
+可用安全入口：
+
+```bash
+npm run backend:test:safety
+npm run backend:test:migrations
+npm run backend:test
+npm run backend:migrate
+```
+
+前 3 项仅使用受管测试资源；`backend:migrate` 会对当前 `DATABASE_URL` 执行 `upgrade head`，仅可用于已确认的受管开发/测试库，绝不能用作探测共享或生产库。`seed_test_data.py` 会先升级迁移，也只能指向已确认的非生产受管资源。
+
+## PostgreSQL 是待验证的生产目标
+
+PostgreSQL 仍是生产目标，尚未完成兼容性、部署、保留和回退验收。连接字符串未来可能从：
 
 ```text
 sqlite:///./data/dev.db
 ```
 
-切换为：
+改为：
 
 ```text
 postgresql+psycopg://user:password@host:5432/dbname
 ```
+
+但仅改 URL 不构成迁移方案或生产授权。上线前必须由受权负责人以受管副本完成 upgrade/downgrade、数据保留、备份恢复、权限、性能与发布验证。
 
 # 迁移链与兼容性
 

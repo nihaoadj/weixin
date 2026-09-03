@@ -1,0 +1,142 @@
+{
+  "modules": ["identity", "qa", "reports", "content", "training", "learning", "classroom", "analytics", "pbl"],
+  "layers": ["api", "application", "domain", "infrastructure"],
+  "required_files": ["__init__.py", "public.py", "wiring.py"],
+  "allowed_imports": [
+    {
+      "path": "app/modules/training/infrastructure/repositories.py",
+      "module": "app.modules.classroom.infrastructure.models",
+      "reason": "training visibility query reads classroom ownership tables"
+    },
+    {
+      "path": "app/modules/training/infrastructure/repositories.py",
+      "module": "app.modules.content.infrastructure.models",
+      "reason": "training reads the published case source"
+    },
+    {
+      "path": "app/modules/training/infrastructure/repositories.py",
+      "module": "app.modules.identity.infrastructure.models",
+      "reason": "training resolves the student owner"
+    },
+    {
+      "path": "app/modules/training/infrastructure/repositories.py",
+      "module": "app.modules.learning.infrastructure.models",
+      "reason": "training links a case attempt to a learning task"
+    },
+    {
+      "path": "app/modules/reports/infrastructure/repositories.py",
+      "module": "app.modules.identity.infrastructure.models",
+      "reason": "reports resolves report ownership and reviewer identity"
+    },
+    {
+      "path": "app/modules/reports/infrastructure/repositories.py",
+      "module": "app.modules.qa.infrastructure.models",
+      "reason": "reports reads the conversation summary source"
+    },
+    {
+      "path": "app/modules/qa/infrastructure/conversation_repository.py",
+      "module": "app.modules.reports.infrastructure.models",
+      "reason": "QA checks whether a conversation has a report"
+    },
+    {
+      "path": "app/modules/qa/infrastructure/medical_chat_audit.py",
+      "module": "app.modules.training.infrastructure.models",
+      "reason": "medical QA audit optionally links a case attempt"
+    },
+    {
+      "path": "app/modules/qa/infrastructure/question_repository.py",
+      "module": "app.modules.classroom.infrastructure.models",
+      "reason": "question visibility reads class membership"
+    },
+    {
+      "path": "app/modules/qa/infrastructure/question_repository.py",
+      "module": "app.modules.content.infrastructure.models",
+      "reason": "question threads are keyed by content problems"
+    },
+    {
+      "path": "app/modules/qa/infrastructure/question_repository.py",
+      "module": "app.modules.identity.infrastructure.models",
+      "reason": "question threads resolve student ownership"
+    },
+    {
+      "path": "app/modules/learning/infrastructure/repositories.py",
+      "module": "app.modules.classroom.infrastructure.models",
+      "reason": "learning selects a visible transfer case by class"
+    },
+    {
+      "path": "app/modules/learning/infrastructure/repositories.py",
+      "module": "app.modules.content.infrastructure.models",
+      "reason": "learning reads approved transfer case content"
+    },
+    {
+      "path": "app/modules/learning/infrastructure/repositories.py",
+      "module": "app.modules.training.infrastructure.models",
+      "reason": "learning reads assessed source attempts"
+    },
+    {
+      "path": "app/modules/content/infrastructure/repositories.py",
+      "module": "app.modules.classroom.infrastructure.models",
+      "reason": "content visibility reads classroom membership"
+    },
+    {
+      "path": "app/modules/content/infrastructure/repositories.py",
+      "module": "app.modules.identity.infrastructure.models",
+      "reason": "content resolves author ownership"
+    },
+    {
+      "path": "app/modules/content/infrastructure/repositories.py",
+      "module": "app.modules.qa.infrastructure.models",
+      "reason": "content computes question answer counts"
+    },
+    {
+      "path": "app/modules/content/infrastructure/repositories.py",
+      "module": "app.modules.training.infrastructure.models",
+      "reason": "content computes case attempt answer counts"
+    },
+    {
+      "path": "app/modules/content/infrastructure/visibility.py",
+      "module": "app.modules.classroom.infrastructure.models",
+      "reason": "content visibility reads classroom membership"
+    },
+    {
+      "path": "app/modules/content/infrastructure/visibility.py",
+      "module": "app.modules.identity.infrastructure.models",
+      "reason": "content visibility resolves student and author identity"
+    },
+    {
+      "path": "app/modules/classroom/infrastructure/repositories.py",
+      "module": "app.modules.identity.infrastructure.models",
+      "reason": "classroom resolves student membership"
+    },
+    {
+      "path": "app/modules/analytics/infrastructure/reader.py",
+      "module": "app.modules.classroom.infrastructure.models",
+      "reason": "analytics read model joins class scope"
+    },
+    {
+      "path": "app/modules/analytics/infrastructure/reader.py",
+      "module": "app.modules.content.infrastructure.models",
+      "reason": "analytics read model joins problem metadata"
+    },
+    {
+      "path": "app/modules/analytics/infrastructure/reader.py",
+      "module": "app.modules.identity.infrastructure.models",
+      "reason": "analytics read model joins student and teacher identity"
+    },
+    {
+      "path": "app/modules/analytics/infrastructure/reader.py",
+      "module": "app.modules.learning.infrastructure.models",
+      "reason": "analytics read model joins learning outcomes"
+    },
+    {
+      "path": "app/modules/analytics/infrastructure/reader.py",
+      "module": "app.modules.training.infrastructure.models",
+      "reason": "analytics read model joins case assessment outcomes"
+    },
+    {
+      "path": "app/modules/content/infrastructure/audit.py",
+      "module": "app.modules.training.infrastructure.models",
+      "reason": "content records case-draft metadata in the existing AI audit table"
+    }
+  ]
+}

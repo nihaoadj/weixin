@@ -1,10 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
-from app.db import Base, engine
 from app.main import app
-from app.services.case_seed import seed_showcase_case
 
 client = TestClient(app)
+pytestmark = pytest.mark.seed_showcase
 
 
 def _login(role: str, external_id: str) -> str:
@@ -17,15 +17,7 @@ def _login(role: str, external_id: str) -> str:
 
 
 def test_structured_case_training_keeps_hidden_fields_private() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    from app.db import SessionLocal
-
-    db = SessionLocal()
-    try:
-        case = seed_showcase_case(db)
-    finally:
-        db.close()
+    case = client.get("/problems", headers={"Authorization": f"Bearer {_login('teacher', 'demo_teacher')}"}).json()[0]
     student = _login("student", "case_student")
     teacher = _login("teacher", "demo_teacher")
     headers = {"Authorization": f"Bearer {student}"}
@@ -33,14 +25,14 @@ def test_structured_case_training_keeps_hidden_fields_private() -> None:
     listing = client.get("/problems", headers=headers)
     assert listing.status_code == 200
     public_case = listing.json()[0]
-    assert public_case["id"] == case.id
+    assert public_case["id"] == case["id"]
     assert "case_definition" not in public_case
     assert "facts" not in public_case
-    assert client.get(f"/problems/{case.id}/authoring", headers=headers).status_code == 403
-    authoring = client.get(f"/problems/{case.id}/authoring", headers={"Authorization": f"Bearer {teacher}"})
+    assert client.get(f"/problems/{case['id']}/authoring", headers=headers).status_code == 403
+    authoring = client.get(f"/problems/{case['id']}/authoring", headers={"Authorization": f"Bearer {teacher}"})
     assert "facts" in authoring.json()["case_definition"]
 
-    started = client.post(f"/problems/{case.id}/attempts", headers=headers, json={})
+    started = client.post(f"/problems/{case['id']}/attempts", headers=headers, json={})
     assert started.status_code == 200
     attempt_id = started.json()["id"]
     patient = client.post(
@@ -96,7 +88,7 @@ def test_structured_case_training_keeps_hidden_fields_private() -> None:
     assert client.post(f"/attempts/{attempt_id}/complete", headers=headers).status_code == 200
     assert client.get("/attempts", headers=headers).status_code == 200
     retry = client.post(
-        f"/problems/{case.id}/attempts",
+        f"/problems/{case['id']}/attempts",
         headers=headers,
         json={"retry_of_id": attempt_id},
     )

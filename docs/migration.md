@@ -14,25 +14,25 @@ uni-app 前端 + FastAPI 后端 + SQLite 开发库
 - 后端目录已标准化为 `api/`、`core/`、`models/`、`schemas/`、`services/`、`tests/`。
 - 新增 SQLite 数据库模型。
 - 新增 Demo 登录、AI、对话、报告、题目、题目作答线程 API。
-- 前端新增 `apiClient.ts` 统一请求层。
-- 前端新增 `repositoryAsync.ts` 统一远程/本地仓储入口。
+- 前端新增 `platform/http/apiClient.ts` 统一请求层；业务仓储按 feature 拆分为各自的 domain port 和 API/Demo infrastructure。
+- 前端由 `bootstrap/wiring.ts` 唯一装配运行模式，页面经各 feature 的 `public.ts` 使用业务能力。
 - H5/演示环境可使用 FastAPI demo-login；微信小程序 API 模式使用服务端 `code2Session` 登录。
 - 前端 AI 请求可携带 FastAPI token 访问 `/v1/medical-chat`。
-- 前端对话、历史、报告、教师批阅、题目管理、学生题目作答已切到异步 adapter。
+- 前端对话、历史、报告、教师批阅、题目管理、学生题目作答已切到对应 feature 的异步 adapter。
 - API 模式已补回服务端微信 `code2Session` 登录；微信 AppSecret 只存在后端环境变量，教师角色由服务端白名单控制。
 - 新增 `20260828_0007` 迁移，保存形成性报告的结构化错误、优点和建议。
 - 新增 `20260823_0005` 兼容迁移：为旧班级字段回填 `class_members`，补 author FK 和分析索引；`0006` 的 down_revision 已接在 `0005` 之后。
-- 文档已收敛为少量主文档。
+- 文档已收敛为少量主文档；旧 `src/services`/`src/data` 运行时 facade、aggregate、mapper 和 repository 已在仓内测试迁移后删除，OpenAPI 生成类型仍保留在 `src/data/contracts/openapi.generated.ts`。
 - 旧 `cloudfunctions/` 已移除，后端统一收敛到 `backend/`。
 
-## 当前仍保留
+## 当前模式
 
-`src/services/repository.ts` 仍保留本地 Demo fallback。它不是主迁移方向，但保留它有两个作用：
+本地 Demo fallback 由各 feature 的 infrastructure 和 `bootstrap/wiring.ts` 显式提供。它不是 API 失败后的隐式兜底，而是独立运行模式，保留它有两个作用：
 
 - 未启动 FastAPI 时仍可体验小程序。
 - 作为开发阶段的离线演示模式。
 
-本地 Demo fallback 是显式离线演示模式，不是生产数据源；API 模式不会因网络错误静默切换到 Demo。旧云函数和云数据库数据不自动迁移，正式切换前需按外部数据迁移方案导入并验数。
+`VITE_APP_MODE=demo|api` 在启动时只选择一种模式；API 模式不会因网络错误静默切换到 Demo。旧云函数和云数据库数据不自动迁移，正式切换前需按外部数据迁移方案导入并验数。若未来需要旧路径兼容，必须由具体仓内/外部调用方、版本窗口和移除日期支持单独变更，不能以假设的外部消费者长期保留旧实现。
 
 ## 后续生产化事项
 

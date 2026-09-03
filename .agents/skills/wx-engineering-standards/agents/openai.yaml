@@ -1,0 +1,4 @@
+interface:
+  display_name: 'WX Engineering Standards'
+  short_description: 'Route safe repo changes and evidence'
+  default_prompt: 'Use $wx-engineering-standards to route this repository change and record safe verification.'

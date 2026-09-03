@@ -13,8 +13,10 @@
       icon="retry"
       title="报告加载失败"
       :description="loadError"
-      action-label="重新加载"
-      @action="loadReport(reportKey)"
+      :action-label="reportKey ? '重新加载' : '返回聊天'"
+      :secondary-action-label="reportKey ? '返回聊天' : ''"
+      @action="reportKey ? loadReport(reportKey) : backToChat()"
+      @secondary-action="backToChat"
     />
     <MedState
       v-else-if="!report"
@@ -115,13 +117,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import MedIcon from '@/components/ui/MedIcon.vue'
 import MedState from '@/components/ui/MedState.vue'
 import SafetyBanner from '@/components/ui/SafetyBanner.vue'
-import { requireRole } from '@/services/auth'
-import { backOrHome, relaunchForRole } from '@/services/navigation'
-import { findReportByConversationAsync, submitReportForReviewAsync } from '@/services/repositoryAsync'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, handleBackPress, relaunchForRole, ROUTES } from '@/platform/navigation'
+import { findReportByConversationAsync, submitReportForReviewAsync } from '@/features/reports/public'
 import type { Report } from '@/types/domain'
 
 const report = ref<Report | null>(null)
@@ -176,8 +178,10 @@ async function submitToTeacher() {
 }
 
 function backToChat() {
-  backOrHome('student')
+  backOrRoute(ROUTES.studentChat)
 }
+
+onBackPress(({ from }) => handleBackPress(from, ROUTES.studentChat))
 </script>
 
 <style scoped>
@@ -190,7 +194,8 @@ function backToChat() {
   align-items: center;
   flex-direction: column;
   background:
-    radial-gradient(circle at 85% 10%, rgba(53, 183, 168, 0.2), transparent 32%), linear-gradient(160deg, #fff, #eaf7f5);
+    radial-gradient(circle at 85% 10%, rgba(53, 183, 168, 0.2), transparent 32%),
+    linear-gradient(160deg, #fff, var(--med-brand-soft));
 }
 .report-mark {
   display: flex;
@@ -205,7 +210,7 @@ function backToChat() {
   box-shadow: 0 14rpx 34rpx rgba(15, 139, 141, 0.12);
 }
 .eyebrow {
-  color: #087f8c;
+  color: var(--med-brand);
   font-size: 22rpx;
   letter-spacing: 4rpx;
 }
@@ -227,7 +232,7 @@ function backToChat() {
   font-weight: 700;
 }
 .score-label {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .summary {
@@ -276,23 +281,23 @@ function backToChat() {
 .general-suggestion {
   display: block;
   margin-top: 16rpx;
-  color: #526174;
+  color: var(--med-text-secondary);
   font-size: 24rpx;
   line-height: 1.55;
 }
 .teacher-review {
-  border-left: 8rpx solid #087f8c;
+  border-left: 8rpx solid var(--med-brand);
 }
 .teacher-score {
   display: block;
-  color: #087f8c;
+  color: var(--med-brand);
   font-size: 46rpx;
   font-weight: 800;
 }
 .teacher-feedback {
   display: block;
   margin-top: 16rpx;
-  color: #526174;
+  color: var(--med-text-secondary);
   line-height: 1.65;
   white-space: pre-wrap;
 }
@@ -309,7 +314,7 @@ function backToChat() {
   align-items: center;
   justify-content: center;
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
   border-radius: 18rpx;
   font-size: 20rpx;
 }
@@ -349,8 +354,8 @@ function backToChat() {
   font-size: 27rpx;
 }
 .secondary {
-  color: #526174;
-  background: #edf2f7;
+  color: var(--med-text-secondary);
+  background: var(--med-divider);
   border-radius: 18rpx;
 }
 .primary-button[disabled] {

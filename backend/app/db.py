@@ -1,9 +1,10 @@
 from pathlib import Path
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
+from app.platform.database import Base
 
 settings = get_settings()
 
@@ -13,12 +14,11 @@ if settings.database_url.startswith("sqlite:///"):
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
 connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-engine = create_engine(settings.database_url, connect_args=connect_args)
+if settings.database_url.startswith("sqlite"):
+    # SQLite 并发写下等待锁而不是立即报 "database is locked"。
+    connect_args["timeout"] = 30
+engine = create_engine(settings.database_url, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-class Base(DeclarativeBase):
-    pass
 
 
 def get_db():
@@ -30,6 +30,6 @@ def get_db():
 
 
 def init_db() -> None:
-    from app import models  # noqa: F401
+    from app.bootstrap import model_registry  # noqa: F401
 
     Base.metadata.create_all(bind=engine)

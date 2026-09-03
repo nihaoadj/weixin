@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { getStartupLogs } from '@/services/logs'
+import { getStartupLogs } from '@/platform/logs'
 const logs = getStartupLogs()
 
 function formatLog(value: number): string {
@@ -46,7 +46,7 @@ function formatLog(value: number): string {
 }
 .muted,
 .empty {
-  color: #718096;
+  color: var(--med-muted);
 }
 .muted {
   display: block;

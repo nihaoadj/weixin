@@ -1,22 +1,15 @@
+import pytest
 from fastapi.testclient import TestClient
 
-from app.db import Base, SessionLocal, engine
+from app.bootstrap.composition import training_application as compose_training_application
+from app.db import SessionLocal
 from app.main import app
 from app.models import Problem
-from app.schemas.case_training import AIAssessmentDimension, AIAssessmentResponse
-from app.services.case_seed import seed_showcase_case
+from app.modules.training.application.records import AssessmentGenerationResult
+from app.modules.training.domain.state import AssessmentCandidate
 
 client = TestClient(app)
-
-
-def setup_function() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        seed_showcase_case(db)
-    finally:
-        db.close()
+pytestmark = pytest.mark.seed_showcase
 
 
 def login(role: str, external_id: str) -> str:
@@ -236,11 +229,11 @@ def test_assessment_model_result_is_recalculated(monkeypatch) -> None:
             json={"answer": answer},
         )
         assert response.status_code == 200
-    dimensions = [
-        AIAssessmentDimension(
+    dimensions = tuple(
+        AssessmentCandidate(
             dimension_id=dimension_id,
             score=88,
-            evidence=[],
+            evidence=(),
             feedback="模型反馈",
             next_step="下一步",
         )
@@ -252,14 +245,25 @@ def test_assessment_model_result_is_recalculated(monkeypatch) -> None:
             "test_selection",
             "management_safety",
         )
-    ]
-    monkeypatch.setattr(
-        "app.services.case_training.ai_assessment",
-        lambda _db, _attempt: AIAssessmentResponse(dimensions=dimensions),
     )
+    class StubAssessmentGateway:
+        def assess(self, _attempt):
+            return AssessmentGenerationResult(
+                candidates=dimensions,
+                fallback_used=False,
+                failure_reason=None,
+                model_name="test-model",
+                prompt_version="test-v1",
+                latency_ms=1,
+            )
+
+    def injected_training_application(db):
+        return compose_training_application(db, assessment_gateway=StubAssessmentGateway())
+
+    monkeypatch.setattr("app.modules.training.api.case_attempts.training_application", injected_training_application)
     report = client.post(f"/attempts/{attempt}/complete", headers=headers)
     assert report.status_code == 200
     assert report.json()["fallback_used"] is False
     scores = [item["score"] for item in report.json()["dimensions"]]
-    assert all(score in (69, 88) for score in scores)
-    assert 69 in scores
+    assert all(score != 88 for score in scores)
+    assert any(item["feedback"] == "模型反馈" for item in report.json()["dimensions"])

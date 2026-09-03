@@ -1,6 +1,32 @@
 <template>
   <view class="safe-page stats-page">
-    <template v-if="problem">
+    <MedState
+      v-if="loading"
+      variant="loading"
+      icon="retry"
+      title="正在加载问题统计"
+      description="正在核对问题与作答数据。"
+    />
+    <MedState
+      v-else-if="loadError"
+      variant="error"
+      icon="retry"
+      title="问题统计加载失败"
+      :description="loadError"
+      :action-label="problemId ? '重新加载' : '返回工作台'"
+      :secondary-action-label="problemId ? '返回内容列表' : ''"
+      @action="problemId ? loadStats(problemId) : back()"
+      @secondary-action="back"
+    />
+    <MedState
+      v-else-if="!problem"
+      icon="book"
+      title="问题不存在"
+      description="内容可能已移除，或当前身份无法查看。"
+      action-label="返回工作台"
+      @action="back"
+    />
+    <template v-else>
       <view class="card hero"
         ><text class="type">{{ problem.type }}</text
         ><text class="title">{{ problem.title }}</text
@@ -31,26 +57,44 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { requireRole } from '@/services/auth'
-import { backOrHome } from '@/services/navigation'
-import { findProblemAsync } from '@/services/repositoryAsync'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
+import MedState from '@/components/ui/MedState.vue'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
+import { findProblemAsync } from '@/features/content/public'
 import type { Problem } from '@/types/domain'
 
 const problem = ref<Problem | null>(null)
 const answerCount = ref(0)
+const loading = ref(false)
+const loadError = ref('')
+let problemId = ''
+function back() {
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems' })
+}
 onLoad((options) => {
   if (!requireRole('teacher')) return
   const id = typeof options?.id === 'string' ? options.id : ''
+  problemId = id
   void loadStats(id)
 })
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems' }))
 
 async function loadStats(id: string) {
-  problem.value = (await findProblemAsync(id)) || null
-  answerCount.value = problem.value?.answerCount || 0
-  if (!problem.value) {
-    uni.showToast({ title: '问题不存在', icon: 'none' })
-    backOrHome('teacher')
+  if (loading.value) return
+  if (!id) {
+    loadError.value = '缺少问题编号，无法加载统计。'
+    return
+  }
+  loading.value = true
+  loadError.value = ''
+  try {
+    problem.value = (await findProblemAsync(id)) || null
+    answerCount.value = problem.value?.answerCount || 0
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '请稍后重试。'
+  } finally {
+    loading.value = false
   }
 }
 </script>
@@ -68,8 +112,8 @@ async function loadStats(id: string) {
 .type {
   align-self: flex-start;
   padding: 6rpx 14rpx;
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
   border-radius: 99rpx;
   font-size: 21rpx;
 }
@@ -91,13 +135,13 @@ async function loadStats(id: string) {
   flex-direction: column;
 }
 .number {
-  color: #087f8c;
+  color: var(--med-brand);
   font-size: 56rpx;
   font-weight: 800;
 }
 .label {
   margin-top: 8rpx;
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .note {

@@ -16,60 +16,149 @@
       action-label="重新加载"
       @action="load"
     />
-    <MedState
+    <view
       v-else-if="isFirstUse"
-      variant="first-use"
-      icon="report"
-      title="完成首次病例训练，建立能力画像"
-      description="提交一份完整病例评估后，系统会生成六维能力画像和三项个性化训练计划。"
-      action-label="进入病例训练"
-      secondary-action-label="先去医学问答"
-      @action="openCases"
-      @secondary-action="openChat"
-    />
-    <template v-else>
-      <view class="hero card">
-        <text class="eyebrow-label">PERSONALIZED PRACTICE</text>
-        <text class="title">我的临床能力画像</text>
-        <text class="muted">正式病例成绩与练习掌握度分开记录。</text>
-        <view class="dimension-grid">
+      class="card onboarding"
+    >
+      <text class="eyebrow-label">第一次训练</text>
+      <text class="onboarding-title">先完成一份病例，再生成你的学习计划</text>
+      <text class="muted">系统会依据正式病例表现建立六维能力画像，并安排三项针对性练习。</text>
+      <view
+        class="onboarding-steps"
+        role="list"
+        aria-label="首次训练流程"
+      >
+        <view
+          class="onboarding-step"
+          role="listitem"
+        >
+          <text class="step-index">1</text>
           <view
-            v-for="item in dimensions"
-            :key="String(item.dimension_id)"
-            class="dimension"
+            ><text class="step-title">完成结构化病例</text
+            ><text class="muted">依次完成病史、表征、鉴别、检查与处置。</text></view
           >
-            <text>{{ item.label || item.dimension_id }}</text>
-            <text class="score">{{ Number(item.score || 0).toFixed(0) }}</text>
-          </view>
         </view>
+        <view
+          class="onboarding-step"
+          role="listitem"
+        >
+          <text class="step-index">2</text>
+          <view
+            ><text class="step-title">获得形成性反馈</text
+            ><text class="muted">查看优势、薄弱项和下一步建议。</text></view
+          >
+        </view>
+        <view
+          class="onboarding-step"
+          role="listitem"
+        >
+          <text class="step-index">3</text>
+          <view
+            ><text class="step-title">开始个性化练习</text><text class="muted">按顺序完成三项针对性任务。</text></view
+          >
+        </view>
+      </view>
+      <view class="onboarding-actions">
+        <button
+          tabindex="0"
+          role="button"
+          class="primary"
+          @keydown="activateButtonOnKey"
+          @click="openCases"
+        >
+          进入病例训练
+        </button>
+        <button
+          tabindex="0"
+          role="button"
+          class="text-action"
+          @keydown="activateButtonOnKey"
+          @click="openChat"
+        >
+          先去医学问答
+        </button>
+      </view>
+    </view>
+    <template v-else>
+      <view class="card section knowledge-entry">
+        <view class="section-head">
+          <text class="section-title">知识巩固</text><text class="evidence-label">问答联动</text>
+        </view>
+        <text class="muted">从知识主题开始问答、完成小测，并把错题带入下一次复习。</text>
+        <button
+          tabindex="0"
+          role="button"
+          class="secondary"
+          @keydown="activateButtonOnKey"
+          @click="openKnowledgeLoop"
+        >
+          查看知识地图与复习
+        </button>
       </view>
       <view
         v-if="plan"
-        class="card section"
+        class="card today-card"
       >
+        <text class="eyebrow-label">今日带教记录</text>
         <view class="section-head"
-          ><text class="section-title">今日训练</text><text class="badge">{{ progress }}/3</text></view
+          ><text class="title">今日训练</text><text class="badge">已完成 {{ progress }}/3</text></view
         >
-        <text class="muted">目标维度：{{ plan.targetDimensionIds.join('、') }}</text>
+        <text class="muted">目标维度：{{ plan.targetDimensionIds.map(dimensionLabel).join('、') }}</text>
         <view
-          v-for="task in plan.tasks"
-          :key="task.id"
-          class="task-row"
-          @click="openTask(task)"
+          v-if="nextTask"
+          class="next-task"
         >
-          <view
-            ><text>{{ task.position }}. {{ task.publicDefinition.title || task.taskType }}</text
-            ><text class="muted">{{ task.publicDefinition.instruction || '按顺序完成任务' }}</text></view
+          <text class="next-task-label">下一项任务</text>
+          <text class="next-task-title"
+            >{{ nextTask.position }}. {{ nextTask.publicDefinition.title || nextTask.taskType }}</text
           >
-          <text :class="['task-status', task.status]">{{ statusLabel(task.status) }}</text>
+          <text class="muted">{{ taskInstruction(nextTask) }}</text>
+          <button
+            tabindex="0"
+            role="button"
+            class="primary"
+            @keydown="activateButtonOnKey"
+            @click="openTask(nextTask)"
+          >
+            {{ nextTask.status === 'in_progress' ? '继续本次训练' : '开始下一项训练' }}
+          </button>
+        </view>
+        <view
+          v-else
+          class="plan-complete"
+        >
+          <text class="next-task-label">今日训练已完成</text>
+          <text class="muted">复盘本次带教记录，确认下一轮练习重点。</text>
         </view>
         <button
           v-if="plan.status === 'completed'"
+          tabindex="0"
+          role="button"
           class="secondary"
+          @keydown="activateButtonOnKey"
           @click="openReview"
         >
           查看训练复盘
         </button>
+        <view
+          class="plan-progress"
+          role="list"
+          aria-label="今日训练进度"
+        >
+          <view
+            v-for="task in plan.tasks"
+            :key="task.id"
+            class="progress-step"
+            :class="task.status"
+            role="listitem"
+          >
+            <text class="progress-index">{{ task.position }}</text>
+            <view
+              ><text>第 {{ task.position }} 项</text
+              ><text class="progress-status">{{ statusLabel(task.status) }}</text></view
+            >
+          </view>
+        </view>
       </view>
       <view
         v-else
@@ -78,11 +167,38 @@
         <text class="section-title">还没有进行中的计划</text>
         <text class="muted">完成一份完整病例评估后，将自动生成三项训练。</text>
         <button
+          tabindex="0"
+          role="button"
           class="primary"
+          @keydown="activateButtonOnKey"
           @click="openCases"
         >
           进入病例训练
         </button>
+      </view>
+      <view class="card evidence-section">
+        <view class="section-head"
+          ><text class="section-title">能力画像</text><text class="evidence-label">评估证据</text></view
+        >
+        <text class="muted">正式病例成绩与练习掌握度分开记录。</text>
+        <view class="dimension-grid">
+          <view
+            v-for="item in dimensions"
+            :key="String(item.dimension_id)"
+            class="dimension"
+          >
+            <view class="dimension-head">
+              <text>{{ item.label || dimensionLabel(String(item.dimension_id)) }}</text>
+              <text class="score">{{ Number(item.score || 0).toFixed(0) }}</text>
+            </view>
+            <view
+              class="score-track"
+              aria-hidden="true"
+            >
+              <view :style="{ width: `${Math.max(0, Math.min(100, Number(item.score || 0)))}%` }" />
+            </view>
+          </view>
+        </view>
       </view>
       <view class="card section">
         <view class="section-head"
@@ -107,7 +223,10 @@
         >
         <button
           v-if="notifications.length"
+          tabindex="0"
+          role="button"
           class="link-button"
+          @keydown="activateButtonOnKey"
           @click="readAll"
         >
           全部标记已读
@@ -116,7 +235,10 @@
       <view class="card section"
         ><text class="section-title">临床病例训练</text><text class="muted">待完成病例</text
         ><button
+          tabindex="0"
+          role="button"
           class="secondary"
+          @keydown="activateButtonOnKey"
           @click="openCases"
         >
           查看病例列表
@@ -128,17 +250,14 @@
 </template>
 
 <script setup lang="ts">
+import { activateButtonOnKey } from '@/components/ui/keyboard'
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import StudentNav from '@/components/ui/StudentNav.vue'
-import { requireRole } from '@/services/auth'
-import { goDetail, goPrimary, ROUTES } from '@/services/navigation'
-import {
-  getLearningNotifications,
-  getLearningProfile,
-  markLearningNotificationsRead,
-} from '@/services/personalizedLearning'
+import { requireRole } from '@/features/identity/public'
+import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
+import { getLearningNotifications, getLearningProfile, markLearningNotificationsRead } from '@/features/learning/public'
 import type { LearningNotification, LearningPlan, LearningProfile, LearningTask } from '@/types/learning'
 
 const profile = ref<LearningProfile>({
@@ -154,6 +273,33 @@ const loading = ref(false)
 const dimensions = computed(() => profile.value.formalDimensions.slice(0, 6))
 const isFirstUse = computed(() => !dimensions.value.length && !plan.value)
 const progress = computed(() => plan.value?.tasks.filter((task) => task.status === 'completed').length || 0)
+const nextTask = computed(() => {
+  const tasks = plan.value?.tasks || []
+  return tasks.find((task) => task.status === 'in_progress') || tasks.find((task) => task.status === 'pending')
+})
+const dimensionLabels: Record<string, string> = {
+  information_gathering: '信息采集',
+  problem_representation: '问题表征',
+  differential_diagnosis: '鉴别诊断',
+  evidence_reasoning: '证据推理',
+  test_selection: '检查合理性',
+  management_safety: '处置与安全意识',
+}
+const stageLabels: Record<string, string> = {
+  history: '病史采集',
+  problem_representation: '问题表征',
+  differential: '鉴别诊断',
+  tests: '检查决策',
+  management: '初步处置',
+}
+const dimensionLabel = (id: string) => dimensionLabels[id] || id
+const taskInstruction = (task: LearningTask) => {
+  const instruction = task.publicDefinition.instruction || '按顺序完成任务'
+  return Object.entries(stageLabels).reduce(
+    (formatted, [stageId, label]) => formatted.replace(new RegExp(`\\b${stageId}\\b`, 'g'), label),
+    instruction,
+  )
+}
 const statusLabel = (status: LearningTask['status']) =>
   status === 'completed' ? '已完成' : status === 'in_progress' ? '进行中' : '待开始'
 
@@ -175,14 +321,17 @@ function openCases() {
   goPrimary(ROUTES.studentCases)
 }
 function openReview() {
-  uni.navigateTo({ url: '/pages/student/learning/review' })
+  goDetail(ROUTES.studentLearningReview)
+}
+function openKnowledgeLoop() {
+  goDetail(ROUTES.studentKnowledgeLoop)
 }
 function openChat() {
   goPrimary(ROUTES.studentChat)
 }
 function openTask(task: LearningTask) {
   if (task.status === 'completed') return
-  goDetail('/pages/student/learning/plan', { planId: plan.value?.id, taskId: task.id })
+  goDetail(ROUTES.studentLearningPlan, { planId: plan.value?.id, taskId: task.id })
 }
 async function readAll() {
   await markLearningNotificationsRead()
@@ -197,19 +346,84 @@ onShow(() => {
 <style scoped>
 .page {
   padding: 28rpx 28rpx 170rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
 }
-.hero,
-.section {
+.onboarding,
+.today-card,
+.section,
+.evidence-section {
   display: flex;
   margin-bottom: 22rpx;
   padding: 30rpx;
   flex-direction: column;
   gap: 14rpx;
 }
-.hero {
-  background: linear-gradient(135deg, #0b2239, #12647a);
-  color: #fff;
+.onboarding {
+  padding: 38rpx 32rpx 30rpx;
+  border-top: 6rpx solid var(--med-clinical);
+}
+.onboarding-title {
+  max-width: 600rpx;
+  color: var(--med-ink);
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.onboarding-steps {
+  display: flex;
+  margin-top: 12rpx;
+  flex-direction: column;
+}
+.onboarding-step {
+  display: flex;
+  padding: 22rpx 0;
+  align-items: flex-start;
+  border-top: 1rpx solid var(--med-divider);
+}
+.onboarding-step > view {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5rpx;
+}
+.step-index {
+  display: flex;
+  width: 48rpx;
+  height: 48rpx;
+  margin-right: 18rpx;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  border-radius: 50%;
+  font-family: var(--med-font-utility);
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 48rpx;
+  text-align: center;
+}
+.step-title {
+  color: var(--med-ink);
+  font-size: 27rpx;
+  font-weight: 700;
+}
+.onboarding-actions {
+  display: flex;
+  margin-top: 8rpx;
+  align-items: center;
+  flex-direction: column;
+}
+.text-action {
+  min-height: 72rpx;
+  margin: 6rpx 0 0;
+  color: var(--med-clinical);
+  background: transparent;
+  font-size: 24rpx;
+}
+.today-card {
+  border-top: 6rpx solid var(--med-clinical);
 }
 .title {
   display: block;
@@ -217,31 +431,47 @@ onShow(() => {
   font-weight: 800;
 }
 .muted {
-  color: #718096;
-  font-size: 22rpx;
+  color: var(--med-muted);
+  font-size: 24rpx;
   line-height: 1.5;
-}
-.hero .muted {
-  color: #d8edf0;
 }
 .dimension-grid {
   display: grid;
   margin-top: 10rpx;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14rpx;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24rpx;
 }
 .dimension {
   display: flex;
-  padding: 18rpx 10rpx;
+  padding: 18rpx 0;
   flex-direction: column;
-  gap: 8rpx;
-  border-radius: 16rpx;
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 21rpx;
+  color: var(--med-text-secondary);
+  border-bottom: 1rpx solid var(--med-divider);
+  font-size: 23rpx;
+}
+.dimension-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12rpx;
 }
 .score {
-  font-size: 34rpx;
+  color: var(--med-ink);
+  font-family: var(--med-font-utility);
+  font-size: 28rpx;
   font-weight: 750;
+}
+.score-track {
+  height: 6rpx;
+  margin-top: 12rpx;
+  overflow: hidden;
+  background: var(--med-divider);
+  border-radius: 99rpx;
+}
+.score-track > view {
+  height: 100%;
+  background: var(--med-clinical);
+  border-radius: inherit;
 }
 .section-head {
   display: flex;
@@ -249,43 +479,107 @@ onShow(() => {
   justify-content: space-between;
 }
 .section-title {
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 30rpx;
   font-weight: 750;
 }
 .badge,
 .alert {
-  color: #087f8c;
+  color: var(--med-clinical);
   font-weight: 700;
 }
-.task-row,
+.next-task,
+.plan-complete {
+  display: flex;
+  padding: 24rpx;
+  flex-direction: column;
+  gap: 10rpx;
+  background: var(--med-wash);
+  border-radius: var(--med-radius-md);
+}
+.next-task-label,
+.evidence-label {
+  color: var(--med-clinical);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+.next-task-title {
+  color: var(--med-ink);
+  font-size: 30rpx;
+  font-weight: 750;
+  line-height: 1.4;
+}
 .notification {
   display: flex;
   padding: 16rpx 0;
   flex-direction: column;
   gap: 6rpx;
-  border-bottom: 1rpx solid #e5edf0;
+  border-bottom: 1rpx solid var(--med-divider);
 }
-.task-row {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
+.plan-progress {
+  display: grid;
+  margin-top: 8rpx;
+  padding-top: 18rpx;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1rpx solid var(--med-divider);
 }
-.task-row > view {
+.progress-step {
+  position: relative;
   display: flex;
-  max-width: 76%;
+  min-width: 0;
+  align-items: center;
+}
+.progress-step + .progress-step::before {
+  position: absolute;
+  top: 24rpx;
+  right: calc(100% - 4rpx);
+  width: calc(100% - 48rpx);
+  height: 2rpx;
+  content: '';
+  background: var(--med-divider);
+}
+.progress-index {
+  display: flex;
+  width: 48rpx;
+  height: 48rpx;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--med-muted);
+  background: var(--med-paper);
+  border: 1rpx solid var(--med-border);
+  border-radius: 50%;
+  font-family: var(--med-font-utility);
+  font-size: 21rpx;
+  line-height: 48rpx;
+  text-align: center;
+  z-index: 1;
+}
+.progress-step > view {
+  display: flex;
+  min-width: 0;
+  margin-left: 10rpx;
   flex-direction: column;
-  gap: 5rpx;
+  color: var(--med-text-secondary);
+  font-size: 20rpx;
 }
-.task-status {
-  font-size: 22rpx;
-  color: #a0aec0;
+.progress-status {
+  margin-top: 3rpx;
+  color: var(--med-muted);
+  font-size: 20rpx;
 }
-.task-status.in_progress {
-  color: #087f8c;
+.progress-step.in_progress .progress-index {
+  color: #fff;
+  background: var(--med-clinical);
+  border-color: var(--med-clinical);
 }
-.task-status.completed {
-  color: #2f855a;
+.progress-step.in_progress .progress-status {
+  color: var(--med-clinical);
+}
+.progress-step.completed .progress-index {
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  border-color: var(--med-wash);
 }
 .empty {
   align-items: flex-start;
@@ -293,19 +587,20 @@ onShow(() => {
 .primary,
 .secondary {
   width: 100%;
+  min-height: 88rpx;
   margin-top: 8rpx;
 }
 .primary {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-clinical);
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-clinical);
+  background: var(--med-wash);
 }
 .link-button {
   padding: 0;
-  color: #087f8c;
+  color: var(--med-clinical);
   background: transparent;
   text-align: left;
   font-size: 23rpx;
@@ -318,5 +613,172 @@ onShow(() => {
   right: 0;
   bottom: 0;
   left: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--med-surface);
+}
+@media screen and (max-width: 360px) {
+  .muted,
+  .text-action,
+  .progress-status {
+    font-size: 12px;
+  }
+
+  .step-title,
+  .next-task-label,
+  .evidence-label {
+    font-size: 13px;
+  }
+
+  .progress-step > view {
+    font-size: 11px;
+  }
+}
+@media screen and (min-width: 600px) and (max-width: 899px) {
+  .page {
+    padding: 24px 24px 120px;
+  }
+
+  .onboarding,
+  .today-card,
+  .evidence-section,
+  .section {
+    width: 100%;
+    max-width: 680px;
+    padding: 32px;
+    box-sizing: border-box;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .onboarding-title {
+    font-size: 30px;
+  }
+
+  .muted {
+    font-size: 15px;
+  }
+
+  .onboarding-step {
+    padding: 18px 0;
+  }
+
+  .step-index {
+    width: 34px;
+    height: 34px;
+    margin-right: 16px;
+    font-size: 14px;
+    line-height: 34px;
+  }
+
+  .step-title {
+    font-size: 17px;
+  }
+
+  .primary,
+  .secondary {
+    min-height: 52px;
+    font-size: 17px;
+  }
+
+  .text-action {
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
+@media screen and (min-width: 900px) {
+  .page {
+    padding: 32px 32px 128px;
+  }
+
+  .onboarding {
+    display: grid;
+    width: 100%;
+    max-width: 960px;
+    padding: 44px;
+    box-sizing: border-box;
+    margin-right: auto;
+    margin-left: auto;
+    grid-template-columns: minmax(0, 0.88fr) minmax(420px, 1fr);
+    align-items: start;
+    column-gap: 64px;
+    row-gap: 14px;
+  }
+
+  .onboarding .eyebrow-label,
+  .onboarding-title,
+  .onboarding > .muted,
+  .onboarding-actions {
+    grid-column: 1;
+  }
+
+  .onboarding-title {
+    max-width: 420px;
+    font-size: 32px;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+
+  .onboarding > .muted {
+    font-size: 15px;
+  }
+
+  .onboarding-steps {
+    margin-top: 0;
+    grid-column: 2;
+    grid-row: 1 / span 4;
+  }
+
+  .step-title {
+    font-size: 17px;
+  }
+
+  .onboarding-step .muted {
+    font-size: 14px;
+  }
+
+  .step-index {
+    width: 34px;
+    height: 34px;
+    margin-right: 16px;
+    font-size: 14px;
+    line-height: 34px;
+  }
+
+  .onboarding-actions {
+    margin-top: 12px;
+    align-items: stretch;
+  }
+
+  .onboarding-actions .primary {
+    min-height: 52px;
+    font-size: 17px;
+  }
+
+  .text-action {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .today-card,
+  .evidence-section,
+  .section {
+    width: 100%;
+    max-width: 920px;
+    box-sizing: border-box;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .dimension-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nav {
+    right: auto;
+    left: 50%;
+    width: 1080px;
+    max-width: 100%;
+    transform: translateX(-50%);
+  }
 }
 </style>

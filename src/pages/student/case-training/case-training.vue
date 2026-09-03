@@ -18,8 +18,10 @@
       icon="retry"
       title="训练加载失败"
       :description="error"
-      action-label="重新加载"
-      @action="load"
+      :action-label="id ? '重新加载' : '返回病例列表'"
+      :secondary-action-label="id ? '返回病例列表' : ''"
+      @action="id ? load() : back()"
+      @secondary-action="back"
     /><view
       v-if="attempt"
       class="card form"
@@ -120,6 +122,8 @@
         ><text class="section">五阶段已完成</text
         ><button
           class="primary"
+          :loading="completing"
+          :disabled="completing"
           @click="complete"
         >
           生成训练报告
@@ -131,6 +135,7 @@
       ><button
         class="primary"
         :loading="submitting"
+        :disabled="submitting"
         @click="submit"
       >
         提交{{ stageLabel(attempt.currentStage) }}
@@ -140,15 +145,16 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/services/auth'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, goReplace, handleBackPress, ROUTES } from '@/platform/navigation'
 import {
   completeCaseAttemptAsync,
   getCaseAttemptAsync,
   sendPatientMessageAsync,
   submitCaseStageAsync,
-} from '@/services/caseRepositoryAsync'
+} from '@/features/training/public'
 import { caseStages, type CaseAttempt, type StageAnswer } from '@/types/case'
 const attempt = ref<CaseAttempt>()
 const error = ref('')
@@ -166,6 +172,7 @@ const testItems = ref<Array<{ testName: string; rationale: string; priority: 'ne
 const managementItems = ref<Array<{ action: string; rationale: string }>>([{ action: '', rationale: '' }])
 const sending = ref(false)
 const submitting = ref(false)
+const completing = ref(false)
 let id = ''
 const stageLabel = (stage: string) => caseStages.find((i) => i.id === stage)?.label || '报告'
 const done = (stage: string) =>
@@ -185,10 +192,40 @@ function addManagement() {
 async function load() {
   try {
     attempt.value = await getCaseAttemptAsync(id)
-    if (!attempt.value) error.value = '训练不存在'
+    if (!attempt.value) error.value = '训练不存在或已不可用'
   } catch (e) {
     error.value = e instanceof Error ? e.message : '请重试'
   }
+}
+function back() {
+  if (hasUnsavedInput()) {
+    uni.showModal({
+      title: '离开本次训练？',
+      content: '当前填写内容尚未提交，离开后不会保留。',
+      confirmText: '离开',
+      success: ({ confirm }) => {
+        if (confirm) leaveTraining()
+      },
+    })
+    return
+  }
+  leaveTraining()
+}
+function leaveTraining() {
+  backOrRoute(ROUTES.studentCases)
+}
+function hasUnsavedInput() {
+  return Boolean(
+    question.value.trim() ||
+    summary.value.trim() ||
+    keyFindingsText.value.trim() ||
+    safetyText.value.trim() ||
+    differentialItems.value.some(
+      (item) => item.diagnosis.trim() || item.supportingEvidence.trim() || item.opposingEvidence.trim(),
+    ) ||
+    testItems.value.some((item) => item.testName.trim() || item.rationale.trim()) ||
+    managementItems.value.some((item) => item.action.trim() || item.rationale.trim()),
+  )
 }
 async function ask() {
   if (!question.value.trim()) return
@@ -257,6 +294,8 @@ async function submit() {
   try {
     await submitCaseStageAsync(id, answer())
     summary.value = ''
+    keyFindingsText.value = ''
+    safetyText.value = ''
     differentialItems.value = [
       { diagnosis: '', supportingEvidence: '', opposingEvidence: '' },
       { diagnosis: '', supportingEvidence: '', opposingEvidence: '' },
@@ -271,13 +310,34 @@ async function submit() {
   }
 }
 async function complete() {
-  await completeCaseAttemptAsync(id)
-  uni.redirectTo({ url: `/pages/student/case-report/case-report?attemptId=${id}` })
+  if (completing.value) return
+  completing.value = true
+  try {
+    await completeCaseAttemptAsync(id)
+    goReplace(ROUTES.studentCaseReport, { attemptId: id })
+  } catch (e) {
+    uni.showToast({ title: e instanceof Error ? e.message : '生成报告失败', icon: 'none' })
+  } finally {
+    completing.value = false
+  }
 }
 onLoad((query) => {
   if (!requireRole('student')) return
   id = String(query?.id || '')
   void load()
+})
+
+onBackPress(({ from }) => {
+  if (from === 'navigateBack') return false
+  if (sending.value || submitting.value || completing.value) {
+    uni.showToast({ title: '正在保存训练内容，请稍候', icon: 'none' })
+    return true
+  }
+  if (hasUnsavedInput()) {
+    back()
+    return true
+  }
+  return handleBackPress(from, ROUTES.studentCases)
 })
 </script>
 <style scoped>
@@ -296,7 +356,7 @@ onLoad((query) => {
   font-weight: 700;
 }
 .muted {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .progress {
@@ -306,18 +366,18 @@ onLoad((query) => {
 }
 .progress text {
   padding: 7rpx;
-  color: #718096;
-  background: #edf2f7;
+  color: var(--med-muted);
+  background: var(--med-divider);
   border-radius: 99rpx;
   font-size: 19rpx;
 }
 .progress .active {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 .progress .done {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 .section {
   font-size: 28rpx;
@@ -330,7 +390,7 @@ onLoad((query) => {
   line-height: 1.5;
 }
 .message.user {
-  background: #e6f7f5;
+  background: var(--med-brand-soft);
 }
 .message.assistant {
   background: #f1f5f9;
@@ -361,11 +421,11 @@ textarea {
   height: 78rpx;
   line-height: 78rpx;
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 .bottom {
   position: fixed;

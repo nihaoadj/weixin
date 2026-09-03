@@ -7,12 +7,12 @@
 
 <script setup lang="ts">
 import { onShow } from '@dcloudio/uni-app'
-import { requireRole } from '@/services/auth'
-import { ROUTES } from '@/services/navigation'
+import { requireRole } from '@/features/identity/public'
+import { goReplace, ROUTES } from '@/platform/navigation'
 
 onShow(() => {
   if (!requireRole('teacher')) return
-  uni.redirectTo({ url: ROUTES.teacherWorkspace })
+  goReplace(ROUTES.teacherWorkspace)
 })
 </script>
 
@@ -28,7 +28,7 @@ onShow(() => {
   color: #637985;
 }
 .redirect-mark {
-  color: #0f8b8d;
+  color: var(--med-brand);
   font-size: 60rpx;
 }
 </style>

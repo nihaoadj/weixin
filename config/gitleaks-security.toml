@@ -1,0 +1,15 @@
+title = "wxprogrom T06 secret scanning"
+
+[extend]
+useDefault = true
+
+# Keep the mature upstream default rules intact. Project-specific exclusions
+# are intentionally absent: a historical finding must be triaged by exact
+# fingerprint and credential status, never by a broad path or rule allowlist.
+
+[[rules]]
+id = "t06-project-secret-assignment"
+description = "Project service secret assigned in configuration or source"
+regex = '''(?i)(?:AI_API_KEY|JWT_SECRET|WECHAT_APP_SECRET)[ \t]*[:=][ \t]*[\"']?([A-Za-z0-9+/_=-]{24,})[\"']?'''
+secretGroup = 1
+keywords = ["ai_api_key", "jwt_secret", "wechat_app_secret"]

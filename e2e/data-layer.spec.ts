@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test'
 
+const apiPort = Number(process.env.E2E_API_PORT ?? 8001)
+
 test('history uses paged summaries and retries errors without downloading message lists', async ({ page }) => {
   const requests: string[] = []
   let failFirst = true
   page.on('request', (request) => {
-    if (request.url().includes(':8001/')) requests.push(new URL(request.url()).pathname)
+    if (request.url().includes(`:${apiPort}/`)) requests.push(new URL(request.url()).pathname)
   })
   await page.route('**/conversations/summaries?*', (route) => {
     if (failFirst) {

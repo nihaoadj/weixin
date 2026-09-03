@@ -16,7 +16,7 @@ test('fresh student and teacher accounts receive actionable empty states', async
   await expect(page.getByText('暂无历史记录', { exact: true })).toBeVisible()
   await expect(page.getByText('开始医学问答', { exact: true })).toBeVisible()
   await page.getByText('开始医学问答', { exact: true }).click()
-  await expect(page.getByText('今天想训练哪项临床思维？')).toBeVisible()
+  await expect(page.getByText('从一个医学问题开始')).toBeVisible()
 
   await page.getByText('退出', { exact: true }).click()
   await page.locator('.role-button.teacher').click()

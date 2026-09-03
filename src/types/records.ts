@@ -3,7 +3,9 @@ export type UserRole = 'student' | 'teacher'
 export type MessageRole = 'user' | 'assistant'
 export type ReportStatus = 'draft' | 'pending_review' | 'reviewed'
 export type ProblemStatus = 'draft' | 'published' | 'rejected'
-export type ProblemType = '医学常识' | '模拟诊疗' | '病例分析'
+// The API stores this as a display label and may add teaching content types.
+// Keep known labels discoverable while preserving forward compatibility.
+export type ProblemType = '医学常识' | '模拟诊疗' | '病例分析' | (string & {})
 export type ProblemTarget = 'all' | 'class' | 'individual'
 
 export interface SessionUser {
@@ -28,6 +30,7 @@ export interface Conversation {
   messages: ChatMessage[]
   createdAt: string
   updatedAt: string
+  topicCodes?: string[]
 }
 
 export interface Page<T> {
@@ -46,6 +49,7 @@ export interface ConversationSummary {
   reportStatus?: ReportStatus
   createdAt: string
   updatedAt: string
+  topicCodes?: string[]
 }
 
 export interface AnalysisIssue {
@@ -73,6 +77,7 @@ export interface Report {
   status: ReportStatus
   teacherScore?: number
   teacherFeedback?: string
+  reviewTopicCodes?: string[]
 }
 
 export interface ReportSummary {
@@ -128,6 +133,7 @@ export interface StudentQuestion {
   description?: string
   time: string
   status: 'unanswered' | 'answered'
+  topicCodes?: string[]
 }
 
 export interface QuestionThread {

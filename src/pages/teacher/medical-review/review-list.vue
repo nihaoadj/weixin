@@ -29,7 +29,9 @@
       title="审核队列加载失败"
       :description="error"
       action-label="重新加载"
+      secondary-action-label="返回工作台"
       @action="load"
+      @secondary-action="back"
     />
     <MedState
       v-else-if="!items.length"
@@ -56,11 +58,11 @@
 </template>
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onBackPress, onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/services/auth'
-import { backOrHome } from '@/services/navigation'
-import { getReviewQueue } from '@/services/teacherInsights'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, goDetail, handleBackPress, ROUTES } from '@/platform/navigation'
+import { getReviewQueue } from '@/features/content/public'
 import type { Problem } from '@/types/domain'
 
 type ReviewStatus = 'pending' | 'approved' | 'rejected'
@@ -104,20 +106,21 @@ function reviewLabel(item: Problem) {
       : '待审核'
 }
 function open(id: string) {
-  uni.navigateTo({ url: `/pages/teacher/medical-review/review-detail?id=${id}` })
+  goDetail(ROUTES.teacherReviewDetail, { id })
 }
 function back() {
-  backOrHome('teacher')
+  backOrRoute(ROUTES.teacherWorkspace)
 }
 onShow(() => {
   if (requireRole('teacher')) void load()
 })
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace))
 </script>
 <style scoped>
 .page {
   min-height: 100vh;
   padding: 28rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
 }
 .intro,
 .item,
@@ -139,7 +142,7 @@ onShow(() => {
 .muted {
   display: block;
   margin-top: 10rpx;
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .tabs {
@@ -148,21 +151,21 @@ onShow(() => {
 }
 .tab {
   padding-bottom: 12rpx;
-  color: #718096;
+  color: var(--med-muted);
   font-size: 24rpx;
 }
 .tab.active {
-  color: #087f8c;
-  border-bottom: 4rpx solid #087f8c;
+  color: var(--med-brand);
+  border-bottom: 4rpx solid var(--med-brand);
   font-weight: 700;
 }
 .link {
   display: block;
   margin-top: 16rpx;
-  color: #087f8c;
+  color: var(--med-brand);
 }
 .empty {
-  color: #718096;
+  color: var(--med-muted);
   text-align: center;
 }
 </style>

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "frontend": {
+    "overallThresholds": { "lines": 85, "branches": 80, "functions": 85 },
+    "thresholds": { "lines": 90, "branches": 85, "functions": 90 },
+    "groups": [
+      {
+        "name": "identity-session",
+        "files": [
+          "src/features/identity/infrastructure/remoteAuth.ts",
+          "src/features/identity/infrastructure/sessionStorage.ts",
+          "src/features/identity/application/session.ts"
+        ]
+      },
+      { "name": "http-cache", "files": ["src/platform/http/apiClient.ts"] },
+      { "name": "storage-migration", "files": ["src/platform/storage/storage.ts"] },
+      {
+        "name": "report-training-use-cases",
+        "files": ["src/features/reports/application/reportDraft.ts", "src/features/training/domain/scoring.ts"]
+      }
+    ]
+  },
+  "backend": {
+    "overallThresholds": { "lines": 85, "branches": 80 },
+    "thresholds": { "lines": 90, "branches": 85 },
+    "groups": [
+      {
+        "name": "identity-authorization",
+        "files": [
+          "backend/app/modules/identity/application/use_cases.py",
+          "backend/app/modules/identity/domain/policy.py",
+          "backend/app/modules/identity/infrastructure/transport.py"
+        ]
+      },
+      {
+        "name": "medical-ai-safety",
+        "files": [
+          "backend/app/modules/qa/infrastructure/medical_chat_gateway.py",
+          "backend/app/modules/training/infrastructure/ai_gateway.py",
+          "backend/app/modules/learning/infrastructure/practice_generator.py",
+          "backend/app/platform/ai.py"
+        ]
+      },
+      {
+        "name": "content-review-publication",
+        "files": [
+          "backend/app/modules/content/application/use_cases.py",
+          "backend/app/modules/content/domain/policy.py"
+        ]
+      },
+      {
+        "name": "training-state-machine",
+        "files": [
+          "backend/app/modules/training/application/use_cases.py",
+          "backend/app/modules/training/domain/state.py",
+          "backend/app/modules/training/infrastructure/ai_gateway.py"
+        ]
+      },
+      {
+        "name": "learning-plan-state-machine",
+        "files": [
+          "backend/app/modules/learning/application/use_cases.py",
+          "backend/app/modules/learning/domain/policy.py",
+          "backend/app/modules/learning/infrastructure/practice_generator.py"
+        ]
+      }
+    ]
+  }
+}

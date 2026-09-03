@@ -1,13 +1,3 @@
-from pydantic import BaseModel, Field
+"""Compatibility exports for QA medical-chat HTTP schemas."""
 
-from app.schemas.conversation import MessageIn
-
-
-class MedicalChatRequest(BaseModel):
-    prompt: str = Field(min_length=1, max_length=4000)
-    mode: str | None = Field(default=None, max_length=40)
-    messages: list[MessageIn] = Field(default_factory=list, max_length=20)
-
-
-class MedicalChatResponse(BaseModel):
-    content: str
+from app.modules.qa.api.medical_schemas import *  # noqa: F401,F403

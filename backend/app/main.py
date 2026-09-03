@@ -5,40 +5,51 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException
 
-from app.api import (
-    ai,
-    analytics,
-    auth,
-    case_attempts,
-    classes,
-    conversations,
-    medical_review,
-    personalized,
-    problems,
-    reports,
-    student_questions,
+from app.core.config import Settings, get_settings
+from app.errors import (
+    ErrorResponse,
+    app_error_handler,
+    http_exception_handler,
+    unexpected_exception_handler,
+    validation_exception_handler,
 )
-from app.core.config import get_settings
-from app.errors import ErrorResponse, http_exception_handler, unexpected_exception_handler, validation_exception_handler
+from app.modules.analytics.api import analytics
+from app.modules.classroom.api import classes
+from app.modules.content.api import knowledge, medical_review, problems
+from app.modules.identity.api import auth
+from app.modules.learning.api import knowledge_review, personalized
+from app.modules.pbl.api import router as pbl_router
+from app.modules.qa.api import ai, conversations, student_questions
+from app.modules.reports.api import reports
+from app.modules.training.api import case_attempts
+from app.shared.errors import AppError
 
 settings = get_settings()
 
 
 def validate_runtime_settings() -> None:
-    if settings.app_env.strip().lower() == "production" and (
-        settings.jwt_secret == "change-me-in-local-env" or len(settings.jwt_secret) < 32
-    ):
+    if settings.is_production and (settings.jwt_secret == "change-me-in-local-env" or len(settings.jwt_secret) < 32):
         raise RuntimeError("生产环境必须设置至少 32 位随机 JWT_SECRET")
+    if settings.pbl_ai_enabled:
+        # Only configuration assembly runs here; gateways perform no network I/O
+        # until a student message is submitted.
+        from app.modules.pbl.wiring import _gateway
+
+        _gateway()
 
 
 validate_runtime_settings()
 
 
+def should_seed_showcase(runtime_settings: Settings) -> bool:
+    return runtime_settings.seed_showcase_case and not runtime_settings.is_production
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    if settings.seed_showcase_case and settings.app_env != "production":
+    if should_seed_showcase(settings):
+        from app.bootstrap.seed import seed_showcase_case
         from app.db import SessionLocal
-        from app.services.case_seed import seed_showcase_case
 
         db = SessionLocal()
         try:
@@ -49,10 +60,13 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Medical QA API", version="0.1.0", lifespan=lifespan,
+    title="Medical QA API",
+    version="0.1.0",
+    lifespan=lifespan,
     responses={code: {"model": ErrorResponse} for code in (400, 401, 403, 404, 409, 422, 500, 503)},
 )
 app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, unexpected_exception_handler)
 
@@ -79,5 +93,8 @@ app.include_router(case_attempts.router)
 app.include_router(classes.router)
 app.include_router(medical_review.router)
 app.include_router(problems.router)
+app.include_router(knowledge.router)
 app.include_router(analytics.router)
 app.include_router(personalized.router)
+app.include_router(knowledge_review.router)
+app.include_router(pbl_router)

@@ -134,21 +134,53 @@
           >{{ item.label }} · {{ item.rate ?? '暂无数据' }}%</text
         >
       </view>
+      <view class="card knowledge-card">
+        <text class="section">知识巩固概览</text>
+        <text
+          v-if="!selectedClassId"
+          class="muted"
+          >选择一个具体班级后可查看复习参与、到期积压与匿名薄弱主题。</text
+        >
+        <template v-else-if="knowledge">
+          <view class="knowledge-metrics">
+            <text>参与复习 {{ knowledge.participantCount }} 人</text>
+            <text>到期积压 {{ knowledge.dueBacklog }} 张</text>
+            <text
+              >客观正确率
+              {{ knowledge.objectiveCorrectRate == null ? '—' : `${knowledge.objectiveCorrectRate}%` }}</text
+            >
+          </view>
+          <text
+            v-if="knowledge.rankingsSuppressed"
+            class="muted"
+            >少于 5 名参与学生，已隐藏薄弱主题排名以保护学习隐私。</text
+          >
+          <view
+            v-for="item in knowledge.weakPoints"
+            :key="item.pointCode"
+            class="link-row"
+          >
+            <text>{{ item.pointCode }}</text
+            ><text>{{ item.studentCount }} 人需巩固</text>
+          </view>
+        </template>
+      </view>
     </template>
   </view>
 </template>
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onBackPress, onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/services/auth'
-import { ROUTES } from '@/services/navigation'
+import { requireRole } from '@/features/identity/public'
+import { goDetail, handleBackPress, relaunchTo, ROUTES } from '@/platform/navigation'
 import {
+  getAnalyticsKnowledge,
   getAnalyticsOverview,
-  getTeacherClasses,
+  type AnalyticsKnowledge,
   type AnalyticsOverview,
-  type TeacherClass,
-} from '@/services/teacherInsights'
+} from '@/features/analytics/public'
+import { getTeacherClasses, type TeacherClass } from '@/features/classroom/public'
 
 const today = new Date()
 const iso = (date: Date) => date.toISOString().slice(0, 10)
@@ -158,6 +190,7 @@ const selectedClassId = ref<number>()
 const classes = ref<TeacherClass[]>([])
 const loading = ref(false)
 const error = ref('')
+const knowledge = ref<AnalyticsKnowledge | null>(null)
 const data = ref<AnalyticsOverview>({
   scope: { classId: null, className: null, dateFrom: '', dateTo: '' },
   studentCount: 0,
@@ -220,7 +253,12 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    data.value = await getAnalyticsOverview(selectedClassId.value, dateFrom.value, dateTo.value)
+    const [overview, knowledgeOverview] = await Promise.all([
+      getAnalyticsOverview(selectedClassId.value, dateFrom.value, dateTo.value),
+      selectedClassId.value ? getAnalyticsKnowledge(selectedClassId.value) : Promise.resolve(null),
+    ])
+    data.value = overview
+    knowledge.value = knowledgeOverview
   } catch (loadError) {
     error.value = loadError instanceof Error ? loadError.message : '请稍后重试'
   } finally {
@@ -229,11 +267,11 @@ async function load() {
 }
 function handleEmptyAction() {
   if (emptyState.value?.target === 'classes') {
-    uni.navigateTo({ url: '/pages/teacher/classes/classes' })
+    goDetail(ROUTES.teacherClasses)
     return
   }
   if (emptyState.value?.target === 'problems') {
-    uni.reLaunch({ url: `${ROUTES.teacherWorkspace}?tab=problems` })
+    relaunchTo(ROUTES.teacherWorkspace, { tab: 'problems' })
     return
   }
   void load()
@@ -243,15 +281,12 @@ function selectClass(id?: number) {
   void load()
 }
 function openCase(id: number) {
-  uni.navigateTo({
-    url: `/pages/teacher/analytics/case-detail?problemId=${id}${selectedClassId.value ? `&classId=${selectedClassId.value}` : ''}`,
-  })
+  goDetail(ROUTES.teacherAnalyticsCaseDetail, { problemId: id, classId: selectedClassId.value })
 }
 function openStudent(id: number) {
-  uni.navigateTo({
-    url: `/pages/teacher/analytics/student-detail?studentId=${id}${selectedClassId.value ? `&classId=${selectedClassId.value}` : ''}`,
-  })
+  goDetail(ROUTES.teacherAnalyticsStudentDetail, { studentId: id, classId: selectedClassId.value })
 }
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace))
 onShow(async () => {
   if (!requireRole('teacher')) return
   try {
@@ -265,7 +300,7 @@ onShow(async () => {
 .page {
   min-height: 100vh;
   padding: 28rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
 }
 .intro,
 .filters,
@@ -281,7 +316,7 @@ onShow(async () => {
   font-weight: 750;
 }
 .muted {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
   line-height: 1.5;
 }
@@ -297,14 +332,14 @@ onShow(async () => {
 }
 .class-tab {
   padding: 10rpx 16rpx;
-  color: #718096;
-  background: #edf2f7;
+  color: var(--med-muted);
+  background: var(--med-divider);
   border-radius: 99rpx;
   font-size: 22rpx;
 }
 .class-tab.active {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 .dates {
   display: flex;
@@ -315,7 +350,7 @@ onShow(async () => {
   flex: 1;
   min-height: 62rpx;
   padding: 0 12rpx;
-  border: 1rpx solid #dbe7eb;
+  border: 1rpx solid var(--med-border);
   border-radius: 10rpx;
   font-size: 21rpx;
 }
@@ -330,7 +365,7 @@ onShow(async () => {
   gap: 8rpx;
 }
 .value {
-  color: #087f8c;
+  color: var(--med-brand);
   font-size: 42rpx;
   font-weight: 800;
 }
@@ -339,7 +374,7 @@ onShow(async () => {
   padding: 16rpx 0;
   justify-content: space-between;
   flex-wrap: wrap;
-  border-bottom: 1rpx solid #edf2f7;
+  border-bottom: 1rpx solid var(--med-divider);
 }
 .bar {
   width: 100%;
@@ -357,7 +392,7 @@ onShow(async () => {
   display: flex;
   padding: 18rpx 0;
   justify-content: space-between;
-  border-bottom: 1rpx solid #edf2f7;
+  border-bottom: 1rpx solid var(--med-divider);
   font-size: 23rpx;
 }
 .weak {
@@ -365,7 +400,19 @@ onShow(async () => {
   padding-top: 14rpx;
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
+}
+.knowledge-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.knowledge-metrics {
+  display: flex;
+  gap: 16rpx;
+  flex-wrap: wrap;
+  color: var(--med-text);
+  font-size: 23rpx;
 }
 </style>

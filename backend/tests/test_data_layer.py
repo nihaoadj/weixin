@@ -1,15 +1,10 @@
 from fastapi.testclient import TestClient
 from sqlalchemy import event
 
-from app.db import Base, engine
+from app.db import engine
 from app.main import app
 
 client = TestClient(app)
-
-
-def setup_function() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
 
 
 def login(role: str, external_id: str) -> str:
@@ -178,7 +173,8 @@ def test_unexpected_error_does_not_leak_medical_content(monkeypatch, caplog) -> 
         raise RuntimeError("synthetic private medical text")
 
     monkeypatch.setattr(reports, "load_visible_report", fail)
-    response = TestClient(app, raise_server_exceptions=False).get("/reports/1", headers=headers(student))
+    with TestClient(app, raise_server_exceptions=False) as error_client:
+        response = error_client.get("/reports/1", headers=headers(student))
     assert response.status_code == 500
     assert response.json() == {"detail": {"code": "SERVICE_ERROR", "message": "服务暂时不可用"}}
     assert "synthetic private medical text" not in caplog.text

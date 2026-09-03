@@ -1,3 +1,4 @@
+import './platform/contracts/validationRuntime'
 import { createSSRApp } from 'vue'
 import App from './App.vue'
 

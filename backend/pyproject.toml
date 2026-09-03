@@ -13,6 +13,10 @@ ignore = ["B008"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers"
+markers = [
+    "seed_showcase: create the explicit showcase seed for this test",
+    "capture_server_errors: return HTTP 500 responses instead of re-raising",
+]
 
 [tool.coverage.run]
 source = ["app"]

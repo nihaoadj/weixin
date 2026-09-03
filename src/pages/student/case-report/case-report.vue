@@ -5,8 +5,10 @@
       icon="retry"
       title="报告加载失败"
       :description="error"
-      action-label="重新加载"
-      @action="load"
+      :action-label="id ? '重新加载' : '返回病例列表'"
+      :secondary-action-label="id ? '返回病例列表' : ''"
+      @action="id ? load() : back()"
+      @secondary-action="back"
     />
     <view
       v-if="report"
@@ -67,10 +69,11 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/services/auth'
-import { getCaseAssessmentAsync, getCaseAttemptAsync, startCaseAttemptAsync } from '@/services/caseRepositoryAsync'
+import { requireRole } from '@/features/identity/public'
+import { getCaseAssessmentAsync, getCaseAttemptAsync, startCaseAttemptAsync } from '@/features/training/public'
+import { backOrRoute, goPrimary, goReplace, handleBackPress, ROUTES } from '@/platform/navigation'
 import type { CaseAssessment } from '@/types/case'
 const report = ref<CaseAssessment>()
 const error = ref('')
@@ -88,19 +91,21 @@ async function retry() {
   const attempt = await getCaseAttemptAsync(id)
   if (!attempt) return
   const next = await startCaseAttemptAsync(attempt.problemId, id)
-  uni.redirectTo({ url: `/pages/student/case-training/case-training?id=${next.id}` })
+  goReplace(ROUTES.studentCaseTraining, { id: next.id })
 }
 function back() {
-  uni.reLaunch({ url: '/pages/student/question/question' })
+  backOrRoute(ROUTES.studentCases)
 }
 function openLearning() {
-  uni.navigateTo({ url: '/pages/student/learning/index' })
+  goPrimary(ROUTES.studentLearning)
 }
 onLoad((query) => {
   if (!requireRole('student')) return
   id = String(query?.attemptId || '')
   void load()
 })
+
+onBackPress(({ from }) => handleBackPress(from, ROUTES.studentCases))
 </script>
 <style scoped>
 .page {
@@ -115,18 +120,18 @@ onLoad((query) => {
   gap: 14rpx;
 }
 .score {
-  color: #087f8c;
+  color: var(--med-brand);
   font-size: 80rpx;
   font-weight: 800;
 }
 .section {
   margin-top: 8rpx;
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 29rpx;
   font-weight: 700;
 }
 .muted {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
   line-height: 1.5;
 }
@@ -135,7 +140,7 @@ onLoad((query) => {
   padding: 18rpx 0;
   flex-direction: column;
   gap: 8rpx;
-  border-bottom: 1rpx solid #edf2f7;
+  border-bottom: 1rpx solid var(--med-divider);
 }
 .dimension > view:first-child {
   display: flex;
@@ -143,12 +148,12 @@ onLoad((query) => {
 }
 .bar {
   height: 12rpx;
-  background: #e6edf2;
+  background: var(--med-divider);
   border-radius: 99rpx;
 }
 .bar view {
   height: 100%;
-  background: #087f8c;
+  background: var(--med-brand);
   border-radius: 99rpx;
 }
 .evidence {
@@ -165,10 +170,10 @@ onLoad((query) => {
   height: 78rpx;
   line-height: 78rpx;
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 </style>

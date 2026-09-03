@@ -1,56 +1,38 @@
-from sqlalchemy import and_, false, or_, select
-from sqlalchemy.orm import Session
+"""Compatibility facade for content visibility and report transition policies."""
 
-from app.models import ClassMember, ClassRoom, Problem, User
+from __future__ import annotations
 
-
-def student_class_codes(db: Session, student: User) -> set[str]:
-    legacy = {item for item in (student.class_ids or []) if item}
-    linked = set(
-        db.scalars(
-            select(ClassRoom.code)
-            .join(ClassMember, ClassMember.class_id == ClassRoom.id)
-            .where(ClassMember.student_id == student.id, ClassRoom.status == "active")
-        ).all()
-    )
-    return legacy | linked
+from app.modules.content.domain.policy import ContentPolicy
+from app.modules.content.infrastructure.visibility import SqlAlchemyContentVisibility
+from app.modules.reports.domain.policy import ReportPolicy
+from app.shared.errors import AppError
 
 
-def student_problem_filter(student: User, class_codes: set[str]):
-    """SQL visibility predicate; shared by lists and detail lookups before pagination."""
-    targets = "," + Problem.target_ids + ","
-    class_matches = (
-        or_(*[targets.contains(f",{code},", autoescape=True) for code in class_codes]) if class_codes else false()
-    )
-    return and_(
-        Problem.status == "published",
-        or_(
-            Problem.target == "all",
-            and_(Problem.target == "individual", targets.contains(f",{student.external_id},", autoescape=True)),
-            and_(Problem.target == "class", class_matches),
-        ),
-    )
+def student_class_codes(db, student):
+    return SqlAlchemyContentVisibility.student_class_codes(db, student)
 
 
-def is_problem_visible_to_student(problem: Problem, student: User, db: Session | None = None) -> bool:
-    if student.role != "student" or problem.status != "published":
+def student_problem_filter(student, class_codes):
+    return SqlAlchemyContentVisibility.student_problem_filter(student, class_codes)
+
+
+def is_problem_visible_to_student(problem, student, db=None) -> bool:
+    if student.role != "student":
         return False
-    if problem.target == "all":
-        return True
-    target_ids = {item for item in problem.target_ids.split(",") if item}
-    if problem.target == "individual":
-        return student.external_id in target_ids
-    if problem.target == "class":
-        class_codes = student_class_codes(db, student) if db is not None else set(student.class_ids or [])
-        return bool(target_ids.intersection(class_codes))
-    return False
+    class_codes = set(student.class_ids or [])
+    if db is not None:
+        class_codes = student_class_codes(db, student)
+    return ContentPolicy.is_visible_to_student(
+        status=problem.status,
+        target=problem.target,
+        target_ids=tuple(item for item in (problem.target_ids or "").split(",") if item),
+        student_external_id=student.external_id,
+        class_codes=class_codes,
+    )
 
 
 def ensure_report_transition(current_status: str, next_status: str) -> None:
-    allowed = {
-        "draft": {"pending_review"},
-        "pending_review": {"reviewed"},
-        "reviewed": {"reviewed"},
-    }
-    if next_status not in allowed.get(current_status, set()):
-        raise ValueError(f"Report cannot transition from {current_status} to {next_status}")
+    try:
+        ReportPolicy().require_transition(current_status, next_status)
+    except AppError as error:
+        raise ValueError(error.message) from error

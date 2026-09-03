@@ -3,14 +3,12 @@ from time import perf_counter
 
 from sqlalchemy import event, insert
 
-from app.db import Base, SessionLocal, engine
+from app.db import SessionLocal, engine
 from app.models import CaseAssessment, CaseAttempt, ClassMember, ClassRoom, Problem, User
 from app.services.analytics import case_detail, overview, student_detail
 
 
 def test_analytics_matrix_scales_to_ten_thousand_attempts() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
     now = datetime.now(UTC)
     dimensions = [
         {"dimension_id": dimension_id, "score": 70, "weighted_score": weight}

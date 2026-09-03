@@ -1,11 +1,6 @@
-from app.db import Base, SessionLocal, engine
+from app.db import SessionLocal
 from app.models import CaseAssessment, CaseAttempt, LearningPlan, LearningTask, Problem, Report
 from app.services.test_seed import seed_test_data
-
-
-def setup_function() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
 
 
 def test_test_seed_is_idempotent_and_builds_each_demo_path() -> None:

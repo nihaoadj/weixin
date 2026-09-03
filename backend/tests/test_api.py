@@ -1,13 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.db import Base, engine
 from app.main import app
-
-
-def setup_function() -> None:
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
 
 client = TestClient(app)
 
@@ -121,6 +114,8 @@ def test_report_state_flow() -> None:
     assert review_response.status_code == 200
     assert review_response.json()["status"] == "reviewed"
     assert review_response.json()["teacher_score"] == 0
+    # 批阅教师身份必须留痕，保证审计可追溯。
+    assert isinstance(review_response.json()["reviewer_id"], int)
 
     duplicate_response = client.post(
         "/reports",
@@ -186,6 +181,46 @@ def test_problem_publish_and_question_thread_flow() -> None:
     teacher_problems = client.get("/problems", headers={"Authorization": f"Bearer {teacher_token}"})
     assert teacher_problems.status_code == 200
     assert teacher_problems.json()[0]["answer_count"] == 1
+
+
+def test_question_writes_require_author_ownership() -> None:
+    owner_token = login("teacher", "question_owner")
+    other_token = login("teacher", "question_intruder")
+    owner_headers = {"Authorization": f"Bearer {owner_token}"}
+    other_headers = {"Authorization": f"Bearer {other_token}"}
+
+    created = client.post(
+        "/problems",
+        headers=owner_headers,
+        json={
+            "type": "医学常识",
+            "title": "仅作者可操作",
+            "description": "归属校验",
+            "target": "all",
+            "target_label": "全体学生",
+            "target_ids": [],
+        },
+    )
+    assert created.status_code == 200
+    problem_id = created.json()["id"]
+    # 题目创建即记录作者，供写操作归属校验使用。
+    assert created.json()["author_id"] is not None
+
+    payload = {
+        "type": "医学常识",
+        "title": "篡改标题",
+        "description": "越权修改",
+        "target": "all",
+        "target_label": "全体学生",
+        "target_ids": [],
+        "content_type": "question",
+    }
+    assert client.put(f"/problems/{problem_id}", headers=other_headers, json=payload).status_code == 404
+    assert client.post(f"/problems/{problem_id}/publish", headers=other_headers).status_code == 404
+    assert client.post(f"/problems/{problem_id}/reject", headers=other_headers).status_code == 404
+
+    # 作者本人操作不受影响。
+    assert client.post(f"/problems/{problem_id}/publish", headers=owner_headers).status_code == 200
 
 
 def test_class_and_individual_problem_visibility() -> None:

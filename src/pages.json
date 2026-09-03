@@ -17,6 +17,10 @@
       "style": { "navigationBarTitleText": "医学问答助手" }
     },
     {
+      "path": "pages/student/pbl/pbl",
+      "style": { "navigationBarTitleText": "病理学 PBL 课堂" }
+    },
+    {
       "path": "pages/student/history/history",
       "style": { "navigationBarTitleText": "历史记录" }
     },
@@ -53,6 +57,10 @@
       "style": { "navigationBarTitleText": "训练复盘" }
     },
     {
+      "path": "pages/student/learning/knowledge-loop",
+      "style": { "navigationBarTitleText": "知识巩固" }
+    },
+    {
       "path": "pages/report/report",
       "style": { "navigationBarTitleText": "问答报告" }
     },
@@ -70,7 +78,7 @@
     },
     {
       "path": "pages/teacher/problem-edit/problem-edit",
-      "style": { "navigationBarTitleText": "编辑问题" }
+      "style": { "navigationBarTitleText": "问题编写" }
     },
     {
       "path": "pages/teacher/case-edit/case-edit",
@@ -107,6 +115,10 @@
     {
       "path": "pages/teacher/classes/classes",
       "style": { "navigationBarTitleText": "班级管理" }
+    },
+    {
+      "path": "pages/teacher/knowledge-cards/knowledge-cards",
+      "style": { "navigationBarTitleText": "知识补充卡" }
     }
   ],
   "globalStyle": {

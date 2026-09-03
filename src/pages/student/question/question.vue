@@ -91,15 +91,11 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import StudentNav from '@/components/ui/StudentNav.vue'
-import {
-  getCaseAssessmentAsync,
-  getCaseAttemptsAsync,
-  getDemoCaseProblemsAsync,
-  startCaseAttemptAsync,
-} from '@/services/caseRepositoryAsync'
-import { requireRole } from '@/services/auth'
-import { goDetail, goPrimary, ROUTES } from '@/services/navigation'
-import { getProblemsAsync, getStudentQuestionsAsync } from '@/services/repositoryAsync'
+import { getCaseAssessmentAsync, getCaseAttemptsAsync, startCaseAttemptAsync } from '@/features/training/public'
+import { requireRole } from '@/features/identity/public'
+import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
+import { getDemoCaseProblemsAsync, getProblemsAsync } from '@/features/content/public'
+import { getStudentQuestionsAsync } from '@/features/qa/public'
 import { caseStages, type CaseAttempt, type CaseAssessment } from '@/types/case'
 import type { Problem, StudentQuestion } from '@/types/domain'
 const cases = ref<Problem[]>([])
@@ -148,13 +144,13 @@ async function start(id: string) {
   }
 }
 function openAttempt(id: string) {
-  goDetail('/pages/student/case-training/case-training', { id })
+  goDetail(ROUTES.studentCaseTraining, { id })
 }
 function openReport(id: string) {
-  goDetail('/pages/student/case-report/case-report', { attemptId: id })
+  goDetail(ROUTES.studentCaseReport, { attemptId: id })
 }
 function openQuestion(id: string) {
-  goDetail('/pages/student/question-detail/question-detail', { id })
+  goDetail(ROUTES.studentQuestionDetail, { id })
 }
 function openChat() {
   goPrimary(ROUTES.studentChat)
@@ -178,7 +174,7 @@ onShow(() => {
 .title,
 .section-title,
 .case-title {
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 34rpx;
   font-weight: 700;
 }
@@ -200,11 +196,11 @@ onShow(() => {
   gap: 12rpx;
 }
 .muted {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 22rpx;
 }
 .go {
-  color: #087f8c;
+  color: var(--med-brand);
 }
 .primary,
 .secondary {
@@ -212,18 +208,18 @@ onShow(() => {
   margin: 10rpx 0 0;
   line-height: 76rpx;
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
   font-size: 25rpx;
 }
 .secondary {
-  color: #087f8c;
-  background: #e6f7f5;
+  color: var(--med-brand);
+  background: var(--med-brand-soft);
 }
 .question {
   display: flex;
   padding: 22rpx 0;
   justify-content: space-between;
-  border-bottom: 1rpx solid #edf2f7;
+  border-bottom: 1rpx solid var(--med-divider);
 }
 .nav {
   position: fixed;
@@ -232,7 +228,16 @@ onShow(() => {
   left: 24rpx;
   padding: 8rpx;
   background: #fff;
-  border: 1rpx solid #dbe7eb;
+  border: 1rpx solid var(--med-border);
   border-radius: 24rpx;
+}
+@media screen and (min-width: 900px) {
+  .nav {
+    right: auto;
+    left: 50%;
+    width: calc(1080px - 48rpx);
+    max-width: calc(100% - 48rpx);
+    transform: translateX(-50%);
+  }
 }
 </style>

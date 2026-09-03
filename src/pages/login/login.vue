@@ -1,56 +1,85 @@
 <template>
   <view class="safe-page login-page">
-    <view class="hero">
-      <view class="brand-lockup">
-        <view class="logo"
-          ><MedIcon
-            name="brand"
-            size="lg"
-        /></view>
-        <text class="brand-kicker">MEDICAL LEARNING COPILOT</text>
+    <view class="login-shell">
+      <view class="hero">
+        <view class="brand-lockup">
+          <view class="logo"
+            ><MedIcon
+              name="brand"
+              size="md"
+          /></view>
+          <view class="brand-copy">
+            <text class="brand-kicker">医学带教工具</text>
+            <text class="brand-note">记录学习过程，连接学生与教师</text>
+          </view>
+        </view>
+        <text class="title">临床思维学习助手</text>
+        <text class="subtitle">从一个病例问题开始，完成推理、反馈与复盘。</text>
+        <view
+          class="loop-note"
+          aria-label="学习闭环：提问、临床推理、教师反馈"
+        >
+          <text class="loop-label">学习闭环</text>
+          <view class="loop-flow">
+            <text>提问</text><text aria-hidden="true">→</text><text>临床推理</text><text aria-hidden="true">→</text
+            ><text>教师反馈</text>
+          </view>
+          <text class="loop-description">每次练习都会留下可回看、可批阅的思维记录。</text>
+        </view>
       </view>
-      <text class="title">临床思维学习助手</text>
-      <text class="subtitle">循证提问 · 形成性评价 · 教师协作</text>
-      <view class="trust-row"><text>教学场景</text><text>隐私友好</text><text>非临床诊疗</text></view>
-    </view>
-    <view class="role-panel card">
-      <text class="panel-title">请选择您的身份</text>
-      <button
-        class="role-button student"
-        :loading="loadingRole === 'student'"
-        :disabled="Boolean(loadingRole)"
-        @click="login('student')"
-      >
-        <view class="role-icon"><MedIcon name="student" /></view>
-        <view class="role-copy"
-          ><text class="role-title">学生</text><text class="role-desc">医学问答、练习与报告</text></view
+      <view class="role-panel card">
+        <view class="panel-heading">
+          <text class="panel-title">选择身份</text>
+          <text class="panel-description">进入对应的学习或教学工作区</text>
+        </view>
+        <button
+          :tabindex="Boolean(loadingRole) ? -1 : 0"
+          role="button"
+          class="role-button student"
+          :loading="loadingRole === 'student'"
+          :disabled="Boolean(loadingRole)"
+          @keydown="activateButtonOnKey"
+          @click="login('student')"
         >
-        <text class="arrow">›</text>
-      </button>
-      <button
-        class="role-button teacher"
-        :loading="loadingRole === 'teacher'"
-        :disabled="Boolean(loadingRole)"
-        @click="login('teacher')"
-      >
-        <view class="role-icon"><MedIcon name="teacher" /></view>
-        <view class="role-copy"
-          ><text class="role-title">教师</text><text class="role-desc">批阅报告与发布问题</text></view
+          <view class="role-icon"><MedIcon name="student" /></view>
+          <view class="role-copy"
+            ><text class="role-title">学生</text><text class="role-desc">医学问答、病例训练与学习报告</text></view
+          >
+          <text class="arrow">›</text>
+        </button>
+        <button
+          :tabindex="Boolean(loadingRole) ? -1 : 0"
+          role="button"
+          class="role-button teacher"
+          :loading="loadingRole === 'teacher'"
+          :disabled="Boolean(loadingRole)"
+          @keydown="activateButtonOnKey"
+          @click="login('teacher')"
         >
-        <text class="arrow">›</text>
-      </button>
-      <text class="notice">当前为试点身份入口。医学内容用于教学辅助，不构成诊断或治疗建议。</text>
+          <view class="role-icon"><MedIcon name="teacher" /></view>
+          <view class="role-copy"
+            ><text class="role-title">教师</text><text class="role-desc">报告批阅、教学内容与学情分析</text></view
+          >
+          <text class="arrow">›</text>
+        </button>
+        <text class="notice">当前为试点身份入口。医学内容仅用于教学辅助，不构成诊断或治疗建议。</text>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
+import { activateButtonOnKey } from '@/components/ui/keyboard'
 import { ref } from 'vue'
 import MedIcon from '@/components/ui/MedIcon.vue'
-import { isApiMode } from '@/config/runtime'
-import { relaunchForRole } from '@/services/navigation'
-import { saveSession } from '@/services/repository'
-import { isWechatMiniProgram, syncDemoLoginWithBackend, syncWechatLoginWithBackend } from '@/services/remoteAuth'
+import {
+  isApiRuntime,
+  isWechatMiniProgram,
+  saveSession,
+  syncDemoLoginWithBackend,
+  syncWechatLoginWithBackend,
+} from '@/features/identity/public'
+import { relaunchForRole } from '@/platform/navigation'
 import type { SessionUser, UserRole } from '@/types/domain'
 
 const loadingRole = ref<UserRole | null>(null)
@@ -75,17 +104,16 @@ async function login(role: UserRole) {
   let permissions: string[] = []
   let sessionUser: SessionUser | undefined
   try {
-    if (isApiMode() && isWechatMiniProgram()) {
+    if (isApiRuntime() && isWechatMiniProgram()) {
+      // 教师身份校验在 remoteAuth 内、写入 token 之前完成，
+      // 失败时既不落新 token 也不污染本地 session。
       sessionUser = await syncWechatLoginWithBackend({ requestedRole: role, nickName, avatarUrl })
-      if (role === 'teacher' && sessionUser.role !== 'teacher') {
-        throw new Error('当前微信账号尚未开通教师身份')
-      }
     } else {
       permissions = (await syncDemoLoginWithBackend({ role, openid, nickName, avatarUrl })) || permissions
     }
   } catch (error) {
     console.error('同步后端登录失败', error)
-    if (isApiMode()) {
+    if (isApiRuntime()) {
       uni.showToast({ title: error instanceof Error ? error.message : '后端登录失败', icon: 'none' })
       loadingRole.value = null
       return
@@ -109,93 +137,137 @@ async function login(role: UserRole) {
 
 <style scoped>
 .login-page {
-  padding: 72rpx 36rpx 48rpx;
-  background:
-    radial-gradient(circle at 88% 4%, rgba(53, 183, 168, 0.2) 0, transparent 34%),
-    linear-gradient(180deg, #eef8f7 0, #f4f8fa 45%);
+  display: flex;
+  padding: 48rpx 32rpx;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--med-paper);
+}
+.login-shell {
+  width: 100%;
+  max-width: 960px;
 }
 .hero {
   display: flex;
+  width: 100%;
   flex-direction: column;
-  align-items: center;
-  margin: 42rpx 0 58rpx;
+  align-items: flex-start;
+  margin: 24rpx 0 40rpx;
 }
 .logo {
   display: flex;
-  width: 120rpx;
-  height: 120rpx;
+  width: 88rpx;
+  height: 88rpx;
   align-items: center;
   justify-content: center;
-  border-radius: 36rpx;
-  background: #fff;
-  border: 1rpx solid #d4e9e5;
-  box-shadow: 0 22rpx 58rpx rgba(11, 93, 97, 0.18);
+  border-radius: var(--med-radius-md);
+  background: var(--med-brand-soft);
+  border: 1rpx solid var(--med-border);
 }
 .brand-lockup {
   display: flex;
   align-items: center;
+}
+.brand-copy {
+  display: flex;
+  margin-left: 20rpx;
   flex-direction: column;
 }
 .brand-kicker {
-  margin-top: 18rpx;
-  color: #0f777b;
-  font-size: 18rpx;
+  color: var(--med-ink);
+  font-size: 26rpx;
   font-weight: 700;
-  letter-spacing: 3rpx;
+}
+.brand-note {
+  margin-top: 5rpx;
+  color: var(--med-muted);
+  font-size: 22rpx;
 }
 .title {
-  margin-top: 30rpx;
-  color: #0b2239;
-  font-size: 48rpx;
+  margin-top: 48rpx;
+  color: var(--med-navy);
+  font-size: 50rpx;
   font-weight: 800;
-  letter-spacing: 2rpx;
+  line-height: 1.28;
 }
 .subtitle {
-  margin-top: 12rpx;
-  color: #637985;
+  max-width: 600rpx;
+  margin-top: 16rpx;
+  color: var(--med-text-secondary);
+  font-size: 28rpx;
+  line-height: 1.6;
 }
-.trust-row {
+.loop-note {
   display: flex;
-  margin-top: 24rpx;
-  gap: 12rpx;
+  width: 100%;
+  max-width: 640rpx;
+  margin-top: 40rpx;
+  padding: 26rpx 28rpx;
+  box-sizing: border-box;
+  flex-direction: column;
+  background: var(--med-surface);
+  border-left: 2rpx solid var(--med-border);
 }
-.trust-row text {
-  padding: 8rpx 14rpx;
-  color: #3f626c;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1rpx solid #d8e8ea;
-  border-radius: 99rpx;
-  font-size: 19rpx;
+.loop-label {
+  color: var(--med-clinical);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+.loop-flow {
+  display: flex;
+  margin-top: 12rpx;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  color: var(--med-ink);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+.loop-flow text:nth-child(even) {
+  color: var(--med-clinical);
+}
+.loop-description {
+  margin-top: 12rpx;
+  color: var(--med-muted);
+  font-size: 24rpx;
+  line-height: 1.55;
 }
 .role-panel {
-  padding: 38rpx 30rpx 30rpx;
-  backdrop-filter: blur(18rpx);
+  width: 100%;
+  margin: 0 auto;
+  padding: 34rpx 28rpx 28rpx;
+  box-sizing: border-box;
+}
+.panel-heading {
+  display: flex;
+  margin-bottom: 26rpx;
+  flex-direction: column;
 }
 .panel-title {
-  display: block;
-  margin-bottom: 28rpx;
   font-size: 32rpx;
-  font-weight: 650;
+  font-weight: 750;
+}
+.panel-description {
+  margin-top: 6rpx;
+  color: var(--med-muted);
+  font-size: 23rpx;
 }
 .role-button {
   display: flex;
-  height: 142rpx;
-  margin: 22rpx 0;
-  padding: 0 28rpx;
+  width: 100%;
+  min-height: 128rpx;
+  margin: 16rpx 0;
+  padding: 18rpx 24rpx;
   align-items: center;
   text-align: left;
-  border-radius: 24rpx;
-  color: #193246;
-  border: 1rpx solid transparent;
+  border-radius: var(--med-radius-md);
+  color: var(--med-ink);
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
   line-height: 1.2;
 }
-.role-button.student {
-  background: #e9f7f5;
-  border-color: #cce9e4;
-}
-.role-button.teacher {
-  background: #edf3f8;
-  border-color: #d8e3ed;
+.role-button:active {
+  background: var(--med-brand-soft);
 }
 .role-icon {
   display: flex;
@@ -204,8 +276,8 @@ async function login(role: UserRole) {
   margin-right: 24rpx;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  border-radius: 22rpx;
+  background: var(--med-brand-soft);
+  border-radius: var(--med-radius-md);
 }
 .role-copy {
   display: flex;
@@ -218,18 +290,248 @@ async function login(role: UserRole) {
 }
 .role-desc {
   margin-top: 8rpx;
-  color: #64748b;
+  color: var(--med-text-secondary);
   font-size: 24rpx;
 }
 .arrow {
-  color: #0f8b8d;
+  color: var(--med-brand);
   font-size: 56rpx;
 }
 .notice {
   display: block;
-  margin-top: 28rpx;
-  color: #8795a8;
+  margin-top: 24rpx;
+  color: var(--med-muted);
   font-size: 22rpx;
   line-height: 1.6;
+}
+@media screen and (max-width: 360px) {
+  .brand-kicker {
+    font-size: 14px;
+  }
+
+  .brand-note,
+  .panel-description,
+  .role-desc,
+  .loop-description {
+    font-size: 12px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .loop-label,
+  .notice {
+    font-size: 11px;
+  }
+
+  .loop-flow {
+    font-size: 15px;
+  }
+}
+@media screen and (min-width: 600px) and (max-width: 899px) {
+  .login-page {
+    padding: 36px;
+  }
+
+  .login-shell {
+    max-width: 640px;
+  }
+
+  .hero {
+    margin: 12px 0 28px;
+  }
+
+  .logo {
+    width: 56px;
+    height: 56px;
+  }
+
+  .brand-copy {
+    margin-left: 16px;
+  }
+
+  .brand-kicker {
+    font-size: 18px;
+  }
+
+  .brand-note,
+  .panel-description,
+  .role-desc,
+  .loop-description {
+    font-size: 14px;
+  }
+
+  .title {
+    margin-top: 36px;
+    font-size: 36px;
+  }
+
+  .subtitle {
+    margin-top: 12px;
+    font-size: 17px;
+  }
+
+  .loop-note {
+    max-width: none;
+    margin-top: 28px;
+    padding: 20px 24px;
+  }
+
+  .loop-label {
+    font-size: 13px;
+  }
+
+  .loop-flow {
+    font-size: 18px;
+  }
+
+  .role-panel {
+    padding: 28px;
+  }
+
+  .panel-title {
+    font-size: 22px;
+  }
+
+  .role-button {
+    min-height: 84px;
+    margin: 12px 0;
+    padding: 14px 18px;
+  }
+
+  .role-icon {
+    width: 52px;
+    height: 52px;
+    margin-right: 16px;
+  }
+
+  .role-title {
+    font-size: 19px;
+  }
+
+  .notice {
+    font-size: 12px;
+  }
+}
+@media screen and (min-width: 900px) {
+  .login-page {
+    padding: 72px 56px;
+    align-items: center;
+  }
+
+  .login-shell {
+    display: grid;
+    max-width: 1040px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(440px, 0.95fr);
+    align-items: center;
+    gap: 88px;
+  }
+
+  .hero {
+    margin: 0;
+  }
+
+  .logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+  }
+
+  .brand-copy {
+    margin-left: 16px;
+  }
+
+  .brand-kicker {
+    font-size: 18px;
+  }
+
+  .brand-note {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  .title {
+    max-width: 520px;
+    margin-top: 44px;
+    font-size: 42px;
+    line-height: 1.18;
+    text-wrap: balance;
+  }
+
+  .subtitle {
+    max-width: 520px;
+    margin-top: 16px;
+    font-size: 18px;
+  }
+
+  .loop-note {
+    max-width: 520px;
+    margin-top: 34px;
+    padding: 24px 28px;
+    border-left-width: 4px;
+  }
+
+  .loop-label,
+  .loop-description,
+  .panel-description,
+  .role-desc {
+    font-size: 14px;
+  }
+
+  .loop-flow {
+    margin-top: 10px;
+    gap: 10px;
+    font-size: 19px;
+  }
+
+  .loop-description {
+    margin-top: 10px;
+  }
+
+  .role-panel {
+    margin: 0;
+    padding: 32px;
+    border-radius: 18px;
+  }
+
+  .panel-heading {
+    margin-bottom: 22px;
+  }
+
+  .panel-title {
+    font-size: 24px;
+  }
+
+  .role-button {
+    min-height: 92px;
+    margin: 14px 0;
+    padding: 16px 20px;
+    border-radius: 14px;
+  }
+
+  .role-icon {
+    width: 56px;
+    height: 56px;
+    margin-right: 18px;
+    border-radius: 12px;
+  }
+
+  .role-title {
+    font-size: 20px;
+  }
+
+  .role-desc {
+    margin-top: 6px;
+  }
+
+  .arrow {
+    font-size: 38px;
+  }
+
+  .notice {
+    margin-top: 20px;
+    font-size: 13px;
+  }
 }
 </style>

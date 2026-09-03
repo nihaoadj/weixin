@@ -94,3 +94,13 @@ export interface AnalyticsStudent {
   learningPlan: { id: number; status: string; targetDimensionIds: string[]; dueAt: string } | null
   practiceMastery: Record<string, { averageScore: number; attemptCount: number }>
 }
+
+export interface AnalyticsKnowledge {
+  classId: number
+  className: string
+  participantCount: number
+  dueBacklog: number
+  objectiveCorrectRate: number | null
+  weakPoints: Array<{ pointCode: string; studentCount: number }>
+  rankingsSuppressed: boolean
+}

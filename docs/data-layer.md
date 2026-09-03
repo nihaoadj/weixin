@@ -4,22 +4,23 @@
 
 ```text
 Page / Component
-  → services compatibility facade
-  → use case (multi-resource business ordering)
-  → Repository port
+  → feature public API
+  → bootstrap-assembled application port
   → API adapter or Demo adapter
-  → explicit mapper
+  → explicit DTO/view mapper
+  → platform HTTP or feature-owned local store
   → validated OpenAPI DTO / validated local storage
 ```
 
-- 页面只能依赖领域类型和 service facade，不得直接调用 `uni.request`、拼接后端地址或读取 storage key。
-- `VITE_APP_MODE` 在 Repository 容器初始化时选择一次 adapter；API 失败不得回退到 Demo。
+- 页面只能依赖 `src/features/*/public.ts` 和共享 UI/纯工具，不得直接调用 `uni.request`、拼接后端地址或读取 storage key。
+- `src/bootstrap/wiring.ts` 在当前运行模式下装配各模块 adapter；API 失败不得回退到 Demo，也不得在 adapter 内自行选择模式。
+- 前端 feature 只能按 `public → presentation/application → domain` 和 `infrastructure → domain` 的许可方向依赖；`scripts/frontend-boundaries.mjs` 检查 alias、相对、type-only、re-export、动态导入、平台 I/O 与循环。它目前直接运行，不是假定存在的 npm script。
 - `docs/openapi.json` 是可审查的服务端契约快照，`src/data/contracts/openapi.generated.ts` 由它生成，二者禁止手改。
 - DTO 在 HTTP 边界使用 Zod 校验；snake_case 到领域字段的转换必须在端点 mapper 中显式完成。
-- `src/types/records.ts` 是核心 Repository 的领域契约，状态为 `draft/pending_review/reviewed`、`draft/published/rejected`、`answered/unanswered`。原 `types/domain.ts` 暂留作页面兼容类型；中文标签由 `mappers/presentation.ts` 和 `mappers/status.ts` 转换。
-- `repositories/core.ts` 按会话、报告和题目定义窄接口；病例、学习计划、教师分析分别有独立接口。容器/门面只在初始化时选模式。
-- `usecases/reportDraft.ts` 编排先保存会话再保存报告；adapter 仅负责该步骤的传输或本地持久化。病例旧 service 导出保持兼容，训练和审核状态已使用英文代码。
-- `contracts/conformance.ts` 在类型检查时验证 Zod 输出与生成 DTO 的兼容性；病例推理、阶段答案、学习计划任务和任务启动结果均有嵌套校验。
+- `src/main.ts` 必须先引入 `src/platform/contracts/validationRuntime.ts`，再装载业务模块。该模块将 Zod 设为 `jitless`，使用解释执行避免微信沙箱不支持的动态 `Function` 编译；它不跳过 schema 校验，不改变 DTO、存储格式、API/Demo 装配或错误边界。相关回归位于 `validationRuntime.spec.ts`。
+- `src/features/*/domain/ports.ts` 是按职责拆开的领域契约；`src/types/records.ts` 保留稳定 record，`types/domain.ts` 保留旧页面 view。中文标签由 `src/shared/mappers` 转换。
+- `features/reports/application/reportDraft.ts` 编排先保存会话再保存报告；adapter 仅负责该步骤的传输或本地持久化。训练评分位于 `features/training/domain/scoring.ts`，不复制到 Demo/API 两套实现。
+- `src/platform/contracts/conformance.ts` 在类型检查时验证 Zod 输出与生成 DTO 的兼容性；病例推理、阶段答案、学习计划任务和任务启动结果均有嵌套校验。
 
 ## 缓存和隐私
 
@@ -31,7 +32,7 @@ Page / Component
 
 ## 本地存储
 
-- 所有 key 和 schema version 由 `src/data/storage.ts` 管理；学生私有集合必须使用用户作用域 key。
+- 底层 key、schema version 和 `StoragePort` 由 `src/platform/storage/storage.ts` 管理；学生私有集合仍必须使用用户作用域 key。身份会话的迁移与格式组合位于 `features/identity/infrastructure/sessionStorage.ts`，应用层只依赖 `SessionStoragePort`；其他业务 schema/store 位于所属 feature infrastructure，训练 schema 位于 `platform/storage/caseSchemas.ts` 作为当前兼容集中存储契约。
 - 读写都执行运行时 schema 校验。损坏或旧格式值不能进入领域层；迁移必须幂等并保留当前 v2 数据兼容。
 - 当前 schema version 为 3。增加字段或改变结构时必须同时新增迁移测试并提升版本。
 - 损坏原值保留以便恢复，不用空数组覆盖。旧私有集合仅在验证成功并写入作用域 key 后删除旧 key；API 模式不迁移 Demo 业务集合。
@@ -44,6 +45,8 @@ Page / Component
 - 查询不存在返回 `undefined`，旧的可空写操作保持 `null`；权限及非法状态转换抛 `AppError`，不能当成空数据。API 404 与旧字符串错误均统一处理。
 - Demo 的班级写入和个性化计划写入本轮不模拟服务端能力，显式抛 `UNSUPPORTED_OPERATION`；对应读取保持空模型。核心会话/报告/题目行为由同一组适配器测试验证。
 - 报告 client ID 仅在学生范围内唯一；教师按 client ID 命中多条时返回 409，必须改用摘要中的 report ID。学生页使用明确的 `findReportByConversationAsync`，避免纯数字 client ID 与报告 ID 混淆。
+
+旧 `src/services`、`src/data` 运行时入口已清理，仓库内测试已迁移到真实 feature/platform 模块；仅生成 OpenAPI 类型保留在 `src/data/contracts/openapi.generated.ts`。新代码不得继续引用已删除路径。
 
 ## 分页和查询预算
 
@@ -68,11 +71,13 @@ Page / Component
 
 ## 契约工作流
 
-修改 Pydantic schema 或路由后执行：
+修改 Pydantic schema 或路由后，在审阅生成差异的工作树执行：
 
 ```bash
 npm run contract:generate
 npm run contract:check
 ```
 
-CI 会重新生成契约并检查工作区差异。提交必须同时包含后端改动、OpenAPI 快照、生成类型、mapper 和契约测试。
+`contract:generate` 会写入 `docs/openapi.json`、`src/data/contracts/openapi.generated.ts` 与 fixture；`contract:check` 在系统临时目录生成并按内容比较，不改写快照。远程 CI 是否已接入仍须由平台证据确认。提交必须同时包含后端改动、OpenAPI 快照、生成类型、mapper 和契约测试。
+
+# T09：`pbl_sessions`、`pbl_participations`、`pbl_diagnostic_snapshots` 和 `pbl_question_suggestions` 采用追加 revision；已处理建议不会被 AI 覆盖。content 的 `problem_origins(source_type, source_id)` 唯一关系保证采用发布幂等。

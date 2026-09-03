@@ -8,8 +8,8 @@
 
 <script setup lang="ts">
 import { onShow } from '@dcloudio/uni-app'
-import { relaunchForRole } from '@/services/navigation'
-import { getRole } from '@/services/repository'
+import { relaunchForRole } from '@/platform/navigation'
+import { getRole } from '@/features/identity/public'
 
 onShow(() => {
   relaunchForRole(getRole())
@@ -32,7 +32,7 @@ onShow(() => {
   justify-content: center;
   border-radius: 36rpx;
   color: #fff;
-  background: linear-gradient(135deg, #087f8c, #16a085);
+  background: linear-gradient(135deg, var(--med-brand), #16a085);
   font-size: 64rpx;
   box-shadow: 0 20rpx 50rpx rgba(8, 127, 140, 0.25);
 }

@@ -1,9 +1,31 @@
-from app.models.case_training import AICallLog, CaseAssessment, CaseAttempt, CaseAttemptMessage, StageSubmission
-from app.models.classroom import ClassMember, ClassRoom, MedicalReview
-from app.models.learning import Conversation, Message, Report
-from app.models.personalized import LearningPlan, LearningTask, LearningTaskAttempt, StudentNotification
-from app.models.problem import Problem, QuestionThread, QuestionThreadMessage
-from app.models.user import User
+"""Compatibility registry for Alembic, legacy seeds, and historical imports.
+
+Concrete ORM ownership lives in each module's infrastructure.models file. This
+package is only the application-wide metadata registration point; it contains
+no table definitions or business behavior.
+"""
+
+from app.bootstrap.model_registry import (
+    AICallLog,
+    CaseAssessment,
+    CaseAttempt,
+    CaseAttemptMessage,
+    ClassMember,
+    ClassRoom,
+    Conversation,
+    LearningPlan,
+    LearningTask,
+    LearningTaskAttempt,
+    MedicalReview,
+    Message,
+    Problem,
+    QuestionThread,
+    QuestionThreadMessage,
+    Report,
+    StageSubmission,
+    StudentNotification,
+    User,
+)
 
 __all__ = [
     "Conversation",

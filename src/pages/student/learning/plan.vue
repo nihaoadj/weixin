@@ -17,7 +17,7 @@
       icon="retry"
       title="任务暂不可用"
       :description="error"
-      action-label="返回计划"
+      action-label="返回学习首页"
       @action="back"
     />
     <view
@@ -36,22 +36,24 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/services/auth'
-import { backOrHome } from '@/services/navigation'
-import { getLearningPlan, startLearningTask } from '@/services/personalizedLearning'
+import { requireRole } from '@/features/identity/public'
+import { backOrRoute, goDetail, goReplace, handleBackPress, ROUTES } from '@/platform/navigation'
+import { getLearningPlan, startLearningTask } from '@/features/learning/public'
 import type { LearningPlan, LearningTask } from '@/types/learning'
 const task = ref<LearningTask>()
 const error = ref('')
 const loading = ref(false)
 let taskId = 0
+let planId = 0
 const statusLabel = (status: LearningTask['status']) =>
   status === 'completed' ? '已完成' : status === 'in_progress' ? '进行中' : '待开始'
 async function load(planId: number) {
   try {
     const plan: LearningPlan = await getLearningPlan(planId)
     task.value = plan.tasks.find((item) => item.id === taskId)
+    if (!task.value) error.value = '任务不存在或已不可用'
   } catch (e) {
     error.value = e instanceof Error ? e.message : '请稍后重试'
   }
@@ -61,11 +63,12 @@ async function start() {
   loading.value = true
   try {
     const result = await startLearningTask(task.value.id)
-    if (result.mode === 'case_attempt')
-      uni.redirectTo({ url: `/pages/student/case-training/case-training?id=${String(result.attempt.id)}` })
+    if (result.mode === 'case_attempt') goReplace(ROUTES.studentCaseTraining, { id: String(result.attempt.id) })
     else
-      uni.redirectTo({
-        url: `/pages/student/learning/drill?attemptId=${String(result.attempt.id)}&taskId=${task.value.id}`,
+      goDetail(ROUTES.studentLearningDrill, {
+        attemptId: String(result.attempt.id),
+        taskId: task.value.id,
+        planId,
       })
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : '无法开始任务', icon: 'none' })
@@ -74,18 +77,21 @@ async function start() {
   }
 }
 function back() {
-  backOrHome('student')
+  backOrRoute(ROUTES.studentLearning)
 }
 onLoad((query) => {
   if (!requireRole('student')) return
   taskId = Number(query?.taskId || 0)
-  void load(Number(query?.planId || 0))
+  planId = Number(query?.planId || 0)
+  void load(planId)
 })
+
+onBackPress(({ from }) => handleBackPress(from, ROUTES.studentLearning))
 </script>
 <style scoped>
 .page {
   padding: 28rpx;
-  background: #f4f8fa;
+  background: var(--med-page);
 }
 .panel {
   display: flex;
@@ -95,17 +101,17 @@ onLoad((query) => {
   gap: 16rpx;
 }
 .title {
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 38rpx;
   font-weight: 800;
 }
 .section-title {
-  color: #0b2239;
+  color: var(--med-navy);
   font-size: 29rpx;
   font-weight: 750;
 }
 .muted {
-  color: #718096;
+  color: var(--med-muted);
   font-size: 23rpx;
   line-height: 1.55;
 }
@@ -118,6 +124,6 @@ onLoad((query) => {
 }
 .primary {
   color: #fff;
-  background: #087f8c;
+  background: var(--med-brand);
 }
 </style>

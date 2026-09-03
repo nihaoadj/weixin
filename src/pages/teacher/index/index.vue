@@ -1,298 +1,274 @@
 <template>
   <view class="safe-page teacher-page">
     <view class="workspace-header">
-      <view class="header-brand">
-        <view class="header-mark"><MedIcon name="brand" /></view>
-        <view><text class="eyebrow">TEACHER WORKSPACE</text><text class="title">教学协作工作台</text></view>
+      <view class="header-copy">
+        <text class="eyebrow-label">教学查房</text>
+        <text class="workspace-title">{{ workspaceTitle }}</text>
+        <text class="workspace-description">{{ workspaceDescription }}</text>
       </view>
-      <text
+      <button
+        hover-class="is-pressed"
+        :hover-start-time="0"
+        :hover-stay-time="80"
+        tabindex="0"
+        role="button"
         class="logout"
+        aria-label="退出教师工作台"
+        @keydown="activateButtonOnKey"
         @click="logout"
-        >退出</text
       >
-    </view>
-    <view class="dashboard-strip">
-      <view class="metric"
-        ><text class="metric-value">{{ pendingReports }}</text
-        ><text>待批阅</text></view
-      >
-      <view class="metric"
-        ><text class="metric-value">{{ reviewedReports }}</text
-        ><text>已批阅</text></view
-      >
-      <view class="metric"
-        ><text class="metric-value">{{ publishedProblems }}</text
-        ><text>已发布题目</text></view
-      >
-    </view>
-    <view class="quick-links">
-      <button
-        class="secondary"
-        @click="openAnalytics"
-      >
-        学情分析
-      </button>
-      <button
-        v-if="isReviewer"
-        class="secondary"
-        @click="openReview"
-      >
-        医学审核<span v-if="pendingReview"> · {{ pendingReview }}</span>
-      </button>
-      <button
-        class="secondary"
-        @click="openClasses"
-      >
-        班级管理
+        退出
       </button>
     </view>
-    <view class="section-heading">
-      <text class="eyebrow-label">{{ currentTab === 'reports' ? 'ASSESSMENT' : 'CONTENT' }}</text>
-      <text>{{ currentTab === 'reports' ? '学生报告' : '问题管理' }}</text>
-    </view>
-    <TeacherReportList
-      v-if="currentTab === 'reports'"
-      ref="reportList"
-      @select="openReport"
-      @count="pendingReports = $event"
-      @reviewed="reviewedReports = $event"
-      @manage="switchTab('problems')"
-    />
-    <TeacherProblemList
-      v-else
-      ref="problemList"
-      @count="pendingProblems = $event"
-      @published="publishedProblems = $event"
-    />
-
-    <view class="tab-bar">
-      <view
-        class="tab"
-        :class="{ active: currentTab === 'reports' }"
-        @click="switchTab('reports')"
-      >
-        <MedIcon name="report" /><text>报告</text
-        ><text
-          v-if="pendingReports"
-          class="badge"
-          >{{ pendingReports }}</text
-        >
+    <view class="workspace-body">
+      <view class="workspace-navigation">
+        <TeacherWorkspaceNav
+          :active="currentWorkspace"
+          @change="switchWorkspace"
+        />
       </view>
-      <view
-        class="tab"
-        :class="{ active: currentTab === 'problems' }"
-        @click="switchTab('problems')"
+      <scroll-view
+        class="workspace-scroll"
+        scroll-y
+        :aria-label="workspaceTitle"
       >
-        <MedIcon name="book" /><text>问题</text
-        ><text
-          v-if="pendingProblems"
-          class="badge"
-          >{{ pendingProblems }}</text
-        >
-      </view>
-      <view
-        class="tab"
-        @click="openAnalytics"
-        ><MedIcon name="report" /><text>学情</text></view
-      >
+        <view class="workspace-content">
+          <TeacherOverview
+            v-if="currentWorkspace === 'overview'"
+            :loading="overviewLoading"
+            :is-reviewer="isReviewer"
+            :pending-reports="pendingReports"
+            :pending-review="pendingReview"
+            :report-error="reportQueueError"
+            :review-error="reviewQueueError"
+            @reports="switchWorkspace('reports')"
+            @review="openReview"
+            @classes="openClasses"
+            @analytics="openAnalytics"
+            @knowledge-cards="openKnowledgeCards"
+            @retry="refreshOverview"
+          />
+          <TeacherReportList
+            v-else-if="currentWorkspace === 'reports'"
+            ref="reportList"
+            @select="openReport"
+            @manage="switchWorkspace('problems')"
+          />
+          <TeacherProblemList
+            v-else-if="currentWorkspace === 'problems'"
+            ref="problemList"
+          />
+          <TeacherPblQueue v-else />
+        </view>
+      </scroll-view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { activateButtonOnKey } from '@/components/ui/keyboard'
+import { computed, nextTick, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import MedIcon from '@/components/ui/MedIcon.vue'
+import TeacherWorkspaceNav, { type TeacherWorkspace } from '@/components/teacher/TeacherWorkspaceNav.vue'
+import TeacherOverview from '@/components/teacher/TeacherOverview.vue'
 import TeacherProblemList from '@/components/TeacherProblemList.vue'
 import TeacherReportList from '@/components/TeacherReportList.vue'
-import { requireRole, logout } from '@/services/auth'
-import { goDetail } from '@/services/navigation'
-import { getSession } from '@/services/repository'
-import { getReviewQueue } from '@/services/teacherInsights'
+import TeacherPblQueue from '@/components/teacher/TeacherPblQueue.vue'
+import { requireRole, logout, getSession } from '@/features/identity/public'
+import { getReportSummariesAsync } from '@/features/reports/public'
+import { getReviewQueue } from '@/features/content/public'
+import { goDetail, goReplace, ROUTES } from '@/platform/navigation'
 
-type Tab = 'reports' | 'problems'
 interface Refreshable {
-  refresh: () => void
+  refresh: () => Promise<void>
 }
-const currentTab = ref<Tab>('reports')
-const pendingReports = ref(0)
-const pendingProblems = ref(0)
-const reviewedReports = ref(0)
-const publishedProblems = ref(0)
+const currentWorkspace = ref<TeacherWorkspace>('reports')
 const reportList = ref<Refreshable | null>(null)
 const problemList = ref<Refreshable | null>(null)
 const isReviewer = ref(false)
-const pendingReview = ref(0)
+const pendingReports = ref<number>()
+const pendingReview = ref<number>()
+const overviewLoading = ref(false)
+const reportQueueError = ref(false)
+const reviewQueueError = ref(false)
+const workspaceCopy: Record<TeacherWorkspace, { title: string; description: string }> = {
+  overview: { title: '工作台', description: '查看待办，管理班级与学习进展。' },
+  reports: { title: '报告批阅', description: '阅读学生推理记录，给出下一步学习建议。' },
+  problems: { title: '教学内容', description: '创建、审核并发布练习问题与结构化病例。' },
+  pbl: { title: 'PBL 教学助手', description: '审阅病理学讨论中的薄弱分析与建议题。' },
+}
+const workspaceTitle = computed(() => workspaceCopy[currentWorkspace.value].title)
+const workspaceDescription = computed(() => workspaceCopy[currentWorkspace.value].description)
 
 onLoad((query) => {
-  if (query?.tab === 'problems') currentTab.value = 'problems'
+  if (query?.tab === 'overview' || query?.tab === 'reports' || query?.tab === 'problems' || query?.tab === 'pbl') {
+    currentWorkspace.value = query.tab
+  }
 })
 
 onShow(async () => {
   if (!requireRole('teacher')) return
   isReviewer.value = getSession()?.permissions?.includes('medical_review') || false
-  if (isReviewer.value) {
-    try {
-      pendingReview.value = (await getReviewQueue()).length
-    } catch {
-      pendingReview.value = 0
-    }
-  }
   await nextTick()
-  reportList.value?.refresh()
-  problemList.value?.refresh()
+  if (currentWorkspace.value === 'overview') void refreshOverview()
+  else if (currentWorkspace.value === 'reports') void reportList.value?.refresh()
+  else if (currentWorkspace.value === 'problems') void problemList.value?.refresh()
 })
 
-async function switchTab(tab: Tab) {
-  currentTab.value = tab
-  await nextTick()
-  if (tab === 'reports') reportList.value?.refresh()
-  else problemList.value?.refresh()
+function switchWorkspace(workspace: TeacherWorkspace) {
+  if (workspace === currentWorkspace.value) return
+  goReplace(ROUTES.teacherWorkspace, { tab: workspace })
+}
+
+async function refreshOverview() {
+  if (overviewLoading.value) return
+  overviewLoading.value = true
+  reportQueueError.value = false
+  reviewQueueError.value = false
+  const [reports, review] = await Promise.allSettled([
+    getReportSummariesAsync(1, 0),
+    isReviewer.value ? getReviewQueue() : Promise.resolve([]),
+  ])
+  if (reports.status === 'fulfilled') pendingReports.value = reports.value.pendingCount
+  else {
+    pendingReports.value = undefined
+    reportQueueError.value = true
+  }
+  if (review.status === 'fulfilled') pendingReview.value = review.value.length
+  else {
+    pendingReview.value = undefined
+    reviewQueueError.value = true
+  }
+  overviewLoading.value = false
 }
 
 function openAnalytics() {
-  uni.navigateTo({ url: '/pages/teacher/analytics/index' })
+  goDetail(ROUTES.teacherAnalytics)
 }
 function openReview() {
-  uni.navigateTo({ url: '/pages/teacher/medical-review/review-list' })
+  goDetail(ROUTES.teacherReviewList)
 }
 function openClasses() {
-  uni.navigateTo({ url: '/pages/teacher/classes/classes' })
+  goDetail(ROUTES.teacherClasses)
 }
-
+function openKnowledgeCards() {
+  goDetail(ROUTES.teacherKnowledgeCards)
+}
 function openReport(id: string) {
-  goDetail('/pages/teacher/detail/detail', { reportId: id })
+  goDetail(ROUTES.teacherReportDetail, { reportId: id })
 }
 </script>
 
 <style scoped>
 .teacher-page {
-  min-height: 100vh;
-  background: radial-gradient(circle at 90% 0, rgba(53, 183, 168, 0.12), transparent 30%), #f4f8fa;
+  display: flex;
+  height: calc(100vh - var(--window-top, 0px));
+  /* #ifdef H5 */
+  height: calc(100dvh - var(--window-top, 0px));
+  /* #endif */
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+  background: var(--med-page);
 }
 .workspace-header {
   display: flex;
-  padding: 28rpx 32rpx 22rpx;
+  padding: 24rpx 28rpx;
+  flex: none;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.96);
-  border-bottom: 1rpx solid #dbe7eb;
+  gap: 24rpx;
+  background: var(--med-surface);
+  border-bottom: 1rpx solid var(--med-border);
 }
-.header-brand,
-.header-brand > view:last-child {
+.header-copy {
   display: flex;
-  align-items: center;
-}
-.header-brand > view:last-child {
+  min-width: 0;
+  flex: 1;
   flex-direction: column;
-  align-items: flex-start;
 }
-.header-mark {
-  display: flex;
-  width: 62rpx;
-  height: 62rpx;
-  margin-right: 14rpx;
-  align-items: center;
-  justify-content: center;
-  background: #eaf7f5;
-  border-radius: 18rpx;
+.workspace-title {
+  margin-top: 6rpx;
+  color: var(--med-ink);
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1.4;
 }
-.eyebrow {
-  color: #087f8c;
-  font-size: 18rpx;
-  letter-spacing: 2rpx;
-}
-.title {
-  margin-top: 5rpx;
-  color: #0b2239;
-  font-size: 31rpx;
-  font-weight: 750;
+.workspace-description {
+  margin-top: 8rpx;
+  color: var(--med-muted);
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 .logout {
-  color: #718096;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12rpx;
+  flex: none;
+  align-self: flex-start;
+  color: var(--med-muted);
+  background: transparent;
   font-size: 24rpx;
 }
-.dashboard-strip {
-  display: grid;
-  margin: 24rpx;
-  padding: 24rpx 16rpx;
-  grid-template-columns: repeat(3, 1fr);
-  background: linear-gradient(135deg, #0b2239, #123d50);
-  border-radius: 28rpx;
-  box-shadow: 0 18rpx 44rpx rgba(11, 34, 57, 0.18);
-}
-.metric {
+.workspace-body {
   display: flex;
-  align-items: center;
-  color: #bad3dc;
+  min-height: 0;
+  flex: 1;
   flex-direction: column;
-  font-size: 20rpx;
 }
-.metric + .metric {
-  border-left: 1rpx solid rgba(255, 255, 255, 0.13);
+.workspace-navigation {
+  order: 2;
+  flex: none;
 }
-.metric-value {
-  margin-bottom: 4rpx;
-  color: #fff;
-  font-size: 42rpx;
-  font-weight: 800;
-}
-.section-heading {
-  display: flex;
-  margin: 34rpx 28rpx 0;
-  flex-direction: column;
-  color: #0b2239;
-  font-size: 36rpx;
-  font-weight: 800;
-  gap: 6rpx;
-}
-.quick-links {
-  display: flex;
-  margin: 0 24rpx;
-  gap: 14rpx;
-}
-.quick-links button {
+.workspace-scroll {
+  height: 0;
+  min-width: 0;
+  min-height: 0;
   flex: 1;
 }
-.tab-bar {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  padding-bottom: env(safe-area-inset-bottom);
-  background: #fff;
-  border-top: 1rpx solid #dce8ef;
-  box-shadow: 0 -10rpx 28rpx rgba(37, 54, 75, 0.06);
+.workspace-content {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 0 24rpx 24rpx;
+  box-sizing: border-box;
 }
-.tab {
-  position: relative;
-  display: flex;
-  height: 112rpx;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 4rpx;
-  color: #8795a8;
-  font-size: 22rpx;
+@media screen and (max-width: 360px) {
+  .workspace-description {
+    font-size: 12px;
+  }
+  .logout {
+    font-size: 13px;
+  }
 }
-.tab.active {
-  color: #087f8c;
-  font-weight: 700;
+@media screen and (min-width: 600px) {
+  .workspace-header {
+    padding: 20px 28px;
+  }
+  .workspace-title {
+    font-size: 26px;
+  }
+  .workspace-description,
+  .logout {
+    font-size: 14px;
+  }
+  .workspace-content {
+    padding: 0 28px 28px;
+  }
 }
-.badge {
-  position: absolute;
-  top: 14rpx;
-  left: calc(50% + 24rpx);
-  min-width: 30rpx;
-  height: 30rpx;
-  padding: 0 5rpx;
-  color: #fff;
-  background: #e35d6a;
-  border-radius: 99rpx;
-  font-size: 18rpx;
-  line-height: 30rpx;
-  text-align: center;
+@media screen and (min-width: 900px) {
+  .workspace-body {
+    flex-direction: row;
+  }
+  .workspace-navigation {
+    width: 176px;
+    order: 0;
+  }
+  .workspace-scroll {
+    height: 100%;
+  }
+  .workspace-content {
+    padding: 0 32px 32px;
+  }
 }
 </style>
