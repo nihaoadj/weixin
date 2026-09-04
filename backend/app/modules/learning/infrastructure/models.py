@@ -23,6 +23,14 @@ class LearningPlan(Base):
     verified_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", name="fk_learning_verifier"), nullable=True)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    current_cycle: Mapped[int] = mapped_column(Integer, default=1, server_default="1", nullable=False)
+    max_cycles: Mapped[int] = mapped_column(Integer, default=2, server_default="2", nullable=False)
+    automation_exhausted: Mapped[bool] = mapped_column(default=False, server_default="0", nullable=False)
+    decision_policy_version: Mapped[str] = mapped_column(
+        String(80), default="pbl-mastery-v1", server_default="pbl-mastery-v1", nullable=False
+    )
+    decision_basis: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}", nullable=False)
+    evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="active", index=True)
     target_dimension_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -38,6 +46,28 @@ class LearningPlan(Base):
     tasks: Mapped[list["LearningTask"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan", order_by="LearningTask.position"
     )
+    evaluations: Mapped[list["LearningPlanEvaluation"]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan", order_by="LearningPlanEvaluation.cycle_number"
+    )
+
+
+class LearningPlanEvaluation(Base):
+    __tablename__ = "learning_plan_evaluations"
+    __table_args__ = (UniqueConstraint("plan_id", "cycle_number", name="uq_learning_plan_evaluation_cycle"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    plan_id: Mapped[int] = mapped_column(ForeignKey("learning_plans.id", ondelete="CASCADE"), index=True)
+    cycle_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    result: Mapped[str] = mapped_column(String(40), nullable=False)
+    checks: Mapped[list[dict]] = mapped_column(JSON, default=list, server_default="[]", nullable=False)
+    failed_targets: Mapped[list[dict]] = mapped_column(JSON, default=list, server_default="[]", nullable=False)
+    automation_exhausted: Mapped[bool] = mapped_column(default=False, server_default="0", nullable=False)
+    record_source: Mapped[str] = mapped_column(String(20), default="runtime", server_default="runtime", nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    plan: Mapped[LearningPlan] = relationship(back_populates="evaluations")
 
 
 class LearningTask(Base):
@@ -47,6 +77,10 @@ class LearningTask(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     plan_id: Mapped[int] = mapped_column(ForeignKey("learning_plans.id", ondelete="CASCADE"), index=True)
     position: Mapped[int] = mapped_column(Integer)
+    cycle_number: Mapped[int] = mapped_column(Integer, default=1, server_default="1", nullable=False)
+    target_type: Mapped[str] = mapped_column(String(40), default="discussion", server_default="discussion")
+    target_code: Mapped[str] = mapped_column(String(160), default="discussion", server_default="discussion")
+    variant_code: Mapped[str] = mapped_column(String(200), default="v1", server_default="v1")
     task_type: Mapped[str] = mapped_column(String(30))
     dimension_id: Mapped[str] = mapped_column(String(50))
     stage_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
@@ -156,6 +190,7 @@ class ReviewAttempt(Base):
 
 __all__ = [
     "LearningPlan",
+    "LearningPlanEvaluation",
     "LearningTask",
     "LearningTaskAttempt",
     "ReviewAttempt",

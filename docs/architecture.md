@@ -75,6 +75,7 @@ src/
 | learning  | `features/learning/domain`                              | `apiLearningRepository.ts`、`demoLearningRepository.ts`                  | `features/learning/public.ts`  |
 | classroom | `features/classroom/domain`                             | `apiClassroomRepository.ts`、`demoClassroomRepository.ts`                | `features/classroom/public.ts` |
 | analytics | `features/analytics/domain`                             | `apiAnalyticsRepository.ts`、`demoAnalyticsRepository.ts`                | `features/analytics/public.ts` |
+| pbl       | `features/pbl/domain`                                   | `apiPblRepository.ts`、`demoPblRepository.ts`                            | `features/pbl/public.ts`       |
 
 跨模块依赖只向领域 port 或公开接口收敛；实际 API/Demo 选择和跨模块对象连接集中在 `bootstrap/wiring.ts`。`types/domain.ts` 的中文状态和 `types/records.ts` 的稳定英文状态由 `shared/mappers/presentation.ts` 转换，避免 DTO、存储值和页面标签混用。
 
@@ -131,3 +132,13 @@ backend/
 `learning.infrastructure.practice_generator` 只接收审核蓝图的公开字段，输出结构化 public definition；AI 日志保存 task/blueprint/digest 元数据，不保存 prompt 原文。没有真实凭据时由 deterministic fallback 完成同一合同。训练 AI 候选只能更新经学生答案白名单校验的反馈/下一步，不能写入确定性分数、权重、总分或 evidence。
 
 # T09：`pbl` 是独立业务模块，拥有课堂会话、参与记录、诊断快照和教师建议题；前端只能通过 `features/pbl/public.ts`，并由 `src/bootstrap/wiring.ts` 选择 API/Demo adapter。建议题发布走 content 的公开桥接，PBL 不直接管理正式题生命周期。
+
+# T14：PBL 参与级阶段与自动巩固
+
+每个 `PblParticipation` 独立维护明确问题、提出假设、讨论证据、总结解释和完成状态。AI schema v3 只提出当前阶段的 `continue/advance/complete`，PBL application 与 repository 共同校验当前阶段开始后的学生消息证据和相邻推进；完成后新消息被锁定，相同消息 ID 仍返回原结果。
+
+教师采用发布仍是医学教学内容进入学生端的唯一入口。content 在事务内提供 `pathology-general-v3` 两轮已审核资源，learning 预建 cycle 1/2；cycle 2 初始 inactive。learning 的确定性 `pbl-mastery-v1` 按知识再测 100、推理微训练 70、病例目标维度 70 逐项判定，首轮失败仅激活失败目标，二轮失败进入耗尽且需要线下支持。教师结果区只读，旧阶段 PATCH 和 verify POST 仅保留 deprecated 冲突合同。
+
+# T15：学生 PBL 学情报告读模型
+
+`pbl` application 通过窄 port 读取本人 participation/阶段快照和本人 learning plans，将同一 session 的个人讨论、课堂共同训练、任务、attempt 与不可覆盖的轮次评价组装为只读报告。报告状态和说明由确定性规则生成，不调用 AI、不计算综合分。前端 `features/pbl` 的 API/Demo adapter 实现同一 `reports/report` 合同，“学情”总览与详情页面只经 `features/pbl/public.ts` 读取。

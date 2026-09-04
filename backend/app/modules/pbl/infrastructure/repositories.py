@@ -7,6 +7,7 @@ from app.modules.pbl.application.records import (
     InferenceResult,
     PblDiagnosticRecord,
     PblParticipationRecord,
+    PblReportParticipationRecord,
     PblSessionRecord,
     PblSnapshotRecord,
     PblSuggestionRecord,
@@ -62,6 +63,7 @@ class SqlAlchemyPblRepository:
                 {
                     "id": str(message.id),
                     "sequence": message.sequence,
+                    "request_revision": message.request_revision,
                     "processing_status": message.processing_status,
                     "role": message.role,
                     "content": message.content,
@@ -70,6 +72,10 @@ class SqlAlchemyPblRepository:
                 for message in messages
             ),
             value.revision,
+            value.current_phase,
+            value.phase_started_revision,
+            value.phase_status,
+            value.phase_completed_at,
         )
 
     @staticmethod
@@ -89,6 +95,11 @@ class SqlAlchemyPblRepository:
             value.safety_notice,
             value.safety_status,
             value.created_at,
+            value.phase,
+            value.phase_decision,
+            tuple(value.phase_evidence_message_ids or []),
+            value.phase_evidence_summary or "",
+            tuple(value.phase_missing_elements or []),
         )
 
     @staticmethod
@@ -189,6 +200,44 @@ class SqlAlchemyPblRepository:
         )
         return self._snapshot_record(value) if value else None
 
+    def report_participations(self, student_id: int) -> tuple[PblReportParticipationRecord, ...]:
+        values = self._session.scalars(
+            select(PblParticipation)
+            .where(PblParticipation.student_id == student_id)
+            .order_by(PblParticipation.updated_at.desc(), PblParticipation.id.desc())
+        ).all()
+        result = []
+        for value in values:
+            session = self._session.get(PblSession, value.session_id)
+            if session is None:
+                continue
+            snapshots = self._session.scalars(
+                select(PblDiagnosticSnapshot)
+                .where(PblDiagnosticSnapshot.participation_id == value.id)
+                .order_by(PblDiagnosticSnapshot.revision.asc())
+            ).all()
+            participation = PblParticipationRecord(
+                value.id,
+                value.session_id,
+                value.student_id,
+                value.coze_user_ref,
+                value.coze_conversation_ref,
+                (),
+                value.revision,
+                value.current_phase,
+                value.phase_started_revision,
+                value.phase_status,
+                value.phase_completed_at,
+            )
+            result.append(
+                PblReportParticipationRecord(
+                    self._session_record(session),
+                    participation,
+                    tuple(self._snapshot_record(snapshot) for snapshot in snapshots),
+                )
+            )
+        return tuple(result)
+
     def append_student_message(
         self, participation_id: int, client_message_id: str, content: str
     ) -> PblParticipationRecord | None:
@@ -261,6 +310,9 @@ class SqlAlchemyPblRepository:
         recommendations = list(result.recommended_questions)[:5]
         if result.diagnostic_status != "ready" or not (gaps or issues):
             recommendations = []
+        assessment = result.phase_assessment or {}
+        assessed_phase = str(assessment.get("phase") or part.current_phase)
+        phase_decision = str(assessment.get("decision") or "unavailable")
         snapshot = PblDiagnosticSnapshot(
             participation_id=part.id,
             revision=revision,
@@ -274,10 +326,26 @@ class SqlAlchemyPblRepository:
             schema_version=result.schema_version,
             safety_notice=result.safety_notice,
             safety_status=result.safety_status,
+            phase=assessed_phase,
+            phase_decision=phase_decision,
+            phase_evidence_message_ids=list(assessment.get("evidence_message_ids") or []),
+            phase_evidence_summary=str(assessment.get("evidence_summary") or "")[:500],
+            phase_missing_elements=[str(item)[:200] for item in assessment.get("missing_elements", [])][:10],
         )
         self._session.add(snapshot)
         if result.conversation_ref:
             part.coze_conversation_ref = result.conversation_ref[:120]
+        if phase_decision == "advance":
+            phases = ("problem_framing", "hypothesis", "evidence", "synthesis")
+            index = phases.index(part.current_phase)
+            part.current_phase = phases[index + 1]
+            part.phase_started_revision = revision
+            part.phase_status = "active"
+        elif phase_decision == "complete":
+            part.current_phase = "completed"
+            part.phase_started_revision = revision
+            part.phase_status = "completed"
+            part.phase_completed_at = datetime.now(UTC)
         self._session.flush()
         self._session.execute(
             update(PblMessage)
@@ -483,17 +551,6 @@ class SqlAlchemyPblRepository:
                 ),
             )
 
-    def change_phase(self, session_id: int, phase: str, version: int):
-        result = self._session.execute(
-            update(PblSession)
-            .where(PblSession.id == session_id, PblSession.version == version, PblSession.status == "active")
-            .values(phase=phase, version=version + 1)
-        )
-        if result.rowcount != 1:
-            raise AppError("STATE_CONFLICT", "课堂已关闭或版本已更新", 409)
-        self._session.flush()
-        return self.get_session(session_id)
-
     def revisions_for_teacher(self, teacher_id: int, snapshot_id: int):
         diagnostic = self.diagnostic_for_teacher(teacher_id, snapshot_id)
         if not diagnostic:
@@ -513,8 +570,13 @@ class SqlAlchemyPblRepository:
         snapshots = select(PblDiagnosticSnapshot.id).where(
             PblDiagnosticSnapshot.participation_id.in_(parts),
             PblDiagnosticSnapshot.status == "ready",
-            PblDiagnosticSnapshot.schema_version == 2,
+            PblDiagnosticSnapshot.schema_version == 3,
         )
+        phase_rows = self._session.execute(
+            select(PblParticipation.current_phase, func.count(PblParticipation.id))
+            .where(PblParticipation.session_id == session_id)
+            .group_by(PblParticipation.current_phase)
+        ).all()
         return {
             "participants": self._session.scalar(select(func.count()).select_from(parts.subquery())) or 0,
             "diagnoses": self._session.scalar(select(func.count()).select_from(snapshots.subquery())) or 0,
@@ -524,4 +586,5 @@ class SqlAlchemyPblRepository:
                 )
             )
             or 0,
+            "phase_counts": {str(phase): int(count) for phase, count in phase_rows},
         }

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from app.modules.content.domain.pathology_data import POINT_DATA, TOPICS
 
-CATALOG_VERSION = "pathology-general-v2"
+CATALOG_VERSION = "pathology-general-v3"
 REFERENCE = "合成病理学总论教学材料；正式使用前须教师审核"
 
 
@@ -99,6 +99,19 @@ def _cards() -> tuple[KnowledgeCard, ...]:
                         f"{topic}.{row[0]}.{kind}", f"{topic}.{row[0]}", question, choices, rotation, row[2], REFERENCE
                     )
                 )
+                second_rotation = (rotation + 1) % 4
+                second_choices = options[-second_rotation:] + options[:-second_rotation]
+                result.append(
+                    KnowledgeCard(
+                        f"{topic}.{row[0]}.{kind}.v2",
+                        f"{topic}.{row[0]}",
+                        f"等价变式：{question}",
+                        second_choices,
+                        second_rotation,
+                        f"从不同表述再次核对同一目标：{row[2]}",
+                        REFERENCE,
+                    )
+                )
     return tuple(result)
 
 
@@ -128,7 +141,7 @@ def tree_view() -> list[dict[str, object]]:
             "title": p.title,
             "objective": p.objective,
             "reference": p.reference,
-            "card_count": 3,
+            "card_count": 5,
             "catalog_version": CATALOG_VERSION,
             "parent_code": p.system,
             "description": p.description,
@@ -150,7 +163,7 @@ def card_for_code(code: str) -> KnowledgeCard | None:
 
 
 def cards_for_points(point_codes: tuple[str, ...]) -> tuple[KnowledgeCard, ...]:
-    return tuple(card for card in CARDS if card.point_code in point_codes)
+    return tuple(card for card in CARDS if card.point_code in point_codes and not card.code.endswith(".v2"))
 
 
 def pathology_topics() -> dict[str, str]:

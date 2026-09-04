@@ -16,6 +16,9 @@ class InferenceRequest:
     message_id: str = ""
     case_context: dict[str, object] | None = None
     goal_point_codes: tuple[str, ...] = ()
+    current_phase: str = "problem_framing"
+    phase_started_revision: int = 0
+    current_revision: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,9 +33,10 @@ class InferenceResult:
     fallback_used: bool = False
     failure_reason: str | None = None
     conversation_ref: str | None = None
-    schema_version: int = 2
+    schema_version: int = 3
     safety_notice: str = "仅供病理学教学，不能替代临床诊疗。"
     safety_status: str = "educational"
+    phase_assessment: dict[str, object] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +68,10 @@ class PblParticipationRecord:
     coze_conversation_ref: str | None
     messages: tuple[dict[str, str], ...]
     revision: int
+    current_phase: str = "problem_framing"
+    phase_started_revision: int = 0
+    phase_status: str = "active"
+    phase_completed_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +90,11 @@ class PblSnapshotRecord:
     safety_notice: str = ""
     safety_status: str = "educational"
     created_at: datetime | None = None
+    phase: str | None = None
+    phase_decision: str | None = None
+    phase_evidence_message_ids: tuple[str, ...] = ()
+    phase_evidence_summary: str = ""
+    phase_missing_elements: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,3 +119,10 @@ class PblDiagnosticRecord:
     student_name: str = ""
     class_name: str = ""
     topic_code: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class PblReportParticipationRecord:
+    session: PblSessionRecord
+    participation: PblParticipationRecord
+    snapshots: tuple[PblSnapshotRecord, ...]

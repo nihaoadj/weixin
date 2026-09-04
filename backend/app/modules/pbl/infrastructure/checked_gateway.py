@@ -10,8 +10,12 @@ class CheckedGateway:
     def infer(self, request: InferenceRequest) -> InferenceResult:
         result = self._gateway.infer(request)
         if result.diagnostic_status == "unavailable":
-            return InferenceResult(result.assistant_reply, "unavailable", failure_reason=result.failure_reason,
-                provider_metadata={"validation_issues": (result.provider_metadata or {}).get("validation_issues", [])})
+            return InferenceResult(
+                result.assistant_reply,
+                "unavailable",
+                failure_reason=result.failure_reason,
+                provider_metadata={"validation_issues": (result.provider_metadata or {}).get("validation_issues", [])},
+            )
         try:
             value = ProviderPayload.model_validate(
                 {
@@ -24,12 +28,25 @@ class CheckedGateway:
                     "recommended_questions": result.recommended_questions,
                     "safety_notice": result.safety_notice,
                     "safety_status": result.safety_status,
+                    "phase_assessment": result.phase_assessment,
                 }
             )
-            allowed = {item["id"] for item in request.history if item.get("role") == "student" and item.get("id")}
-            allowed.add(request.message_id)
-            if value.diagnostic_status == "ready" and (len(allowed) < 2 or not request.message_id):
-                raise ValueError("multi-turn evidence required")
+            assessment = value.phase_assessment
+            if assessment.phase != request.current_phase:
+                raise ValueError("phase mismatch")
+            if assessment.decision == "complete" and request.current_phase != "synthesis":
+                raise ValueError("early completion")
+            allowed = {
+                item["id"]
+                for item in request.history
+                if item.get("role") == "student"
+                and item.get("id")
+                and int(item.get("request_revision") or 0) > request.phase_started_revision
+            }
+            if request.current_revision > request.phase_started_revision:
+                allowed.add(request.message_id)
+            if not set(assessment.evidence_message_ids).issubset(allowed) or not assessment.evidence_message_ids:
+                raise ValueError("invalid phase evidence")
             for finding in [*value.knowledge_gaps, *value.reasoning_issues]:
                 if not set(finding.evidence_message_ids).issubset(allowed):
                     raise ValueError("invalid message reference")
@@ -41,4 +58,5 @@ class CheckedGateway:
                 "本次诊断缺少可核对的依据，请重新说明你的理解。",
                 "unavailable",
                 failure_reason="invalid_diagnostic_evidence",
+                phase_assessment=None,
             )

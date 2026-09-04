@@ -86,6 +86,8 @@ class PracticeBlueprint(ProviderModel):
     allowed_variants: list[str] = Field(default_factory=list, max_length=12)
     fixed_facts: list[str] = Field(default_factory=list, max_length=20)
     fallback_prompt: str = Field(min_length=1, max_length=1000)
+    reinforcement_prompt: str | None = Field(default=None, min_length=1, max_length=1000)
+    reinforcement_variant_code: str | None = Field(default=None, min_length=1, max_length=160)
     answer_schema: Literal["short_text", "evidence_grid", "decision_cards"]
     criteria: list[PracticeCriterion] = Field(min_length=1, max_length=12)
 
@@ -99,7 +101,7 @@ class PracticeBlueprint(ProviderModel):
 
 
 class CaseDefinition(ProviderModel):
-    schema_version: Literal[1, 2] = 1
+    schema_version: Literal[1, 2, 3] = 1
     opening: CaseOpening
     stage_instructions: dict[StageId, str]
     facts: list[CaseFact] = Field(min_length=1, max_length=60)

@@ -60,12 +60,16 @@ def discussion(client, context):
     first = client.post(path, headers=student, json={"client_message_id": "first", "content": "为什么红肿？"})
     assert first.status_code == 200, first.text
     assert first.json()["diagnostic"]["diagnostic_status"] == "probing"
-    second = client.post(
-        path,
-        headers=student,
-        json={"client_message_id": "second", "content": "我以为红肿都来自通透性，不能解释血流变化。"},
-    )
-    assert second.status_code == 200, second.text
+    responses = [first]
+    for message_id, content in (
+        ("second", "我提出血管扩张与通透性升高两个机制假设，但仍不确定。"),
+        ("third", "充血支持血流增加，渗出支持通透性变化，但形态证据有限。"),
+        ("fourth", "综合来看两种机制共同解释红肿，仍需更多形态证据复核。"),
+    ):
+        response = client.post(path, headers=student, json={"client_message_id": message_id, "content": content})
+        assert response.status_code == 200, response.text
+        responses.append(response)
+    second = responses[-1]
     assert second.json()["diagnostic"]["diagnostic_status"] == "ready"
     queue = client.get("/teacher/pbl-diagnostics", headers=teacher)
     assert queue.status_code == 200, queue.text
@@ -117,7 +121,7 @@ def test_t11_atomic_edit_publish_learning_and_teacher_verification(client, db, c
         ).status_code
         == 404
     )
-    for task in plan["tasks"]:
+    for task in [item for item in plan["tasks"] if item["status"] == "pending"]:
         stored = db.get(LearningTask, task["id"])
         answer = (
             {"selected_option": stored.private_rubric["correct_option"]}
@@ -130,20 +134,19 @@ def test_t11_atomic_edit_publish_learning_and_teacher_verification(client, db, c
         assert result.status_code == 200, result.text
         assert client.post(task_path, headers=student, json=task_payload).json() == result.json()
         plan = result.json()
-    assert plan["verification_status"] == "pending_teacher"
+    assert plan["verification_status"] == "improved"
     db.expire_all()
-    assert db.scalar(select(func.count(LearningTaskAttempt.id))) == len(plan["tasks"])
+    assert db.scalar(select(func.count(LearningTaskAttempt.id))) == sum(
+        task["status"] == "completed" for task in plan["tasks"]
+    )
     assert db.scalar(select(func.count(ReviewAttempt.id))) == 2
     verify_path = f"/teacher/pbl-learning-results/{plan['id']}/verify"
     verification = {"version": plan["version"], "decision": "improved", "note": "讨论与两次客观作答能够支持机制区别。"}
     assert client.post(verify_path, headers=other_teacher, json=verification).status_code == 404
-    verified = client.post(verify_path, headers=teacher, json=verification)
-    assert verified.status_code == 200, verified.text
-    assert verified.json()["verification_status"] == "improved"
     assert client.post(verify_path, headers=teacher, json=verification).status_code == 409
     summary = client.get(f"/classes/{classroom['id']}/pbl-sessions/{session['id']}/summary", headers=teacher).json()
     assert summary["improved"] == 1 and summary["objective_retest_average"] == 100
-    assert summary["completed_tasks"] == len(plan["tasks"])
+    assert summary["completed_tasks"] == sum(task["status"] == "completed" for task in plan["tasks"])
     # Retrying the first message after a later diagnostic must return its original result.
     repeated = client.post(path, headers=student, json={"client_message_id": "first", "content": "为什么红肿？"})
     assert repeated.json()["diagnostic"] == first["diagnostic"]
@@ -153,7 +156,7 @@ def test_t11_closed_history_scope_phase_and_invalid_targets(client, db, context)
     teacher, student, outsider, other_teacher, classroom, session, _ = context
     path, _, _, diagnostic = discussion(client, context)
     phase_path = f"/classes/{classroom['id']}/pbl-sessions/{session['id']}/phase"
-    assert client.patch(phase_path, headers=teacher, json={"phase": "evidence", "version": 1}).status_code == 200
+    assert client.patch(phase_path, headers=teacher, json={"phase": "evidence", "version": 1}).status_code == 409
     assert client.patch(phase_path, headers=teacher, json={"phase": "synthesis", "version": 1}).status_code == 409
     assert publish(client, context, diagnostic, target_student_ids=[999999])[2].status_code == 422
     assert publish(client, context, diagnostic, version=100)[2].status_code == 409
@@ -167,7 +170,7 @@ def test_t11_closed_history_scope_phase_and_invalid_targets(client, db, context)
     assert client.get(f"/student/pbl-sessions/{session['id']}/participation", headers=outsider).status_code == 404
     assert (
         client.post(path, headers=student, json={"client_message_id": "closed-new", "content": "新消息"}).status_code
-        == 404
+        == 409
     )
     assert client.get("/student/pbl-sessions", headers=student).json()[0]["status"] == "closed"
     assert publish(client, context, diagnostic)[2].status_code == 200
@@ -195,7 +198,7 @@ def test_t11_invalid_diagnosis_never_enters_queue(client, context, monkeypatch, 
 
     monkeypatch.setattr(gateway, "infer", invalid)
     path = f"/student/pbl-sessions/{context[5]['id']}/messages"
-    for index in range(2):
+    for index in range(4):
         response = client.post(
             path, headers=context[1], json={"client_message_id": str(index), "content": "合成病理学问题"}
         )
@@ -206,7 +209,7 @@ def test_t11_invalid_diagnosis_never_enters_queue(client, context, monkeypatch, 
 
 
 def test_t11_catalog_integrity_and_old_codes(client, context):
-    assert len(POINTS) == 30 and len(CARDS) == 60 and len(RECALL_CARDS) == 30
+    assert len(POINTS) == 30 and len(CARDS) == 120 and len(RECALL_CARDS) == 30
     codes = {p.code for p in POINTS}
     graph = {p.code: p.prerequisite_codes for p in POINTS}
 
@@ -220,10 +223,10 @@ def test_t11_catalog_integrity_and_old_codes(client, context):
         visit(point.code, set())
         assert set(point.related_codes) <= codes
         own = [card for card in CARDS if card.point_code == point.code]
-        assert len(own) == 2 and own[0].prompt != own[1].prompt
+        assert len(own) == 4 and len({card.prompt for card in own}) == 4
         assert all(0 <= card.correct_option < len(card.options) for card in own)
     tree = client.get("/knowledge/tree", headers=context[1]).json()
-    assert tree["catalog_version"] == "pathology-general-v2" and len(tree["items"]) == 30
+    assert tree["catalog_version"] == "pathology-general-v3" and len(tree["items"]) == 30
     assert "correct_option" not in str(tree)
     assert client.get("/knowledge/points/respiratory.cap", headers=context[1]).status_code == 404
 
@@ -255,7 +258,9 @@ def test_t11_full_case_retry_returns_evidence_to_original_plan(client, db, conte
     assert publish(client, context, diagnostic, include_case_retry=True)[2].status_code == 200
     teacher, student, *_ = context
     plan = client.get("/student/pbl-learning-plans", headers=student).json()[0]
-    for task in plan["tasks"][:-1]:
+    for task in [
+        item for item in plan["tasks"] if item["status"] == "pending" and item["task_type"] != "focused_retry"
+    ]:
         stored = db.get(LearningTask, task["id"])
         answer = (
             {"selected_option": stored.private_rubric["correct_option"]}
@@ -268,7 +273,7 @@ def test_t11_full_case_retry_returns_evidence_to_original_plan(client, db, conte
             json={"client_submission_id": str(task["id"]), "answer": answer},
         )
         assert result.status_code == 200
-    retry = plan["tasks"][-1]
+    retry = next(item for item in plan["tasks"] if item["status"] == "pending" and item["task_type"] == "focused_retry")
     assert retry["task_type"] == "focused_retry"
     user = db.scalar(select(User).where(User.external_id == "demo_student"))
     # Complete a synthetic structured assessment, then connect its evidence to the original intervention task.
@@ -278,10 +283,67 @@ def test_t11_full_case_retry_returns_evidence_to_original_plan(client, db, conte
     db.commit()
     learning_application(db).ensure_for_case_completion(Actor.from_user(user), attempt.id)
     updated = client.get("/student/pbl-learning-plans", headers=student).json()[0]
-    assert updated["verification_status"] == "pending_teacher"
-    assert updated["tasks"][-1]["result"]["answer"]["case_attempt_id"] == attempt.id
+    assert updated["verification_status"] in {"improved", "not_ready"}
+    completed_retry = next(item for item in updated["tasks"] if item["id"] == retry["id"])
+    assert completed_retry["result"]["answer"]["case_attempt_id"] == attempt.id
     assert db.scalar(select(func.count(LearningPlan.id))) == 1
     assert client.get("/learning-plans/current", headers=student).status_code == 404
+
+
+def test_t14_first_cycle_failure_activates_only_failed_target_and_second_cycle_improves(client, db, context):
+    _, _, _, diagnostic = discussion(client, context)
+    assert publish(client, context, diagnostic)[2].status_code == 200
+    student = context[1]
+    plan = client.get("/student/pbl-learning-plans", headers=student).json()[0]
+    inactive = next(task for task in plan["tasks"] if task["status"] == "inactive")
+    assert (
+        client.post(
+            f"/student/pbl-learning-tasks/{inactive['id']}/submit",
+            headers=student,
+            json={"client_submission_id": "early-cycle-2", "answer": {"text": "early"}},
+        ).status_code
+        == 409
+    )
+    first_variants = {task["variant_code"] for task in plan["tasks"] if task["cycle_number"] == 1}
+    for task in [item for item in plan["tasks"] if item["status"] == "pending"]:
+        stored = db.get(LearningTask, task["id"])
+        if task["task_type"] == "retest":
+            wrong = (stored.private_rubric["correct_option"] + 1) % len(task["public_definition"]["options"])
+            answer = {"selected_option": wrong}
+        elif task["task_type"] == "knowledge_review":
+            answer = {"selected_option": stored.private_rubric["correct_option"]}
+        elif task["task_type"] == "micro_drill":
+            keywords = [word for criterion in stored.private_rubric["criteria"] for word in criterion["keywords"]]
+            answer = {"text": "、".join(keywords)}
+        else:
+            answer = {"text": "完成正式讨论并提交证据。"}
+        response = client.post(
+            f"/student/pbl-learning-tasks/{task['id']}/submit",
+            headers=student,
+            json={"client_submission_id": f"cycle-1-{task['id']}", "answer": answer},
+        )
+        assert response.status_code == 200, response.text
+        plan = response.json()
+    assert plan["current_cycle"] == 2 and plan["decision_basis"]["result"] == "next_cycle_activated"
+    active_second = [task for task in plan["tasks"] if task["cycle_number"] == 2 and task["status"] == "pending"]
+    assert {task["target_type"] for task in active_second} == {"discussion", "knowledge_gap"}
+    assert all(task["variant_code"] not in first_variants for task in active_second)
+    for task in active_second:
+        stored = db.get(LearningTask, task["id"])
+        answer = (
+            {"selected_option": stored.private_rubric["correct_option"]}
+            if task["task_type"] in {"knowledge_review", "retest"}
+            else {"text": "根据首轮反馈重新说明证据链与不确定性。"}
+        )
+        response = client.post(
+            f"/student/pbl-learning-tasks/{task['id']}/submit",
+            headers=student,
+            json={"client_submission_id": f"cycle-2-{task['id']}", "answer": answer},
+        )
+        assert response.status_code == 200, response.text
+        plan = response.json()
+    assert plan["verification_status"] == "improved"
+    assert plan["automation_exhausted"] is False
 
 
 def test_t11_conversion_preserves_pbl_mixed_and_original_records(client, db, context):

@@ -75,20 +75,25 @@ class SqlAlchemyQuestionPublication:
         # These are internal task definitions; answer keys are stripped from student DTOs by learning.
         resources = []
         for point in point_codes:
-            for kind in ("practice", "retest"):
-                card = self._session.scalar(
-                    select(KnowledgeCardContribution).where(
-                        KnowledgeCardContribution.catalog_card_code == f"{point}.{kind}",
-                        KnowledgeCardContribution.status == "approved",
+            for cycle in (1, 2):
+                for kind in ("practice", "retest"):
+                    code = f"{point}.{kind}" + (".v2" if cycle == 2 else "")
+                    card = self._session.scalar(
+                        select(KnowledgeCardContribution).where(
+                            KnowledgeCardContribution.catalog_card_code == code,
+                            KnowledgeCardContribution.status == "approved",
+                        )
                     )
-                )
-                if card is None:
-                    raise AppError("STATE_CONFLICT", "该知识点的巩固卡或再测卡尚未审核", 409)
-                if card:
+                    if card is None:
+                        raise AppError("STATE_CONFLICT", "该知识点的两轮巩固卡或再测卡尚未审核", 409)
                     resources.append(
                         {
                             "task_type": "knowledge_review" if kind == "practice" else "retest",
                             "dimension_id": "knowledge",
+                            "cycle_number": cycle,
+                            "target_type": "knowledge_gap",
+                            "target_code": point,
+                            "variant_code": code,
                             "point_code": point,
                             "card_code": card.catalog_card_code,
                             "prompt": card.prompt,
@@ -111,13 +116,24 @@ class SqlAlchemyQuestionPublication:
                 if case
                 else None
             )
-            if blueprint:
+            if not blueprint or not blueprint.get("reinforcement_prompt") or not blueprint.get(
+                "reinforcement_variant_code"
+            ):
+                raise AppError("STATE_CONFLICT", "该推理目标的两轮微训练尚未审核", 409)
+            for cycle, prompt, variant in (
+                (1, blueprint["fallback_prompt"], blueprint["id"] + ".v1"),
+                (2, blueprint["reinforcement_prompt"], blueprint["reinforcement_variant_code"]),
+            ):
                 resources.append(
                     {
                         "task_type": "micro_drill",
                         "dimension_id": dimension,
+                        "cycle_number": cycle,
+                        "target_type": "reasoning_issue",
+                        "target_code": dimension,
+                        "variant_code": variant,
                         "stage_id": blueprint["stage_id"],
-                        "prompt": blueprint["fallback_prompt"],
+                        "prompt": prompt,
                         "private_rubric": {"criteria": blueprint["criteria"]},
                         "answer_schema": blueprint["answer_schema"],
                     }

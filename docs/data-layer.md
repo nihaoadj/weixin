@@ -80,4 +80,14 @@ npm run contract:check
 
 `contract:generate` 会写入 `docs/openapi.json`、`src/data/contracts/openapi.generated.ts` 与 fixture；`contract:check` 在系统临时目录生成并按内容比较，不改写快照。远程 CI 是否已接入仍须由平台证据确认。提交必须同时包含后端改动、OpenAPI 快照、生成类型、mapper 和契约测试。
 
-# T11：PBL 诊断快照使用 schema v2，知识薄弱点只能引用 `pathology-general-v2` 的稳定知识点编码，推理问题单独引用能力维度。教师队列按最新有效诊断分页（每页 20 条），详情保留 revision。采用发布在一个事务中写入编辑后的正式题、来源、任务和通知；`client_message_id` 返回同一次处理结果，不以最新快照替代重试结果。学习计划的 `(student_id, source_type, source_id)` 唯一约束允许病例评估与独立 PBL 干预并存。
+# T14：PBL 当前合同
+
+PBL 诊断快照使用 schema v3，知识薄弱点只能引用 `pathology-general-v3` 的稳定知识点编码，推理问题单独引用能力维度。请求携带 participation 当前阶段和证据起始 revision；响应的阶段证据只允许引用当前窗口内的学生消息。教师队列按最新有效诊断分页（每页 20 条），详情保留 revision。
+
+采用发布在一个事务中写入编辑后的正式题、来源、两轮任务和通知；两轮资源不完整时原子失败。`client_message_id` 返回同一次处理结果，不以最新快照替代重试结果。学习计划保持 `(student_id, source_type, source_id)` 唯一约束，并在同一计划内以 cycle 和 variant 字段区分两轮。API 与 Demo adapter 都返回个人阶段、逐项判定依据和耗尽状态；API 错误不回退 Demo。
+
+# T15：PBL 学情报告合同
+
+`GET /student/pbl-learning-reports` 和 `GET /student/pbl-learning-reports/{session_id}` 按当前学生聚合 PBL 报告。即使本人没有 participation，只要本人收到该课堂的学习计划，也会得到标记为“课堂共同训练”的报告；其他学生的诊断不会进入响应。总览按 session 输出状态统计、下一行动、本人反复出现的目标和最近课堂，详情输出四阶段证据、个人薄弱点、任务、两轮目标对照和判定时间线。
+
+前端 `reportContract.ts` 对 API DTO 做 Zod 校验和显式 mapper，Demo repository 返回相同领域合同。报告只包含任务公开题面、本人得分/反馈和证据是否存在，不包含完整消息、原始答案、正确选项、private rubric、模型提示、隐藏病例事实、教师 ID 或 provider failure；API 请求失败仍不得切换 Demo。

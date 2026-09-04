@@ -21,6 +21,8 @@
 | [T11 PBL 主线与病理学知识体系](11-pbl-pathology-integration/README.md)           | 病理学目录、课堂、学习反馈与开发联调   |
 | [T12 PBL 前端流程与流畅度优化](12-pbl-frontend-flow-polish/README.md)            | 学生导航、任务提示与教师同页切换       |
 | [T13 文档信息架构整理](13-documentation-information-architecture/README.md)      | 当前文档分组、阶段资料与链接治理       |
+| [T14 PBL 自动阶段与自动巩固闭环](14-pbl-automatic-mastery-loop/README.md)        | 参与级阶段、两轮任务与系统自动判定     |
+| [T15 学生 PBL 学情报告与改善轨迹](15-pbl-student-learning-report/README.md)      | 学生累计学情、单课证据与改善对照       |
 
 ## 共享工程治理记录
 

@@ -40,23 +40,30 @@
         ></view
       ><view
         class="plan-progress"
-        :aria-label="`已完成 ${completedCount(plan)} / ${plan.tasks.length} 项任务`"
+        :aria-label="`已完成 ${completedCount(plan)} / ${relevantCount(plan)} 项任务`"
         ><view class="progress-track"><view :style="{ width: `${progressPercent(plan)}%` }" /></view
-        ><text class="muted">已完成 {{ completedCount(plan) }} / {{ plan.tasks.length }}</text></view
+        ><text class="muted">已完成 {{ completedCount(plan) }} / {{ relevantCount(plan) }}</text></view
       >
-      <text v-if="plan.verification_note">教师反馈：{{ plan.verification_note }}</text>
+      <text class="muted"
+        >当前第 {{ plan.current_cycle }}/{{ plan.max_cycles }} 轮 · {{ plan.decision_policy_version }}</text
+      >
+      <text
+        v-if="plan.automation_exhausted"
+        class="exhausted"
+        >自动轮次已结束，仍有目标需线下支持。</text
+      >
       <view
         v-if="nextTask(plan)"
         class="next-hint"
         ><text class="next-hint-label">下一步</text><text>{{ taskLabels[nextTask(plan)!.task_type] }}</text
-        ><text class="muted">按顺序完成，结果会进入教师核验。</text></view
+        ><text class="muted">按顺序完成，系统会按逐项目标自动判定。</text></view
       >
       <view
         v-for="task in plan.tasks"
         :key="task.id"
         class="task"
         :class="{ 'task--next': nextTask(plan)?.id === task.id }"
-        ><text class="subtitle">{{ task.position }}. {{ taskLabels[task.task_type] }}</text
+        ><text class="subtitle">第 {{ task.cycle_number }} 轮 · {{ taskLabels[task.task_type] }}</text
         ><text>{{ task.public_definition.prompt }}</text>
         <template v-if="task.status === 'completed'"
           ><text class="done">已完成</text
@@ -64,6 +71,16 @@
             >{{ task.result.feedback
             }}<template v-if="task.result.score != null"> · {{ task.result.score }} 分</template></text
           ></template
+        >
+        <text
+          v-else-if="task.status === 'inactive'"
+          class="muted"
+          >首轮未达标且命中此目标时自动激活。</text
+        >
+        <text
+          v-else-if="task.status === 'skipped'"
+          class="muted"
+          >本轮该目标已达标，无需重复训练。</text
         >
         <template v-else-if="unlocked(plan, task)">
           <button
@@ -135,8 +152,8 @@ const inputValue = (event: unknown) => (event as NativeInputEvent).detail.value
 const radioValue = (event: unknown) => Number((event as NativeInputEvent).detail.value)
 const labels = {
   not_ready: '学习进行中',
-  pending_teacher: '已完成，待教师核验',
-  improved: '教师确认已改善',
+  pending_teacher: '历史待转换',
+  improved: '系统判定已改善',
   needs_reinforcement: '需继续巩固',
 }
 const taskLabels = {
@@ -147,10 +164,16 @@ const taskLabels = {
   focused_retry: '完整病例重练',
 }
 const unlocked = (plan: PblPlan, task: PblTask) =>
-  plan.tasks.filter((t) => t.position < task.position).every((t) => t.status === 'completed')
+  task.cycle_number === plan.current_cycle &&
+  plan.tasks
+    .filter((t) => t.cycle_number === task.cycle_number && t.position < task.position)
+    .every((t) => ['completed', 'skipped'].includes(t.status))
 const completedCount = (plan: PblPlan) => plan.tasks.filter((task) => task.status === 'completed').length
-const progressPercent = (plan: PblPlan) => (plan.tasks.length ? (completedCount(plan) / plan.tasks.length) * 100 : 0)
-const nextTask = (plan: PblPlan) => plan.tasks.find((task) => task.status !== 'completed' && unlocked(plan, task))
+const relevantCount = (plan: PblPlan) =>
+  plan.tasks.filter((task) => !['inactive', 'skipped'].includes(task.status)).length
+const progressPercent = (plan: PblPlan) =>
+  relevantCount(plan) ? (completedCount(plan) / relevantCount(plan)) * 100 : 0
+const nextTask = (plan: PblPlan) => plan.tasks.find((task) => task.status === 'pending' && unlocked(plan, task))
 const hasAnswer = (task: PblTask) =>
   task.public_definition.options
     ? answers.value[task.id]?.selected_option != null

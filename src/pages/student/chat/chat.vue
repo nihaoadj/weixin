@@ -148,7 +148,7 @@ import StudentNav from '@/components/ui/StudentNav.vue'
 import ChatWelcome from '@/components/chat/ChatWelcome.vue'
 import ChatComposer from '@/components/chat/ChatComposer.vue'
 import { requireRole, logout } from '@/features/identity/public'
-import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
+import { goDetail, ROUTES } from '@/platform/navigation'
 import { requestMedicalAssistant } from '@/features/qa/public'
 import { findConversationAsync, upsertConversationAsync } from '@/features/qa/public'
 import { captureManualReviewItem, getKnowledgeCatalog } from '@/features/learning/public'
@@ -223,7 +223,7 @@ function quickAsk(question: string) {
 }
 
 function goToHistory() {
-  goPrimary(ROUTES.studentHistory)
+  goDetail(ROUTES.studentHistory)
 }
 
 function createMessage(role: ChatMessage['role'], content: string): ChatMessage {

@@ -12,7 +12,8 @@ test('fresh student and teacher accounts receive actionable empty states', async
 
   await page.goto('/')
   await page.locator('.role-button.student').click()
-  await page.locator('.student-nav__item').filter({ hasText: '记录' }).click()
+  await page.locator('.student-nav__item').filter({ hasText: '答疑' }).click()
+  await page.getByRole('button', { name: '查看历史学习记录' }).click()
   await expect(page.getByText('暂无历史记录', { exact: true })).toBeVisible()
   await expect(page.getByText('开始医学问答', { exact: true })).toBeVisible()
   await page.getByText('开始医学问答', { exact: true }).click()

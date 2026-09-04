@@ -21,12 +21,24 @@ class LocalMockGateway:
     """Deterministic test-only provider used by the API-mode local E2E suite."""
 
     def infer(self, request: InferenceRequest) -> InferenceResult:
-        if not request.history:
+        phase_prompts = {
+            "problem_framing": "请用一句话概括当前病理问题，并指出关键形态线索。",
+            "hypothesis": "请提出至少一个机制假设，并说明你最不确定的地方。",
+            "evidence": "哪些病例证据支持或反驳该假设？这些证据有什么限制？",
+        }
+        if request.current_phase != "synthesis":
             return InferenceResult(
-                "请先说明你认为红肿形成的直接病理基础。",
+                phase_prompts[request.current_phase],
                 "probing",
-                follow_up_question="血管通透性和血流变化分别会造成什么表现？",
+                follow_up_question=phase_prompts[request.current_phase],
                 provider_metadata={"provider": "local_mock", "mode": "test"},
+                phase_assessment={
+                    "phase": request.current_phase,
+                    "decision": "advance",
+                    "evidence_message_ids": [request.message_id],
+                    "evidence_summary": "合成测试回答满足当前阶段目标。",
+                    "missing_elements": [],
+                },
             )
         return InferenceResult(
             "你已经开始联系血管反应与炎症表现，但还需要区分不同机制。",
@@ -63,6 +75,13 @@ class LocalMockGateway:
                 },
             ),
             provider_metadata={"provider": "local_mock", "mode": "test"},
+            phase_assessment={
+                "phase": "synthesis",
+                "decision": "complete",
+                "evidence_message_ids": [request.message_id],
+                "evidence_summary": "合成测试回答完成机制、证据与疑问整合。",
+                "missing_elements": [],
+            },
         )
 
 

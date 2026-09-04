@@ -36,6 +36,12 @@ class PblParticipation(Base):
     coze_user_ref: Mapped[str | None] = mapped_column(String(100), nullable=True)
     coze_conversation_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
     revision: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    current_phase: Mapped[str] = mapped_column(
+        String(40), default="problem_framing", server_default="problem_framing", nullable=False
+    )
+    phase_started_revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    phase_status: Mapped[str] = mapped_column(String(20), default="active", server_default="active", nullable=False)
+    phase_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -68,7 +74,12 @@ class PblDiagnosticSnapshot(Base):
     participation_id: Mapped[int] = mapped_column(ForeignKey("pbl_participations.id", ondelete="CASCADE"), index=True)
     revision: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(32))
-    schema_version: Mapped[int] = mapped_column(Integer, default=2, server_default="1")
+    schema_version: Mapped[int] = mapped_column(Integer, default=3, server_default="1")
+    phase: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    phase_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    phase_evidence_message_ids: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
+    phase_evidence_summary: Mapped[str] = mapped_column(Text, default="", server_default="")
+    phase_missing_elements: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
     safety_notice: Mapped[str] = mapped_column(Text, default="仅供病理学教学。", server_default="")
     safety_status: Mapped[str] = mapped_column(String(30), default="educational", server_default="educational")
     assistant_reply: Mapped[str] = mapped_column(Text)

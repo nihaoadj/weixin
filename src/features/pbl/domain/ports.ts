@@ -1,4 +1,4 @@
-export type PblPhase = 'problem_framing' | 'hypothesis' | 'evidence' | 'synthesis'
+export type PblPhase = 'problem_framing' | 'hypothesis' | 'evidence' | 'synthesis' | 'completed'
 export type PblSession = {
   id: string
   classId: string
@@ -11,6 +11,9 @@ export type PblSession = {
   caseContext?: { title: string; opening?: { setting: string; patient_intro: string; chief_complaint: string } }
   goalPointCodes: string[]
   phase: PblPhase
+  studentPhase?: PblPhase
+  phaseStatus?: 'active' | 'completed'
+  phaseCounts?: Partial<Record<PblPhase, number>>
   version: number
 }
 export type PblFinding = { id: string; summary: string; evidence_message_ids: string[]; evidence_summary: string }
@@ -34,6 +37,10 @@ export type PblDiagnostic = {
   className?: string
   sessionId?: string
   topicCode?: string
+  phase?: Exclude<PblPhase, 'completed'>
+  phaseDecision?: 'continue' | 'advance' | 'complete' | 'unavailable'
+  phaseEvidenceSummary?: string
+  phaseMissingElements?: string[]
 }
 export type PblSuggestion = {
   id: string
@@ -52,7 +59,14 @@ export type PblMessage = {
   processing_status?: string
   client_message_id?: string | null
 }
-export type PblParticipation = { messages: PblMessage[]; diagnostic?: PblDiagnostic }
+export type PblParticipation = {
+  messages: PblMessage[]
+  diagnostic?: PblDiagnostic
+  currentPhase: PblPhase
+  phaseStartedRevision: number
+  phaseStatus: 'active' | 'completed'
+  phaseCompletedAt?: string
+}
 export type PblFilters = { classId?: string; sessionId?: string; studentId?: string; status?: string; offset?: number }
 export type PblTargets = { studentIds?: number[]; wholeClass?: boolean; includeCaseRetry?: boolean }
 export type PblTask = {
@@ -66,9 +80,13 @@ export type PblTask = {
     score: number | null
     feedback: string
     evidence: string[]
-    answer: { text?: string; selected_option?: number }
+    answer: { text?: string; selected_option?: number; dimension_scores?: Record<string, number> }
     submitted_at: string | null
   } | null
+  cycle_number: number
+  target_type: string
+  target_code: string
+  variant_code: string
 }
 export type PblPlan = {
   id: number
@@ -93,6 +111,154 @@ export type PblPlan = {
   version: number
   due_at: string
   tasks: PblTask[]
+  current_cycle: number
+  max_cycles: number
+  automation_exhausted: boolean
+  decision_policy_version: string
+  decision_basis: {
+    result?: string
+    cycle?: number
+    offline_support_required?: boolean
+    failed_targets?: Array<{ target_type: string; target_code: string }>
+    checks?: Array<{
+      target_type: string
+      target_code: string
+      threshold: number | null
+      score: number | null
+      evidence_present: boolean
+      passed: boolean
+    }>
+  }
+  evaluated_at: string | null
+  evaluations?: PblCycleEvaluation[]
+}
+export type PblCycleCheck = {
+  target_type: string
+  target_code: string
+  label?: string
+  threshold: number | null
+  score: number | null
+  evidence_present: boolean
+  passed: boolean
+}
+export type PblCycleEvaluation = {
+  cycle_number: number
+  policy_version: string
+  result: string
+  checks: PblCycleCheck[]
+  failed_targets: Array<{ target_type: string; target_code: string; label?: string }>
+  automation_exhausted: boolean
+  record_source: string
+  evaluated_at: string
+}
+export type PblReportStatus =
+  'discussing' | 'awaiting_learning' | 'learning_cycle_1' | 'learning_cycle_2' | 'improved' | 'support_needed'
+export type PblReportSession = {
+  id: string
+  topicCode: string
+  topicLabel: string
+  caseTitle: string
+  status: string
+  createdAt: string
+  closedAt?: string
+}
+export type PblReportAction = { kind: 'discussion' | 'tasks' | 'none'; label: string }
+export type PblReportListItem = {
+  session: PblReportSession
+  status: PblReportStatus
+  currentPhase?: PblPhase
+  phaseStatus?: 'active' | 'completed'
+  knowledgeGapCount: number
+  reasoningIssueCount: number
+  taskProgress: { completed: number; total: number }
+  summaryText: string
+  nextAction: PblReportAction
+  updatedAt: string
+}
+export type PblReportPage = {
+  summary: {
+    totalReports: number
+    statusCounts: Record<PblReportStatus, number>
+    recurringTargets: Array<{ targetType: string; targetCode: string; label: string; occurrences: number }>
+    nextAction?: PblReportAction & { sessionId: string; caseTitle: string }
+  }
+  items: PblReportListItem[]
+  total: number
+  limit: number
+  offset: number
+}
+export type PblLearningReport = {
+  session: PblReportSession
+  status: PblReportStatus
+  currentPhase?: PblPhase
+  phaseStatus?: 'active' | 'completed'
+  phaseProgress: Array<{
+    phase: Exclude<PblPhase, 'completed'>
+    label: string
+    state: 'completed' | 'current' | 'pending'
+    evidenceSummary: string
+    missingElements: string[]
+    evidencedAt?: string
+  }>
+  diagnosis: {
+    createdAt?: string
+    knowledgeGaps: Array<{
+      id: string
+      pointCode: string
+      label: string
+      summary: string
+      confidence: string
+      evidenceSummary: string
+    }>
+    reasoningIssues: Array<{
+      id: string
+      dimensionId: string
+      label: string
+      summary: string
+      issueType: string
+      improvement: string
+      evidenceSummary: string
+    }>
+  }
+  plans: Array<{
+    id: number
+    assignmentBasis: 'personal' | 'classroom'
+    status: string
+    verificationStatus: string
+    currentCycle: number
+    maxCycles: number
+    automationExhausted: boolean
+    decisionPolicyVersion: string
+    dueAt: string
+    createdAt: string
+    tasks: Array<{
+      id: number
+      taskType: string
+      status: string
+      cycleNumber: number
+      targetType: string
+      targetCode: string
+      targetLabel: string
+      prompt: string
+      score: number | null
+      feedback: string
+      evidencePresent: boolean
+      submittedAt?: string
+    }>
+    evaluations: PblCycleEvaluation[]
+  }>
+  targetProgress: Array<{
+    planId: number
+    targetType: string
+    targetCode: string
+    label: string
+    cycles: Array<PblCycleCheck & { cycleNumber: number }>
+  }>
+  taskProgress: { completed: number; total: number }
+  summaryText: string
+  nextAction: PblReportAction
+  timeline: Array<{ type: string; label: string; cycleNumber?: number; occurredAt: string }>
+  updatedAt: string
 }
 export type PblSummary = {
   participants: number
@@ -106,13 +272,14 @@ export type PblSummary = {
   needs_reinforcement: number
   objective_retest_count: number
   objective_retest_average: number | null
+  phase_counts: Partial<Record<PblPhase, number>>
+  automation_exhausted: number
 }
 export interface PblRepository {
   active(): Promise<PblSession[]>
   sessions(classId: string): Promise<PblSession[]>
   createSession(classId: string, topicCode: string, caseId: string, goals: string[]): Promise<PblSession>
   closeSession(classId: string, id: string): Promise<PblSession>
-  phase(item: PblSession, phase: PblPhase): Promise<PblSession>
   participation(id: string): Promise<PblParticipation>
   message(id: string, content: string, clientMessageId: string): Promise<PblParticipation>
   diagnostics(filters?: PblFilters): Promise<{ items: PblDiagnostic[]; total: number }>
@@ -121,12 +288,13 @@ export interface PblRepository {
   editSuggestion(item: PblSuggestion, reject?: boolean): Promise<PblSuggestion>
   adopt(item: PblSuggestion, targets?: PblTargets): Promise<PblSuggestion>
   plans(): Promise<PblPlan[]>
+  reports(limit?: number, offset?: number): Promise<PblReportPage>
+  report(sessionId: string): Promise<PblLearningReport>
   results(sessionId?: string): Promise<PblPlan[]>
   submitTask(
     taskId: number,
     submissionId: string,
     answer: { text?: string; selected_option?: number },
   ): Promise<PblPlan>
-  verify(plan: PblPlan, decision: 'improved' | 'needs_reinforcement', note: string): Promise<PblPlan>
   summary(session: PblSession): Promise<PblSummary>
 }

@@ -47,3 +47,11 @@
 # T09：生产 PBL 仅使用 Coze，显式 Bot/Workflow 模式；普通 OpenAI-compatible 仅开发/测试。输入最多 20 条去标识化历史，日志/DTO 不得含 token、完整 prompt、完整学生回答、供应商 DTO 或教师建议题。
 
 # T11：开发环境可在被 Git 忽略且未跟踪的 `backend/.env` 中选择 `PBL_AI_PROVIDER=openai_compatible`。该文件只由服务端读取；测试和 OpenAPI 导出会隔离 AI 环境变量，自动化回归使用 Mock。生产环境仍拒绝 openai-compatible 并要求显式 Coze 调用模式。不得在示例、文档、日志、生成物或客户端保存实际密钥。
+
+# T14：自动阶段与结果数据边界
+
+阶段推进只接受当前阶段开始 revision 后的学生消息 ID；无效、越级、旧证据或 provider unavailable 均不推进、不形成诊断。自动判定日志和 `decision_basis` 只保存计划 ID 可关联元数据、策略版本、轮次、阈值结果与失败目标编码，不保存完整学生回答、正确答案、rubric、隐藏病例事实或模型提示。教师只能读取有权班级的阶段分布和结果，deprecated 阶段/核验写接口固定返回冲突。
+
+# T15：学生学情报告数据边界
+
+学生报告以登录学生 ID 为唯一主体；列表不接受 student 参数，详情对无本人 participation 且无本人计划的 session 统一返回 404。全班发布若源于其他学生，只显示“课堂共同训练”，不读取或返回来源学生诊断。报告不复制完整消息或答案，也不返回正确选项、private rubric、提示词、隐藏病例事实、教师 ID 和 provider failure。评价历史只保存目标编码、阈值、本人分数、证据布尔值、结果与策略版本；应用日志只允许记录内部 student/session/plan ID 和结果编码。

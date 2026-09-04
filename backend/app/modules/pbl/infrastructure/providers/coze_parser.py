@@ -24,9 +24,10 @@ def parse_provider_json(raw: str, metadata: dict[str, object], conversation_ref:
             recommended_questions=tuple(item.model_dump() for item in value.recommended_questions),
             provider_metadata=metadata,
             conversation_ref=conversation_ref,
-            schema_version=2,
+            schema_version=3,
             safety_notice=value.safety_notice,
             safety_status=value.safety_status,
+            phase_assessment=value.phase_assessment.model_dump(),
         )
     except ValidationError as error:
         # Only schema locations/types are retained; never input values or provider text.

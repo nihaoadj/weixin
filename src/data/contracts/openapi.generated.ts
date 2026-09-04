@@ -1455,7 +1455,10 @@ export interface paths {
     delete?: never
     options?: never
     head?: never
-    /** Phase */
+    /**
+     * Phase
+     * @deprecated
+     */
     patch: operations['phase_classes__class_id__pbl_sessions__session_id__phase_patch']
     trace?: never
   }
@@ -1485,6 +1488,40 @@ export interface paths {
     }
     /** Learning Plans */
     get: operations['learning_plans_student_pbl_learning_plans_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/pbl-learning-reports': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Learning Reports */
+    get: operations['learning_reports_student_pbl_learning_reports_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/pbl-learning-reports/{session_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Learning Report */
+    get: operations['learning_report_student_pbl_learning_reports__session_id__get']
     put?: never
     post?: never
     delete?: never
@@ -1536,7 +1573,10 @@ export interface paths {
     }
     get?: never
     put?: never
-    /** Verify Result */
+    /**
+     * Verify Result
+     * @deprecated
+     */
     post: operations['verify_result_teacher_pbl_learning_results__plan_id__verify_post']
     delete?: never
     options?: never
@@ -1836,7 +1876,7 @@ export interface components {
        * @default 1
        * @enum {integer}
        */
-      schema_version: 1 | 2
+      schema_version: 1 | 2 | 3
       opening: components['schemas']['CaseOpening']
       /** Stage Instructions */
       stage_instructions: {
@@ -1855,7 +1895,7 @@ export interface components {
        * @default 1
        * @enum {integer}
        */
-      schema_version: 1 | 2
+      schema_version: 1 | 2 | 3
       opening: components['schemas']['CaseOpening']
       /** Stage Instructions */
       stage_instructions: {
@@ -2751,6 +2791,12 @@ export interface components {
       /** Messages */
       messages: components['schemas']['MessageResponse'][]
       diagnostic: components['schemas']['StudentDiagnosticResponse']
+      /** Current Phase */
+      current_phase: string
+      /** Phase Status */
+      phase_status: string
+      /** Phase Completed At */
+      phase_completed_at: string | null
     }
     /** NotificationListRead */
     NotificationListRead: {
@@ -2802,6 +2848,14 @@ export interface components {
       /** Revision */
       revision: number
       diagnostic: components['schemas']['StudentDiagnosticResponse'] | null
+      /** Current Phase */
+      current_phase: string
+      /** Phase Started Revision */
+      phase_started_revision: number
+      /** Phase Status */
+      phase_status: string
+      /** Phase Completed At */
+      phase_completed_at: string | null
     }
     /** PatientMessageCreate */
     PatientMessageCreate: {
@@ -2875,6 +2929,18 @@ export interface components {
       due_at: string
       /** Tasks */
       tasks: components['schemas']['TaskResponse'][]
+      /** Current Cycle */
+      current_cycle: number
+      /** Max Cycles */
+      max_cycles: number
+      /** Automation Exhausted */
+      automation_exhausted: boolean
+      /** Decision Policy Version */
+      decision_policy_version: string
+      /** Decision Basis */
+      decision_basis: Record<string, unknown>
+      /** Evaluated At */
+      evaluated_at: string | null
     }
     /** PracticeBlueprint */
     PracticeBlueprint: {
@@ -2894,6 +2960,10 @@ export interface components {
       fixed_facts?: string[]
       /** Fallback Prompt */
       fallback_prompt: string
+      /** Reinforcement Prompt */
+      reinforcement_prompt?: string | null
+      /** Reinforcement Variant Code */
+      reinforcement_variant_code?: string | null
       /**
        * Answer Schema
        * @enum {string}
@@ -3302,6 +3372,16 @@ export interface components {
       /** Result Fact Id */
       result_fact_id?: string | null
     }
+    /** ReportAction */
+    ReportAction: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'discussion' | 'tasks' | 'none'
+      /** Label */
+      label: string
+    }
     /** ReportAnalysis */
     ReportAnalysis: {
       /** Errors */
@@ -3321,6 +3401,23 @@ export interface components {
        */
       suggestion: string
     }
+    /** ReportCheck */
+    ReportCheck: {
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Label */
+      label: string
+      /** Threshold */
+      threshold: number | null
+      /** Score */
+      score: number | null
+      /** Evidence Present */
+      evidence_present: boolean
+      /** Passed */
+      passed: boolean
+    }
     /** ReportCreate */
     ReportCreate: {
       /** Conversation Id */
@@ -3330,6 +3427,237 @@ export interface components {
       /** Ai Summary */
       ai_summary: string
       analysis?: components['schemas']['ReportAnalysis'] | null
+    }
+    /** ReportCycleCheck */
+    ReportCycleCheck: {
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Label */
+      label: string
+      /** Threshold */
+      threshold: number | null
+      /** Score */
+      score: number | null
+      /** Evidence Present */
+      evidence_present: boolean
+      /** Passed */
+      passed: boolean
+      /** Cycle Number */
+      cycle_number: number
+    }
+    /** ReportDetailResponse */
+    ReportDetailResponse: {
+      session: components['schemas']['ReportSession']
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        'discussing' | 'awaiting_learning' | 'learning_cycle_1' | 'learning_cycle_2' | 'improved' | 'support_needed'
+      /** Current Phase */
+      current_phase: string | null
+      /** Phase Status */
+      phase_status: string | null
+      /** Phase Progress */
+      phase_progress: components['schemas']['ReportPhaseProgress'][]
+      diagnosis: components['schemas']['ReportDiagnosis']
+      /** Plans */
+      plans: components['schemas']['ReportPlan'][]
+      /** Target Progress */
+      target_progress: components['schemas']['ReportTargetProgress'][]
+      task_progress: components['schemas']['ReportTaskProgress']
+      /** Summary Text */
+      summary_text: string
+      next_action: components['schemas']['ReportAction']
+      /** Timeline */
+      timeline: components['schemas']['ReportTimelineItem'][]
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /** ReportDiagnosis */
+    ReportDiagnosis: {
+      /** Created At */
+      created_at: string | null
+      /** Knowledge Gaps */
+      knowledge_gaps: components['schemas']['ReportKnowledgeGap'][]
+      /** Reasoning Issues */
+      reasoning_issues: components['schemas']['ReportReasoningIssue'][]
+    }
+    /** ReportEvaluation */
+    ReportEvaluation: {
+      /** Cycle Number */
+      cycle_number: number
+      /** Policy Version */
+      policy_version: string
+      /**
+       * Result
+       * @enum {string}
+       */
+      result: 'improved' | 'next_cycle_activated' | 'needs_reinforcement'
+      /** Checks */
+      checks: components['schemas']['ReportCheck'][]
+      /** Failed Targets */
+      failed_targets: components['schemas']['ReportFailedTarget'][]
+      /** Automation Exhausted */
+      automation_exhausted: boolean
+      /**
+       * Record Source
+       * @enum {string}
+       */
+      record_source: 'runtime' | 'backfill' | 'legacy'
+      /**
+       * Evaluated At
+       * Format: date-time
+       */
+      evaluated_at: string
+    }
+    /** ReportFailedTarget */
+    ReportFailedTarget: {
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Label */
+      label: string
+    }
+    /** ReportKnowledgeGap */
+    ReportKnowledgeGap: {
+      /** Id */
+      id: string
+      /** Point Code */
+      point_code: string
+      /** Label */
+      label: string
+      /** Summary */
+      summary: string
+      /** Confidence */
+      confidence: string
+      /** Evidence Summary */
+      evidence_summary: string
+    }
+    /** ReportListItem */
+    ReportListItem: {
+      session: components['schemas']['ReportSession']
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        'discussing' | 'awaiting_learning' | 'learning_cycle_1' | 'learning_cycle_2' | 'improved' | 'support_needed'
+      /** Current Phase */
+      current_phase: string | null
+      /** Phase Status */
+      phase_status: string | null
+      /** Knowledge Gap Count */
+      knowledge_gap_count: number
+      /** Reasoning Issue Count */
+      reasoning_issue_count: number
+      task_progress: components['schemas']['ReportTaskProgress']
+      /** Summary Text */
+      summary_text: string
+      next_action: components['schemas']['ReportAction']
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /** ReportPageAction */
+    ReportPageAction: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'discussion' | 'tasks' | 'none'
+      /** Label */
+      label: string
+      /** Session Id */
+      session_id: number
+      /** Case Title */
+      case_title: string
+    }
+    /** ReportPageResponse */
+    ReportPageResponse: {
+      summary: components['schemas']['ReportPageSummary']
+      /** Items */
+      items: components['schemas']['ReportListItem'][]
+      /** Total */
+      total: number
+      /** Limit */
+      limit: number
+      /** Offset */
+      offset: number
+    }
+    /** ReportPageSummary */
+    ReportPageSummary: {
+      /** Total Reports */
+      total_reports: number
+      /** Status Counts */
+      status_counts: {
+        [key: string]: number
+      }
+      /** Recurring Targets */
+      recurring_targets: components['schemas']['ReportRecurringTarget'][]
+      next_action: components['schemas']['ReportPageAction'] | null
+    }
+    /** ReportPhaseProgress */
+    ReportPhaseProgress: {
+      /** Phase */
+      phase: string
+      /** Label */
+      label: string
+      /**
+       * State
+       * @enum {string}
+       */
+      state: 'completed' | 'current' | 'pending'
+      /** Evidence Summary */
+      evidence_summary: string
+      /** Missing Elements */
+      missing_elements: string[]
+      /** Evidenced At */
+      evidenced_at: string | null
+    }
+    /** ReportPlan */
+    ReportPlan: {
+      /** Id */
+      id: number
+      /**
+       * Assignment Basis
+       * @enum {string}
+       */
+      assignment_basis: 'personal' | 'classroom'
+      /** Status */
+      status: string
+      /** Verification Status */
+      verification_status: string
+      /** Current Cycle */
+      current_cycle: number
+      /** Max Cycles */
+      max_cycles: number
+      /** Automation Exhausted */
+      automation_exhausted: boolean
+      /** Decision Policy Version */
+      decision_policy_version: string
+      /**
+       * Due At
+       * Format: date-time
+       */
+      due_at: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Tasks */
+      tasks: components['schemas']['ReportTask'][]
+      /** Evaluations */
+      evaluations: components['schemas']['ReportEvaluation'][]
     }
     /** ReportRead */
     ReportRead: {
@@ -3374,6 +3702,34 @@ export interface components {
        */
       updated_at: string
     }
+    /** ReportReasoningIssue */
+    ReportReasoningIssue: {
+      /** Id */
+      id: string
+      /** Dimension Id */
+      dimension_id: string
+      /** Label */
+      label: string
+      /** Summary */
+      summary: string
+      /** Issue Type */
+      issue_type: string
+      /** Improvement */
+      improvement: string
+      /** Evidence Summary */
+      evidence_summary: string
+    }
+    /** ReportRecurringTarget */
+    ReportRecurringTarget: {
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Label */
+      label: string
+      /** Occurrences */
+      occurrences: number
+    }
     /** ReportReview */
     ReportReview: {
       /** Teacher Score */
@@ -3385,6 +3741,26 @@ export interface components {
       teacher_feedback: string
       /** Review Topic Codes */
       review_topic_codes?: string[]
+    }
+    /** ReportSession */
+    ReportSession: {
+      /** Id */
+      id: number
+      /** Topic Code */
+      topic_code: string
+      /** Topic Label */
+      topic_label: string
+      /** Case Title */
+      case_title: string
+      /** Status */
+      status: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Closed At */
+      closed_at: string | null
     }
     /** ReportSummaryPage */
     ReportSummaryPage: {
@@ -3439,6 +3815,67 @@ export interface components {
        * Format: date-time
        */
       updated_at: string
+    }
+    /** ReportTargetProgress */
+    ReportTargetProgress: {
+      /** Plan Id */
+      plan_id: number
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Label */
+      label: string
+      /** Cycles */
+      cycles: components['schemas']['ReportCycleCheck'][]
+    }
+    /** ReportTask */
+    ReportTask: {
+      /** Id */
+      id: number
+      /** Task Type */
+      task_type: string
+      /** Status */
+      status: string
+      /** Cycle Number */
+      cycle_number: number
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Target Label */
+      target_label: string
+      /** Prompt */
+      prompt: string
+      /** Score */
+      score: number | null
+      /** Feedback */
+      feedback: string
+      /** Evidence Present */
+      evidence_present: boolean
+      /** Submitted At */
+      submitted_at: string | null
+    }
+    /** ReportTaskProgress */
+    ReportTaskProgress: {
+      /** Completed */
+      completed: number
+      /** Total */
+      total: number
+    }
+    /** ReportTimelineItem */
+    ReportTimelineItem: {
+      /** Type */
+      type: string
+      /** Label */
+      label: string
+      /** Cycle Number */
+      cycle_number?: number | null
+      /**
+       * Occurred At
+       * Format: date-time
+       */
+      occurred_at: string
     }
     /** ReviewCardRead */
     ReviewCardRead: {
@@ -3544,6 +3981,14 @@ export interface components {
       phase: string
       /** Version */
       version: number
+      /** Student Phase */
+      student_phase?: string | null
+      /** Phase Status */
+      phase_status?: string | null
+      /** Phase Counts */
+      phase_counts?: {
+        [key: string]: number
+      } | null
     }
     /** StageSubmissionCreate */
     StageSubmissionCreate: {
@@ -3602,6 +4047,17 @@ export interface components {
       created_at: string | null
       /** Legacy Findings */
       legacy_findings?: Record<string, unknown> | null
+      /** Phase */
+      phase?: string | null
+      /** Phase Decision */
+      phase_decision?: string | null
+      /**
+       * Phase Evidence Summary
+       * @default
+       */
+      phase_evidence_summary: string
+      /** Phase Missing Elements */
+      phase_missing_elements?: string[]
     }
     /** StudentQuestionRead */
     StudentQuestionRead: {
@@ -3674,6 +4130,12 @@ export interface components {
       objective_retest_count: number
       /** Objective Retest Average */
       objective_retest_average: number | null
+      /** Phase Counts */
+      phase_counts: {
+        [key: string]: number
+      }
+      /** Automation Exhausted */
+      automation_exhausted: number
     }
     /** TaskResponse */
     TaskResponse: {
@@ -3693,6 +4155,14 @@ export interface components {
       /** Public Definition */
       public_definition: Record<string, unknown>
       result: components['schemas']['TaskResult'] | null
+      /** Cycle Number */
+      cycle_number: number
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Variant Code */
+      variant_code: string
     }
     /** TaskResult */
     TaskResult: {
@@ -3733,6 +4203,17 @@ export interface components {
       created_at: string | null
       /** Legacy Findings */
       legacy_findings?: Record<string, unknown> | null
+      /** Phase */
+      phase?: string | null
+      /** Phase Decision */
+      phase_decision?: string | null
+      /**
+       * Phase Evidence Summary
+       * @default
+       */
+      phase_evidence_summary: string
+      /** Phase Missing Elements */
+      phase_missing_elements?: string[]
       /** Student Id */
       student_id: number
       /** Student Name */
@@ -12972,6 +13453,195 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['PlanResponse'][]
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  learning_reports_student_pbl_learning_reports_get: {
+    parameters: {
+      query?: {
+        limit?: number
+        offset?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ReportPageResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  learning_report_student_pbl_learning_reports__session_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        session_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ReportDetailResponse']
         }
       }
       /** @description Bad Request */

@@ -13,7 +13,7 @@ from app.modules.pbl.infrastructure.providers.request_builder import provider_me
 
 READY = json.dumps(
     {
-        "schema_version": 2,
+        "schema_version": 3,
         "safety_notice": "仅供教学",
         "safety_status": "educational",
         "assistant_reply": "请比较急慢性炎症证据。",
@@ -37,6 +37,13 @@ READY = json.dumps(
                 "linked_findings": ["gap"],
             }
         ],
+        "phase_assessment": {
+            "phase": "synthesis",
+            "decision": "complete",
+            "evidence_message_ids": ["2"],
+            "evidence_summary": "学生完成了综合解释。",
+            "missing_elements": [],
+        },
     }
 )
 

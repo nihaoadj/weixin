@@ -103,7 +103,7 @@ export const localDraftSchema: z.ZodType<CaseDraftGenerateResult> = z.object({
   generationMode: z.enum(['model', 'fallback']),
   safetyNotice: z.string(),
   caseDefinition: z.object({
-    schemaVersion: z.union([z.literal(1), z.literal(2)]),
+    schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     opening,
     stageInstructions: z.object({
       history: z.string(),
@@ -161,6 +161,8 @@ export const localDraftSchema: z.ZodType<CaseDraftGenerateResult> = z.object({
           allowedVariants: z.array(z.string()),
           fixedFacts: z.array(z.string()),
           fallbackPrompt: z.string(),
+          reinforcementPrompt: z.string().optional(),
+          reinforcementVariantCode: z.string().optional(),
           answerSchema: z.enum(['short_text', 'evidence_grid', 'decision_cards']),
           criteria: z.array(
             z.object({

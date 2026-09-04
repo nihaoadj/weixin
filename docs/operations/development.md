@@ -85,7 +85,23 @@ npm run contract:generate
 npm run contract:check
 ```
 
-`pathology-general-v2` 是当前唯一运行时教学目录；开发样例均标记为合成内容，不能当作已完成医学审核的生产素材。
+`pathology-general-v3` 是当前唯一运行时教学目录；既有卡片编码作为第一轮兼容资源，`.v2` 卡片和病例蓝图的 reinforcement variant 用于第二轮。开发样例均标记为合成内容，不能当作已完成医学审核的生产素材。
+
+T14 历史转换默认只读预览：
+
+```bash
+python backend/scripts/transition_pbl_t14.py --database backend/data/dev.db
+```
+
+只有确认目标是受管非生产 SQLite 后才可使用 `--apply --confirm-development --backup <新备份路径>`；脚本遇到缺少审核变式或首轮证据时回滚并报告 plan ID。
+
+T15 评价历史回填同样默认只读预览：
+
+```bash
+python backend/scripts/backfill_pbl_evaluations.py --database backend/data/dev.db
+```
+
+只有受管非生产 SQLite 可追加 `--apply --confirm-development --backup <新备份路径>`。脚本仅回填可由既有 task/attempt/当前判定快照证明的轮次；历史人工结论标记为 legacy，不伪造逐项目标成绩。
 
 后端：
 

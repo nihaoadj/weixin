@@ -79,7 +79,7 @@ NOW = datetime(2026, 8, 31, tzinfo=UTC)
 
 
 def test_versioned_pathology_catalog_has_five_topics_and_thirty_points() -> None:
-    assert len(POINTS) == 30 and len(CARDS) == 60
+    assert len(POINTS) == 30 and len(CARDS) == 120
     assert {point.system for point in POINTS} == {
         "pathology.cell-injury",
         "pathology.inflammation",

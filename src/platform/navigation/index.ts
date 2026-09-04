@@ -12,6 +12,7 @@ export const ROUTES = {
   studentChat: '/pages/student/chat/chat',
   studentCases: '/pages/student/question/question',
   studentLearning: '/pages/student/learning/index',
+  studentInsights: '/pages/student/insights/index',
   studentPbl: '/pages/student/pbl/pbl',
   studentHistory: '/pages/student/history/history',
   // 学生端二级页面
@@ -22,6 +23,7 @@ export const ROUTES = {
   studentLearningDrill: '/pages/student/learning/drill',
   studentLearningReview: '/pages/student/learning/review',
   studentKnowledgeLoop: '/pages/student/learning/knowledge-loop',
+  studentInsightDetail: '/pages/student/insights/detail',
   studentReport: '/pages/report/report',
   // 教师端
   teacherWorkspace: '/pages/teacher/index/index',
@@ -44,8 +46,8 @@ export type StudentPrimaryRoute =
   | typeof ROUTES.studentChat
   | typeof ROUTES.studentCases
   | typeof ROUTES.studentLearning
+  | typeof ROUTES.studentInsights
   | typeof ROUTES.studentPbl
-  | typeof ROUTES.studentHistory
 
 type NavigationParams = Record<string, string | number | null | undefined>
 type BackPressSource = 'backbutton' | 'navigateBack'

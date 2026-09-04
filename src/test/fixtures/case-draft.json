@@ -5,7 +5,7 @@
   "difficulty": "basic",
   "estimated_minutes": 15,
   "case_definition": {
-    "schema_version": 2,
+    "schema_version": 3,
     "opening": {
       "setting": "病理学切片讨论课",
       "patient_intro": "合成情境：短暂缺血后，肾小管上皮出现肿胀；另一标本可见细胞膜破裂。",
@@ -87,6 +87,8 @@
         "allowed_variants": ["调整追问顺序"],
         "fixed_facts": ["标本 A 细胞肿胀，核仍可辨认；标本 B 膜完整性丧失并有核碎裂。"],
         "fallback_prompt": "细胞肿胀能否直接证明坏死？ 收集病变的背景、时间与形态观察，区分已知和待查信息。",
+        "reinforcement_prompt": "第二轮等价变式：先列出一条观察、一条相反解释，再完成以下任务：细胞肿胀能否直接证明坏死？ 收集病变的背景、时间与形态观察，区分已知和待查信息。",
+        "reinforcement_variant_code": "pathology.cell-injury.information_gathering.v2",
         "answer_schema": "short_text",
         "criteria": [
           {
@@ -107,6 +109,8 @@
         "allowed_variants": ["调整追问顺序"],
         "fixed_facts": ["标本 A 细胞肿胀，核仍可辨认；标本 B 膜完整性丧失并有核碎裂。"],
         "fallback_prompt": "细胞肿胀能否直接证明坏死？ 用一句话概括病理问题，保留关键形态与机制线索。",
+        "reinforcement_prompt": "第二轮等价变式：先列出一条观察、一条相反解释，再完成以下任务：细胞肿胀能否直接证明坏死？ 用一句话概括病理问题，保留关键形态与机制线索。",
+        "reinforcement_variant_code": "pathology.cell-injury.problem_representation.v2",
         "answer_schema": "short_text",
         "criteria": [
           {
@@ -127,6 +131,8 @@
         "allowed_variants": ["调整追问顺序"],
         "fixed_facts": ["标本 A 细胞肿胀，核仍可辨认；标本 B 膜完整性丧失并有核碎裂。"],
         "fallback_prompt": "细胞肿胀能否直接证明坏死？ 提出至少两个解释，逐一列出支持、反对和缺少的证据。",
+        "reinforcement_prompt": "第二轮等价变式：先列出一条观察、一条相反解释，再完成以下任务：细胞肿胀能否直接证明坏死？ 提出至少两个解释，逐一列出支持、反对和缺少的证据。",
+        "reinforcement_variant_code": "pathology.cell-injury.differential_diagnosis.v2",
         "answer_schema": "short_text",
         "criteria": [
           {
@@ -147,6 +153,8 @@
         "allowed_variants": ["调整追问顺序"],
         "fixed_facts": ["标本 A 细胞肿胀，核仍可辨认；标本 B 膜完整性丧失并有核碎裂。"],
         "fallback_prompt": "细胞肿胀能否直接证明坏死？ 提出至少两个解释，逐一列出支持、反对和缺少的证据。",
+        "reinforcement_prompt": "第二轮等价变式：先列出一条观察、一条相反解释，再完成以下任务：细胞肿胀能否直接证明坏死？ 提出至少两个解释，逐一列出支持、反对和缺少的证据。",
+        "reinforcement_variant_code": "pathology.cell-injury.evidence_reasoning.v2",
         "answer_schema": "short_text",
         "criteria": [
           {
@@ -167,6 +175,8 @@
         "allowed_variants": ["调整追问顺序"],
         "fixed_facts": ["标本 A 细胞肿胀，核仍可辨认；标本 B 膜完整性丧失并有核碎裂。"],
         "fallback_prompt": "细胞肿胀能否直接证明坏死？ 选择能够区分假设的进一步观察或检查，说明目的与局限。",
+        "reinforcement_prompt": "第二轮等价变式：先列出一条观察、一条相反解释，再完成以下任务：细胞肿胀能否直接证明坏死？ 选择能够区分假设的进一步观察或检查，说明目的与局限。",
+        "reinforcement_variant_code": "pathology.cell-injury.test_selection.v2",
         "answer_schema": "short_text",
         "criteria": [
           {
@@ -187,6 +197,8 @@
         "allowed_variants": ["调整追问顺序"],
         "fixed_facts": ["标本 A 细胞肿胀，核仍可辨认；标本 B 膜完整性丧失并有核碎裂。"],
         "fallback_prompt": "细胞肿胀能否直接证明坏死？ 总结病理机制、判断边界和需要教师复核的疑点。",
+        "reinforcement_prompt": "第二轮等价变式：先列出一条观察、一条相反解释，再完成以下任务：细胞肿胀能否直接证明坏死？ 总结病理机制、判断边界和需要教师复核的疑点。",
+        "reinforcement_variant_code": "pathology.cell-injury.management_safety.v2",
         "answer_schema": "short_text",
         "criteria": [
           {

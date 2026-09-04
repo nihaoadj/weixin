@@ -11173,6 +11173,7 @@
         "tags": ["pbl"],
         "summary": "Phase",
         "operationId": "phase_classes__class_id__pbl_sessions__session_id__phase_patch",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -11529,6 +11530,250 @@
         ]
       }
     },
+    "/student/pbl-learning-reports": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Learning Reports",
+        "operationId": "learning_reports_student_pbl_learning_reports_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/student/pbl-learning-reports/{session_id}": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Learning Report",
+        "operationId": "learning_report_student_pbl_learning_reports__session_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/student/pbl-learning-tasks/{task_id}/submit": {
       "post": {
         "tags": ["pbl"],
@@ -11785,6 +12030,7 @@
         "tags": ["pbl"],
         "summary": "Verify Result",
         "operationId": "verify_result_teacher_pbl_learning_results__plan_id__verify_post",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -12807,7 +13053,7 @@
         "properties": {
           "schema_version": {
             "type": "integer",
-            "enum": [1, 2],
+            "enum": [1, 2, 3],
             "title": "Schema Version",
             "default": 1
           },
@@ -12851,7 +13097,7 @@
         "properties": {
           "schema_version": {
             "type": "integer",
-            "enum": [1, 2],
+            "enum": [1, 2, 3],
             "title": "Schema Version",
             "default": 1
           },
@@ -14959,10 +15205,30 @@
           },
           "diagnostic": {
             "$ref": "#/components/schemas/StudentDiagnosticResponse"
+          },
+          "current_phase": {
+            "type": "string",
+            "title": "Current Phase"
+          },
+          "phase_status": {
+            "type": "string",
+            "title": "Phase Status"
+          },
+          "phase_completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Completed At"
           }
         },
         "type": "object",
-        "required": ["messages", "diagnostic"],
+        "required": ["messages", "diagnostic", "current_phase", "phase_status", "phase_completed_at"],
         "title": "MessageSubmissionResponse"
       },
       "NotificationListRead": {
@@ -15071,10 +15337,43 @@
                 "type": "null"
               }
             ]
+          },
+          "current_phase": {
+            "type": "string",
+            "title": "Current Phase"
+          },
+          "phase_started_revision": {
+            "type": "integer",
+            "title": "Phase Started Revision"
+          },
+          "phase_status": {
+            "type": "string",
+            "title": "Phase Status"
+          },
+          "phase_completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Completed At"
           }
         },
         "type": "object",
-        "required": ["session_id", "messages", "revision", "diagnostic"],
+        "required": [
+          "session_id",
+          "messages",
+          "revision",
+          "diagnostic",
+          "current_phase",
+          "phase_started_revision",
+          "phase_status",
+          "phase_completed_at"
+        ],
         "title": "ParticipationResponse"
       },
       "PatientMessageCreate": {
@@ -15222,6 +15521,38 @@
             },
             "type": "array",
             "title": "Tasks"
+          },
+          "current_cycle": {
+            "type": "integer",
+            "title": "Current Cycle"
+          },
+          "max_cycles": {
+            "type": "integer",
+            "title": "Max Cycles"
+          },
+          "automation_exhausted": {
+            "type": "boolean",
+            "title": "Automation Exhausted"
+          },
+          "decision_policy_version": {
+            "type": "string",
+            "title": "Decision Policy Version"
+          },
+          "decision_basis": {
+            "type": "object",
+            "title": "Decision Basis"
+          },
+          "evaluated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated At"
           }
         },
         "type": "object",
@@ -15237,7 +15568,13 @@
           "verified_at",
           "version",
           "due_at",
-          "tasks"
+          "tasks",
+          "current_cycle",
+          "max_cycles",
+          "automation_exhausted",
+          "decision_policy_version",
+          "decision_basis",
+          "evaluated_at"
         ],
         "title": "PlanResponse"
       },
@@ -15290,6 +15627,32 @@
             "maxLength": 1000,
             "minLength": 1,
             "title": "Fallback Prompt"
+          },
+          "reinforcement_prompt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reinforcement Prompt"
+          },
+          "reinforcement_variant_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reinforcement Variant Code"
           },
           "answer_schema": {
             "type": "string",
@@ -16234,6 +16597,22 @@
         "required": ["name", "purpose", "priority"],
         "title": "ReferenceTest"
       },
+      "ReportAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["discussion", "tasks", "none"],
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "label"],
+        "title": "ReportAction"
+      },
       "ReportAnalysis": {
         "properties": {
           "errors": {
@@ -16287,6 +16666,55 @@
         "required": ["content"],
         "title": "ReportAnalysisIssue"
       },
+      "ReportCheck": {
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "evidence_present": {
+            "type": "boolean",
+            "title": "Evidence Present"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": ["target_type", "target_code", "label", "threshold", "score", "evidence_present", "passed"],
+        "title": "ReportCheck"
+      },
       "ReportCreate": {
         "properties": {
           "conversation_id": {
@@ -16318,6 +16746,598 @@
         "type": "object",
         "required": ["conversation_id", "ai_score", "ai_summary"],
         "title": "ReportCreate"
+      },
+      "ReportCycleCheck": {
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "evidence_present": {
+            "type": "boolean",
+            "title": "Evidence Present"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "cycle_number": {
+            "type": "integer",
+            "title": "Cycle Number"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_type",
+          "target_code",
+          "label",
+          "threshold",
+          "score",
+          "evidence_present",
+          "passed",
+          "cycle_number"
+        ],
+        "title": "ReportCycleCheck"
+      },
+      "ReportDetailResponse": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/ReportSession"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "discussing",
+              "awaiting_learning",
+              "learning_cycle_1",
+              "learning_cycle_2",
+              "improved",
+              "support_needed"
+            ],
+            "title": "Status"
+          },
+          "current_phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Phase"
+          },
+          "phase_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Status"
+          },
+          "phase_progress": {
+            "items": {
+              "$ref": "#/components/schemas/ReportPhaseProgress"
+            },
+            "type": "array",
+            "title": "Phase Progress"
+          },
+          "diagnosis": {
+            "$ref": "#/components/schemas/ReportDiagnosis"
+          },
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/ReportPlan"
+            },
+            "type": "array",
+            "title": "Plans"
+          },
+          "target_progress": {
+            "items": {
+              "$ref": "#/components/schemas/ReportTargetProgress"
+            },
+            "type": "array",
+            "title": "Target Progress"
+          },
+          "task_progress": {
+            "$ref": "#/components/schemas/ReportTaskProgress"
+          },
+          "summary_text": {
+            "type": "string",
+            "title": "Summary Text"
+          },
+          "next_action": {
+            "$ref": "#/components/schemas/ReportAction"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/ReportTimelineItem"
+            },
+            "type": "array",
+            "title": "Timeline"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session",
+          "status",
+          "current_phase",
+          "phase_status",
+          "phase_progress",
+          "diagnosis",
+          "plans",
+          "target_progress",
+          "task_progress",
+          "summary_text",
+          "next_action",
+          "timeline",
+          "updated_at"
+        ],
+        "title": "ReportDetailResponse"
+      },
+      "ReportDiagnosis": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "knowledge_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/ReportKnowledgeGap"
+            },
+            "type": "array",
+            "title": "Knowledge Gaps"
+          },
+          "reasoning_issues": {
+            "items": {
+              "$ref": "#/components/schemas/ReportReasoningIssue"
+            },
+            "type": "array",
+            "title": "Reasoning Issues"
+          }
+        },
+        "type": "object",
+        "required": ["created_at", "knowledge_gaps", "reasoning_issues"],
+        "title": "ReportDiagnosis"
+      },
+      "ReportEvaluation": {
+        "properties": {
+          "cycle_number": {
+            "type": "integer",
+            "title": "Cycle Number"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "result": {
+            "type": "string",
+            "enum": ["improved", "next_cycle_activated", "needs_reinforcement"],
+            "title": "Result"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ReportCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "failed_targets": {
+            "items": {
+              "$ref": "#/components/schemas/ReportFailedTarget"
+            },
+            "type": "array",
+            "title": "Failed Targets"
+          },
+          "automation_exhausted": {
+            "type": "boolean",
+            "title": "Automation Exhausted"
+          },
+          "record_source": {
+            "type": "string",
+            "enum": ["runtime", "backfill", "legacy"],
+            "title": "Record Source"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cycle_number",
+          "policy_version",
+          "result",
+          "checks",
+          "failed_targets",
+          "automation_exhausted",
+          "record_source",
+          "evaluated_at"
+        ],
+        "title": "ReportEvaluation"
+      },
+      "ReportFailedTarget": {
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": ["target_type", "target_code", "label"],
+        "title": "ReportFailedTarget"
+      },
+      "ReportKnowledgeGap": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "point_code": {
+            "type": "string",
+            "title": "Point Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence"
+          },
+          "evidence_summary": {
+            "type": "string",
+            "title": "Evidence Summary"
+          }
+        },
+        "type": "object",
+        "required": ["id", "point_code", "label", "summary", "confidence", "evidence_summary"],
+        "title": "ReportKnowledgeGap"
+      },
+      "ReportListItem": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/ReportSession"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "discussing",
+              "awaiting_learning",
+              "learning_cycle_1",
+              "learning_cycle_2",
+              "improved",
+              "support_needed"
+            ],
+            "title": "Status"
+          },
+          "current_phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Phase"
+          },
+          "phase_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Status"
+          },
+          "knowledge_gap_count": {
+            "type": "integer",
+            "title": "Knowledge Gap Count"
+          },
+          "reasoning_issue_count": {
+            "type": "integer",
+            "title": "Reasoning Issue Count"
+          },
+          "task_progress": {
+            "$ref": "#/components/schemas/ReportTaskProgress"
+          },
+          "summary_text": {
+            "type": "string",
+            "title": "Summary Text"
+          },
+          "next_action": {
+            "$ref": "#/components/schemas/ReportAction"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session",
+          "status",
+          "current_phase",
+          "phase_status",
+          "knowledge_gap_count",
+          "reasoning_issue_count",
+          "task_progress",
+          "summary_text",
+          "next_action",
+          "updated_at"
+        ],
+        "title": "ReportListItem"
+      },
+      "ReportPageAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["discussion", "tasks", "none"],
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "case_title": {
+            "type": "string",
+            "title": "Case Title"
+          }
+        },
+        "type": "object",
+        "required": ["kind", "label", "session_id", "case_title"],
+        "title": "ReportPageAction"
+      },
+      "ReportPageResponse": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/ReportPageSummary"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReportListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": ["summary", "items", "total", "limit", "offset"],
+        "title": "ReportPageResponse"
+      },
+      "ReportPageSummary": {
+        "properties": {
+          "total_reports": {
+            "type": "integer",
+            "title": "Total Reports"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Status Counts"
+          },
+          "recurring_targets": {
+            "items": {
+              "$ref": "#/components/schemas/ReportRecurringTarget"
+            },
+            "type": "array",
+            "title": "Recurring Targets"
+          },
+          "next_action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportPageAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": ["total_reports", "status_counts", "recurring_targets", "next_action"],
+        "title": "ReportPageSummary"
+      },
+      "ReportPhaseProgress": {
+        "properties": {
+          "phase": {
+            "type": "string",
+            "title": "Phase"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["completed", "current", "pending"],
+            "title": "State"
+          },
+          "evidence_summary": {
+            "type": "string",
+            "title": "Evidence Summary"
+          },
+          "missing_elements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Elements"
+          },
+          "evidenced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidenced At"
+          }
+        },
+        "type": "object",
+        "required": ["phase", "label", "state", "evidence_summary", "missing_elements", "evidenced_at"],
+        "title": "ReportPhaseProgress"
+      },
+      "ReportPlan": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "assignment_basis": {
+            "type": "string",
+            "enum": ["personal", "classroom"],
+            "title": "Assignment Basis"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "current_cycle": {
+            "type": "integer",
+            "title": "Current Cycle"
+          },
+          "max_cycles": {
+            "type": "integer",
+            "title": "Max Cycles"
+          },
+          "automation_exhausted": {
+            "type": "boolean",
+            "title": "Automation Exhausted"
+          },
+          "decision_policy_version": {
+            "type": "string",
+            "title": "Decision Policy Version"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/ReportTask"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/ReportEvaluation"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "assignment_basis",
+          "status",
+          "verification_status",
+          "current_cycle",
+          "max_cycles",
+          "automation_exhausted",
+          "decision_policy_version",
+          "due_at",
+          "created_at",
+          "tasks",
+          "evaluations"
+        ],
+        "title": "ReportPlan"
       },
       "ReportRead": {
         "properties": {
@@ -16449,6 +17469,64 @@
         ],
         "title": "ReportRead"
       },
+      "ReportReasoningIssue": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "dimension_id": {
+            "type": "string",
+            "title": "Dimension Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "issue_type": {
+            "type": "string",
+            "title": "Issue Type"
+          },
+          "improvement": {
+            "type": "string",
+            "title": "Improvement"
+          },
+          "evidence_summary": {
+            "type": "string",
+            "title": "Evidence Summary"
+          }
+        },
+        "type": "object",
+        "required": ["id", "dimension_id", "label", "summary", "issue_type", "improvement", "evidence_summary"],
+        "title": "ReportReasoningIssue"
+      },
+      "ReportRecurringTarget": {
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "occurrences": {
+            "type": "integer",
+            "title": "Occurrences"
+          }
+        },
+        "type": "object",
+        "required": ["target_type", "target_code", "label", "occurrences"],
+        "title": "ReportRecurringTarget"
+      },
       "ReportReview": {
         "properties": {
           "teacher_score": {
@@ -16475,6 +17553,50 @@
         "type": "object",
         "required": ["teacher_score"],
         "title": "ReportReview"
+      },
+      "ReportSession": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "topic_code": {
+            "type": "string",
+            "title": "Topic Code"
+          },
+          "topic_label": {
+            "type": "string",
+            "title": "Topic Label"
+          },
+          "case_title": {
+            "type": "string",
+            "title": "Case Title"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "topic_code", "topic_label", "case_title", "status", "created_at", "closed_at"],
+        "title": "ReportSession"
       },
       "ReportSummaryPage": {
         "properties": {
@@ -16585,6 +17707,165 @@
           "updated_at"
         ],
         "title": "ReportSummaryRead"
+      },
+      "ReportTargetProgress": {
+        "properties": {
+          "plan_id": {
+            "type": "integer",
+            "title": "Plan Id"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "cycles": {
+            "items": {
+              "$ref": "#/components/schemas/ReportCycleCheck"
+            },
+            "type": "array",
+            "title": "Cycles"
+          }
+        },
+        "type": "object",
+        "required": ["plan_id", "target_type", "target_code", "label", "cycles"],
+        "title": "ReportTargetProgress"
+      },
+      "ReportTask": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "task_type": {
+            "type": "string",
+            "title": "Task Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "cycle_number": {
+            "type": "integer",
+            "title": "Cycle Number"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "target_label": {
+            "type": "string",
+            "title": "Target Label"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "feedback": {
+            "type": "string",
+            "title": "Feedback"
+          },
+          "evidence_present": {
+            "type": "boolean",
+            "title": "Evidence Present"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "task_type",
+          "status",
+          "cycle_number",
+          "target_type",
+          "target_code",
+          "target_label",
+          "prompt",
+          "score",
+          "feedback",
+          "evidence_present",
+          "submitted_at"
+        ],
+        "title": "ReportTask"
+      },
+      "ReportTaskProgress": {
+        "properties": {
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": ["completed", "total"],
+        "title": "ReportTaskProgress"
+      },
+      "ReportTimelineItem": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "cycle_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle Number"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          }
+        },
+        "type": "object",
+        "required": ["type", "label", "occurred_at"],
+        "title": "ReportTimelineItem"
       },
       "ReviewCardRead": {
         "properties": {
@@ -16841,6 +18122,42 @@
           "version": {
             "type": "integer",
             "title": "Version"
+          },
+          "student_phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Student Phase"
+          },
+          "phase_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Status"
+          },
+          "phase_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Counts"
           }
         },
         "type": "object",
@@ -17016,6 +18333,40 @@
               }
             ],
             "title": "Legacy Findings"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "phase_decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Decision"
+          },
+          "phase_evidence_summary": {
+            "type": "string",
+            "title": "Phase Evidence Summary",
+            "default": ""
+          },
+          "phase_missing_elements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Phase Missing Elements"
           }
         },
         "type": "object",
@@ -17189,6 +18540,17 @@
               }
             ],
             "title": "Objective Retest Average"
+          },
+          "phase_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Phase Counts"
+          },
+          "automation_exhausted": {
+            "type": "integer",
+            "title": "Automation Exhausted"
           }
         },
         "type": "object",
@@ -17203,7 +18565,9 @@
           "improved",
           "needs_reinforcement",
           "objective_retest_count",
-          "objective_retest_average"
+          "objective_retest_average",
+          "phase_counts",
+          "automation_exhausted"
         ],
         "title": "Summary"
       },
@@ -17250,10 +18614,38 @@
                 "type": "null"
               }
             ]
+          },
+          "cycle_number": {
+            "type": "integer",
+            "title": "Cycle Number"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "variant_code": {
+            "type": "string",
+            "title": "Variant Code"
           }
         },
         "type": "object",
-        "required": ["id", "position", "task_type", "status", "problem_id", "public_definition", "result"],
+        "required": [
+          "id",
+          "position",
+          "task_type",
+          "status",
+          "problem_id",
+          "public_definition",
+          "result",
+          "cycle_number",
+          "target_type",
+          "target_code",
+          "variant_code"
+        ],
         "title": "TaskResponse"
       },
       "TaskResult": {
@@ -17378,6 +18770,40 @@
               }
             ],
             "title": "Legacy Findings"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "phase_decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Decision"
+          },
+          "phase_evidence_summary": {
+            "type": "string",
+            "title": "Phase Evidence Summary",
+            "default": ""
+          },
+          "phase_missing_elements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Phase Missing Elements"
           },
           "student_id": {
             "type": "integer",

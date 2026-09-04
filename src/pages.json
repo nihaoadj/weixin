@@ -45,6 +45,14 @@
       "style": { "navigationBarTitleText": "个性化学习" }
     },
     {
+      "path": "pages/student/insights/index",
+      "style": { "navigationBarTitleText": "我的 PBL 学情" }
+    },
+    {
+      "path": "pages/student/insights/detail",
+      "style": { "navigationBarTitleText": "PBL 学情详情" }
+    },
+    {
       "path": "pages/student/learning/plan",
       "style": { "navigationBarTitleText": "训练计划" }
     },

@@ -6,11 +6,10 @@ import type {
   PblSession,
   PblSuggestion,
   PblSession as SessionType,
-  PblPhase,
   PblTargets,
   PblFilters,
-  PblPlan,
 } from '../domain/ports'
+import { mapLearningReport, mapReportPage, reportDetailSchema, reportPageSchema } from './reportContract'
 const session = z.object({
   id: z.number(),
   class_id: z.number(),
@@ -28,6 +27,9 @@ const session = z.object({
     .nullable(),
   goal_point_codes: z.array(z.string()),
   phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis']),
+  student_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']).nullable().optional(),
+  phase_status: z.enum(['active', 'completed']).nullable().optional(),
+  phase_counts: z.record(z.string(), z.number()).nullable().optional(),
   version: z.number(),
 })
 const suggestion = z.object({
@@ -67,6 +69,10 @@ const diagnostic = z.object({
   session_id: z.number().optional(),
   topic_code: z.string().optional(),
   recommended_questions: z.array(suggestion).optional(),
+  phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis']).nullable().optional(),
+  phase_decision: z.enum(['continue', 'advance', 'complete', 'unavailable']).nullable().optional(),
+  phase_evidence_summary: z.string(),
+  phase_missing_elements: z.array(z.string()),
 })
 const toSession = (v: z.infer<typeof session>): PblSession => ({
   id: String(v.id),
@@ -80,6 +86,9 @@ const toSession = (v: z.infer<typeof session>): PblSession => ({
   caseContext: v.case_context ?? undefined,
   goalPointCodes: v.goal_point_codes,
   phase: v.phase,
+  studentPhase: v.student_phase ?? undefined,
+  phaseStatus: v.phase_status ?? undefined,
+  phaseCounts: v.phase_counts ?? undefined,
   version: v.version,
 })
 const toSuggestion = (v: z.infer<typeof suggestion>): PblSuggestion => ({
@@ -109,6 +118,10 @@ const toDiagnostic = (v: z.infer<typeof diagnostic>): PblDiagnostic => ({
   className: v.class_name,
   sessionId: v.session_id == null ? undefined : String(v.session_id),
   topicCode: v.topic_code,
+  phase: v.phase ?? undefined,
+  phaseDecision: v.phase_decision ?? undefined,
+  phaseEvidenceSummary: v.phase_evidence_summary,
+  phaseMissingElements: v.phase_missing_elements,
 })
 const messageSchema = z.object({
   id: z.string(),
@@ -140,6 +153,12 @@ const plan = z.object({
   verified_at: z.string().nullable(),
   version: z.number(),
   due_at: z.string(),
+  current_cycle: z.number(),
+  max_cycles: z.number(),
+  automation_exhausted: z.boolean(),
+  decision_policy_version: z.string(),
+  decision_basis: z.record(z.string(), z.unknown()),
+  evaluated_at: z.string().nullable(),
   tasks: z.array(
     z.object({
       id: z.number(),
@@ -147,6 +166,10 @@ const plan = z.object({
       task_type: z.enum(['discussion', 'knowledge_review', 'retest', 'micro_drill', 'focused_retry']),
       status: z.string(),
       problem_id: z.number().nullable(),
+      cycle_number: z.number(),
+      target_type: z.string(),
+      target_code: z.string(),
+      variant_code: z.string(),
       public_definition: z.object({
         prompt: z.string(),
         options: z.array(z.string()).optional(),
@@ -159,7 +182,11 @@ const plan = z.object({
           score: z.number().nullable(),
           feedback: z.string(),
           evidence: z.array(z.string()),
-          answer: z.object({ text: z.string().optional(), selected_option: z.number().optional() }),
+          answer: z.object({
+            text: z.string().optional(),
+            selected_option: z.number().optional(),
+            dimension_scores: z.record(z.string(), z.number()).optional(),
+          }),
           submitted_at: z.string().nullable(),
         })
         .nullable(),
@@ -178,6 +205,8 @@ const summary = z.object({
   needs_reinforcement: z.number(),
   objective_retest_count: z.number(),
   objective_retest_average: z.number().nullable(),
+  phase_counts: z.record(z.string(), z.number()),
+  automation_exhausted: z.number(),
 })
 export class ApiPblRepository implements PblRepository {
   async active() {
@@ -207,9 +236,20 @@ export class ApiPblRepository implements PblRepository {
       schema: z.object({
         messages: z.array(messageSchema),
         diagnostic: diagnostic.nullable(),
+        current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
+        phase_started_revision: z.number(),
+        phase_status: z.enum(['active', 'completed']),
+        phase_completed_at: z.string().nullable(),
       }),
     })
-    return { messages: value.messages, diagnostic: value.diagnostic ? toDiagnostic(value.diagnostic) : undefined }
+    return {
+      messages: value.messages,
+      diagnostic: value.diagnostic ? toDiagnostic(value.diagnostic) : undefined,
+      currentPhase: value.current_phase,
+      phaseStartedRevision: value.phase_started_revision,
+      phaseStatus: value.phase_status,
+      phaseCompletedAt: value.phase_completed_at ?? undefined,
+    }
   }
   async message(id: string, content: string, clientMessageId: string) {
     const value = await apiRequest({
@@ -217,9 +257,22 @@ export class ApiPblRepository implements PblRepository {
       timeoutMs: 35000,
       method: 'POST',
       body: { content, client_message_id: clientMessageId },
-      schema: z.object({ diagnostic, messages: z.array(messageSchema) }),
+      schema: z.object({
+        diagnostic,
+        messages: z.array(messageSchema),
+        current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
+        phase_status: z.enum(['active', 'completed']),
+        phase_completed_at: z.string().nullable(),
+      }),
     })
-    return { messages: value.messages, diagnostic: toDiagnostic(value.diagnostic) }
+    return {
+      messages: value.messages,
+      diagnostic: toDiagnostic(value.diagnostic),
+      currentPhase: value.current_phase,
+      phaseStartedRevision: value.diagnostic.revision,
+      phaseStatus: value.phase_status,
+      phaseCompletedAt: value.phase_completed_at ?? undefined,
+    }
   }
   async diagnostics(filters: PblFilters = {}) {
     const value = await apiRequest({
@@ -266,16 +319,6 @@ export class ApiPblRepository implements PblRepository {
       }),
     )
   }
-  async phase(item: SessionType, phase: PblPhase) {
-    return toSession(
-      await apiRequest({
-        path: `/classes/${item.classId}/pbl-sessions/${item.id}/phase`,
-        method: 'PATCH',
-        body: { phase, version: item.version },
-        schema: session,
-      }),
-    )
-  }
   async revisions(id: string) {
     return (await apiRequest({ path: `/teacher/pbl-diagnostics/${id}/revisions`, schema: z.array(diagnostic) })).map(
       toDiagnostic,
@@ -283,6 +326,16 @@ export class ApiPblRepository implements PblRepository {
   }
   async plans() {
     return apiRequest({ path: '/student/pbl-learning-plans', schema: z.array(plan) })
+  }
+  async reports(limit = 20, offset = 0) {
+    return mapReportPage(
+      await apiRequest({ path: '/student/pbl-learning-reports', query: { limit, offset }, schema: reportPageSchema }),
+    )
+  }
+  async report(sessionId: string) {
+    return mapLearningReport(
+      await apiRequest({ path: `/student/pbl-learning-reports/${sessionId}`, schema: reportDetailSchema }),
+    )
   }
   async results(sessionId?: string) {
     return apiRequest({
@@ -296,14 +349,6 @@ export class ApiPblRepository implements PblRepository {
       path: `/student/pbl-learning-tasks/${taskId}/submit`,
       method: 'POST',
       body: { client_submission_id: submissionId, answer },
-      schema: plan,
-    })
-  }
-  async verify(item: PblPlan, decision: 'improved' | 'needs_reinforcement', note: string) {
-    return apiRequest({
-      path: `/teacher/pbl-learning-results/${item.id}/verify`,
-      method: 'POST',
-      body: { version: item.version, decision, note },
       schema: plan,
     })
   }

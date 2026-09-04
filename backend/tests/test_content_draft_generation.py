@@ -85,7 +85,7 @@ def test_disabled_fallback_preserves_all_approved_topic_payloads_and_audit(clien
         assert body["description"].endswith("学习层级：undergraduate。教学目标：识别危险信号、说明证据")
         assert body["generation_mode"] == "fallback"
         assert body["safety_notice"] == SAFETY_NOTICE
-        assert definition["schema_version"] == 2
+        assert definition["schema_version"] == 3
         assert set(definition["stage_instructions"]) == {
             "history",
             "problem_representation",

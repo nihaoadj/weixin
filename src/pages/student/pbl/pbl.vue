@@ -44,15 +44,16 @@
         class="panel classroom-context"
         aria-label="当前课堂上下文"
         ><text class="section-title">{{ session.caseContext?.title || topicTitle(session.topicCode) }}</text
-        ><text v-if="session.caseContext?.opening">{{ session.caseContext.opening.patient_intro }}</text>
-        ><view class="classroom-meta">
-          <text class="phase-chip">阶段：{{ phaseLabels[session.phase] }}</text>
+        ><text v-if="session.caseContext?.opening">{{ session.caseContext.opening.patient_intro }}</text> ><view
+          class="classroom-meta"
+        >
+          <text class="phase-chip">我的阶段：{{ phaseLabels[session.studentPhase || session.phase] }}</text>
           <text
             class="status-chip"
             :class="{ closed: session.status !== 'active' }"
-          >{{ session.status === 'active' ? '课堂进行中' : '已结束，可回看' }}</text>
-        </view
-        >
+            >{{ session.status === 'active' ? '课堂进行中' : '已结束，可回看' }}</text
+          >
+        </view>
         <text
           v-if="!session.caseId"
           class="muted"
@@ -94,8 +95,18 @@
         v-if="diagnostic"
         class="panel diagnosis"
         ><text class="section-title">{{
-          diagnostic.diagnosticStatus === 'ready' ? '待教师确认的学习线索' : '继续梳理思路'
+          diagnostic.diagnosticStatus === 'ready' ? '已形成学习线索' : '继续梳理思路'
         }}</text>
+        <text
+          v-if="diagnostic.phaseEvidenceSummary"
+          class="muted"
+          >阶段依据：{{ diagnostic.phaseEvidenceSummary }}</text
+        >
+        <text
+          v-if="diagnostic.phaseMissingElements?.length"
+          class="muted"
+          >还需补充：{{ diagnostic.phaseMissingElements.join('；') }}</text
+        >
         <text v-if="diagnostic.followUpQuestion">追问：{{ diagnostic.followUpQuestion }}</text>
         <text v-if="diagnostic.diagnosticStatus === 'unavailable'">本次没有形成有效诊断，请重试或请教师帮助。</text>
         <view
@@ -113,7 +124,7 @@
         <text class="muted">{{ diagnostic.safetyNotice }}</text>
       </view>
       <view
-        v-if="session.status === 'active'"
+        v-if="session.status === 'active' && session.phaseStatus !== 'completed'"
         class="panel composer"
       >
         <textarea
@@ -129,6 +140,11 @@
         >
           {{ sending ? '正在分析，请稍候…' : retry ? '重试提交讨论' : '提交讨论' }}</button
         ><text class="muted">只填写合成教学内容，请勿提供身份或患者信息。</text></view
+      >
+      <view
+        v-else-if="session.phaseStatus === 'completed'"
+        class="notice"
+        >四阶段讨论已完成，输入已关闭。教师采用发布建议题后，系统会按两轮规则自动判定学习结果。</view
       >
       <view
         v-else
@@ -166,7 +182,13 @@ const loading = ref(true),
   points = ref<KnowledgePoint[]>([])
 const retry = ref<{ id: string; content: string; sessionId: string }>()
 const session = computed(() => sessions.value[sessionIndex.value])
-const phaseLabels = { problem_framing: '明确问题', hypothesis: '提出假设', evidence: '讨论证据', synthesis: '总结解释' }
+const phaseLabels = {
+  problem_framing: '明确问题',
+  hypothesis: '提出假设',
+  evidence: '讨论证据',
+  synthesis: '总结解释',
+  completed: '已完成',
+}
 const topicTitle = (code: string) => points.value.find((p) => p.systemCode === code)?.systemLabel ?? code
 const pointTitle = (code: string) => points.value.find((p) => p.code === code)?.title ?? code
 const sessionOptions = computed(() =>
@@ -177,6 +199,8 @@ async function participation() {
   const result = await getPblParticipation(session.value.id)
   messages.value = result.messages
   diagnostic.value = result.diagnostic
+  session.value.studentPhase = result.currentPhase
+  session.value.phaseStatus = result.phaseStatus
 }
 async function load() {
   loading.value = true
@@ -214,6 +238,8 @@ async function send() {
     const result = await sendPblMessage(session.value.id, content, retry.value.id)
     messages.value = result.messages
     diagnostic.value = result.diagnostic
+    session.value.studentPhase = result.currentPhase
+    session.value.phaseStatus = result.phaseStatus
     draft.value = ''
     retry.value = undefined
   } catch {

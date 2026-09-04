@@ -123,16 +123,13 @@ def test_pbl_teacher_scope_edit_protection_and_adoption_idempotency(client, db, 
         headers=_headers(teacher),
         json=_session_payload(db),
     ).json()["id"]
-    client.post(
-        f"/student/pbl-sessions/{session_id}/messages",
-        headers=_headers(student),
-        json={"client_message_id": "probe", "content": "为什么红肿？"},
-    )
-    client.post(
-        f"/student/pbl-sessions/{session_id}/messages",
-        headers=_headers(student),
-        json={"client_message_id": "first", "content": "我认为红肿都由细菌直接导致。"},
-    )
+    for index, content in enumerate(("为什么红肿？", "提出血管机制假设。", "比较支持与反对证据。", "整合机制与疑问。")):
+        response = client.post(
+            f"/student/pbl-sessions/{session_id}/messages",
+            headers=_headers(student),
+            json={"client_message_id": f"phase-{index}", "content": content},
+        )
+        assert response.status_code == 200
     queue = client.get("/teacher/pbl-diagnostics", headers=_headers(teacher))
     assert queue.status_code == 200
     suggestion = queue.json()["items"][0]["recommended_questions"][0]
@@ -160,37 +157,10 @@ def test_pbl_teacher_scope_edit_protection_and_adoption_idempotency(client, db, 
     assert edited.status_code == 200
     assert edited.json()["status"] == "edited"
 
-    second_ready = client.post(
-        f"/student/pbl-sessions/{session_id}/messages",
-        headers=_headers(student),
-        json={"client_message_id": "second", "content": "我还不能将红肿和血管反应对应起来。"},
-    )
-    assert second_ready.status_code == 200
-    db.expire_all()
-    protected = db.get(PblQuestionSuggestion, suggestion_id)
-    assert protected is not None and protected.status == "superseded"
-    assert db.scalar(select(func.count(PblQuestionSuggestion.id))) == 2
-    assert (
-        client.patch(
-            f"/teacher/pbl-question-suggestions/{suggestion_id}",
-            headers=_headers(teacher),
-            json={"version": suggestion["version"], "title": "旧版本", "prompt": "旧版本", "reject": False},
-        ).status_code
-        == 409
-    )
-
     latest = client.get("/teacher/pbl-diagnostics", headers=_headers(teacher)).json()["items"][0][
         "recommended_questions"
     ][0]
     publish = {"version": latest["version"], "title": "教师当前编辑", "prompt": "请区分血管反应。"}
-    assert (
-        client.post(
-            f"/teacher/pbl-question-suggestions/{suggestion_id}/adopt-and-publish",
-            headers=_headers(teacher),
-            json=publish,
-        ).status_code
-        == 409
-    )
     suggestion_id = latest["id"]
     adopted = client.post(
         f"/teacher/pbl-question-suggestions/{suggestion_id}/adopt-and-publish", headers=_headers(teacher), json=publish
@@ -244,3 +214,45 @@ def test_pbl_repository_rejects_a_stale_inference_revision(client, db, monkeypat
         InferenceResult("过期结果", "probing", follow_up_question="继续说明依据。"),
     )
     assert stale is None
+
+
+def test_t14_participation_advances_four_phases_and_locks_new_messages(client, db, monkeypatch) -> None:
+    gateway = _configure_gateway(monkeypatch)
+    teacher = _login(client, "teacher", "t14-phase-teacher")
+    student = _login(client, "student", "t14-phase-student")
+    class_id = _classroom(client, teacher, "t14-phase-student")
+    session_id = client.post(
+        f"/classes/{class_id}/pbl-sessions",
+        headers=_headers(teacher),
+        json=_session_payload(db),
+    ).json()["id"]
+    path = f"/student/pbl-sessions/{session_id}/messages"
+    expected = ["hypothesis", "evidence", "synthesis", "completed"]
+    last = None
+    for index, phase in enumerate(expected):
+        last = client.post(
+            path,
+            headers=_headers(student),
+            json={"client_message_id": f"stage-{index}", "content": f"第 {index + 1} 阶段的新证据"},
+        )
+        assert last.status_code == 200, last.text
+        assert last.json()["current_phase"] == phase
+    assert gateway.calls == 4
+    assert last is not None and last.json()["diagnostic"]["diagnostic_status"] == "ready"
+    duplicate = client.post(
+        path,
+        headers=_headers(student),
+        json={"client_message_id": "stage-3", "content": "第 4 阶段的新证据"},
+    )
+    assert duplicate.status_code == 200 and duplicate.json() == last.json()
+    assert gateway.calls == 4
+    assert (
+        client.post(
+            path,
+            headers=_headers(student),
+            json={"client_message_id": "after-complete", "content": "完成后的新消息"},
+        ).status_code
+        == 409
+    )
+    sessions = client.get(f"/classes/{class_id}/pbl-sessions", headers=_headers(teacher)).json()
+    assert sessions[0]["phase_counts"]["completed"] == 1

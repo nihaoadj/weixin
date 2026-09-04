@@ -84,17 +84,16 @@
         ><view
           ><text>{{ item.caseContext?.title || topicName(item.topicCode) }}</text
           ><text class="muted"
-            >{{ item.status === 'active' ? '进行中' : '已结束' }} · {{ phaseLabels[item.phase] }}</text
+            >{{ item.status === 'active' ? '进行中' : '已结束' }} · 学生阶段由系统自动推进</text
           ></view
         >
-        <picker
-          :range="phaseTitles"
-          :value="phaseKeys.indexOf(item.phase)"
-          aria-label="调整讨论阶段"
-          :disabled="busy || item.status === 'closed'"
-          @change="updatePhase(item, Number($event.detail.value))"
-          ><view class="select">调整阶段 ▾</view></picker
-        >
+        <view class="phase-distribution">
+          <text
+            v-for="(label, phase) in phaseLabels"
+            :key="phase"
+            >{{ label }} {{ item.phaseCounts?.[phase] || 0 }}</text
+          >
+        </view>
         <button
           :disabled="busy"
           @click="showSummary(item)"
@@ -116,14 +115,15 @@
         ><text>参与 {{ summary.participants }} 人</text><text>AI 诊断 {{ summary.diagnoses }} 次</text
         ><text>教师发布 {{ summary.published_suggestions }} 项</text
         ><text>任务完成 {{ summary.completed_tasks }}/{{ summary.tasks }}</text
-        ><text>待核验 {{ summary.pending_verification }} 项</text><text>教师确认改善 {{ summary.improved }} 项</text
+        ><text>系统判定改善 {{ summary.improved }} 项</text
+        ><text>自动轮次耗尽 {{ summary.automation_exhausted }} 项</text
         ><text
           >客观再测 {{ summary.objective_retest_count }} 次 ·
           {{
             summary.objective_retest_average == null ? '暂无成绩' : `${summary.objective_retest_average.toFixed(0)} 分`
           }}</text
         ></view
-      ><text class="muted">AI 诊断属于待确认推测，客观成绩和教师判断分别统计。</text></view
+      ><text class="muted">教师查看阶段与逐项成绩；系统按固定阈值决定后续轮次。</text></view
     >
     <view class="panel"
       ><text class="section-title">诊断待办</text
@@ -167,7 +167,7 @@
           >{{ topicName(item.topicCode || '') }} · 课堂 {{ item.sessionId }} · {{ formatTime(item.createdAt) }}</text
         >
         <text
-          v-if="item.schemaVersion !== 2"
+          v-if="item.schemaVersion !== 3"
           class="notice"
           >历史诊断只读，不纳入新版掌握统计。</text
         >
@@ -284,7 +284,7 @@
       ></view
     >
     <view class="panel"
-      ><text class="section-title">学习结果核验</text
+      ><text class="section-title">学习结果数据</text
       ><text
         v-if="!results.length"
         class="muted"
@@ -298,11 +298,25 @@
           >{{ students.find((s) => s.id === plan.student_id)?.nickname || `学生 ${plan.student_id}` }} · 课堂
           {{ plan.source_context.session_id }} · {{ verificationLabel(plan.verification_status) }}</text
         >
+        <text class="muted"
+          >第 {{ plan.current_cycle }}/{{ plan.max_cycles }} 轮 · 判定策略 {{ plan.decision_policy_version
+          }}<template v-if="plan.automation_exhausted"> · 自动轮次已结束，需线下支持</template></text
+        >
         <view
           v-for="task in plan.tasks"
           :key="task.id"
           class="finding"
-          ><text>{{ task.public_definition.prompt }} · {{ task.status === 'completed' ? '已完成' : '待完成' }}</text
+          ><text
+            >第 {{ task.cycle_number }} 轮 · {{ task.public_definition.prompt }} ·
+            {{
+              task.status === 'completed'
+                ? '已完成'
+                : task.status === 'inactive'
+                  ? '未激活'
+                  : task.status === 'skipped'
+                    ? '已跳过'
+                    : '待完成'
+            }}</text
           ><text
             v-if="task.result"
             class="muted"
@@ -316,26 +330,19 @@
             }}</text
           ></view
         >
-        <template v-if="plan.verification_status === 'pending_teacher'">
-          <textarea
-            v-model="notes[plan.id]"
-            aria-label="教师核验依据"
-            placeholder="说明本次核验依据与下一步建议"
-            :maxlength="1000"
-          /><view class="controls"
-            ><button
-              :disabled="busy || !notes[plan.id]?.trim()"
-              @click="verify(plan, 'improved')"
-            >
-              确认已改善</button
-            ><button
-              :disabled="busy || !notes[plan.id]?.trim()"
-              @click="verify(plan, 'needs_reinforcement')"
-            >
-              需继续巩固
-            </button></view
-          ></template
-        ><text v-else-if="plan.verification_note">核验意见：{{ plan.verification_note }}</text>
+        <view
+          v-if="plan.decision_basis.checks?.length"
+          class="decision-grid"
+        >
+          <text
+            v-for="check in plan.decision_basis.checks"
+            :key="`${check.target_type}:${check.target_code}`"
+            >{{ check.target_code }}：{{ check.passed ? '达标' : '未达标'
+            }}<template v-if="check.threshold != null">
+              · {{ check.score ?? '缺少成绩' }}/{{ check.threshold }}</template
+            ></text
+          >
+        </view>
       </view>
     </view>
   </view>
@@ -357,15 +364,12 @@ import {
   editPblSuggestion,
   getTeacherPblDiagnostics,
   getTeacherPblSessions,
-  setPblPhase,
   getPblSummary,
   getPblDiagnosticRevisions,
   getPblLearningResults,
-  verifyPblLearning,
   type PblDiagnostic,
   type PblSession,
   type PblSuggestion,
-  type PblPhase,
   type PblSummary,
   type PblPlan,
 } from '@/features/pbl/public'
@@ -393,7 +397,6 @@ const classIndex = ref(0),
 const targets = ref<Record<string, number[]>>({}),
   wholeClass = ref<Record<string, boolean>>({}),
   caseRetry = ref<Record<string, boolean>>({}),
-  notes = ref<Record<number, string>>({}),
   histories = ref<Record<string, PblDiagnostic[]>>({})
 const selectedClass = computed(() => classes.value[classIndex.value]),
   topics = computed(() =>
@@ -409,9 +412,13 @@ const selectedClass = computed(() => classes.value[classIndex.value]),
     ),
   ),
   selectedCase = computed(() => availableCases.value[caseIndex.value])
-const phaseKeys: PblPhase[] = ['problem_framing', 'hypothesis', 'evidence', 'synthesis'],
-  phaseLabels = { problem_framing: '明确问题', hypothesis: '提出假设', evidence: '讨论证据', synthesis: '总结解释' },
-  phaseTitles = phaseKeys.map((p) => phaseLabels[p])
+const phaseLabels = {
+  problem_framing: '明确问题',
+  hypothesis: '提出假设',
+  evidence: '讨论证据',
+  synthesis: '总结解释',
+  completed: '已完成',
+} as const
 const statuses = ['', 'proposed', 'edited', 'published', 'rejected', 'superseded'],
   statusTitles = ['全部状态', '待审阅', '已编辑', '已发布', '已拒绝', '已更新']
 const switchValue = (event: unknown) => Boolean((event as { detail: { value: boolean } }).detail.value)
@@ -419,12 +426,15 @@ const statusLabel = (s: string) => statusTitles[statuses.indexOf(s)] ?? s,
   topicName = (code: string) => topics.value.find((t) => t.code === code)?.title ?? code,
   pointName = (code: string) => points.value.find((p) => p.code === code)?.title ?? code
 const verificationLabel = (s: string) =>
-  ({ not_ready: '学习进行中', pending_teacher: '待教师核验', improved: '已改善', needs_reinforcement: '需继续巩固' })[
-    s
-  ] ?? s
+  ({
+    not_ready: '学习进行中',
+    pending_teacher: '历史待转换',
+    improved: '系统判定已改善',
+    needs_reinforcement: '需继续巩固',
+  })[s] ?? s
 const formatTime = (value?: string) => (value ? new Date(value).toLocaleString() : '')
 const editable = (s: PblSuggestion, d: PblDiagnostic) =>
-  d.schemaVersion === 2 && ['proposed', 'edited'].includes(s.status)
+  d.schemaVersion === 3 && ['proposed', 'edited'].includes(s.status)
 async function run(action: () => Promise<void>) {
   if (busy.value) return
   busy.value = true
@@ -521,12 +531,6 @@ function close(item: PblSession) {
     await scope()
   })
 }
-function updatePhase(item: PblSession, index: number) {
-  void run(async () => {
-    await setPblPhase(item, phaseKeys[index])
-    await scope()
-  })
-}
 function showSummary(item: PblSession) {
   void run(async () => {
     summary.value = await getPblSummary(item)
@@ -557,12 +561,6 @@ function publish(item: PblSuggestion) {
         includeCaseRetry: caseRetry.value[item.id],
       }),
     )
-    await scope()
-  })
-}
-function verify(plan: PblPlan, decision: 'improved' | 'needs_reinforcement') {
-  void run(async () => {
-    await verifyPblLearning(plan, decision, notes.value[plan.id])
     await scope()
   })
 }

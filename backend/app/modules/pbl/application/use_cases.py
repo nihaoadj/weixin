@@ -12,6 +12,7 @@ from app.modules.pbl.application.records import (
     PblSnapshotRecord,
     PblSuggestionRecord,
 )
+from app.modules.pbl.application.reporting import build_report, build_report_page
 from app.modules.pbl.domain.catalog import PATHOLOGY_POINTS
 from app.shared.errors import AppError
 from app.shared.uow import UnitOfWork
@@ -59,11 +60,7 @@ class PblApplication:
 
     def phase(self, teacher_id: int, class_id: int, session_id: int, phase: str, version: int):
         self._require_owned_session(teacher_id, class_id, session_id)
-        if phase not in {"problem_framing", "hypothesis", "evidence", "synthesis"}:
-            raise AppError("VALIDATION_ERROR", "讨论阶段无效", 422)
-        result = self._repository.change_phase(session_id, phase, version)
-        self._uow.commit()
-        return result
+        raise AppError("STATE_CONFLICT", "学生阶段已由系统自动推进，教师不能手工修改", 409)
 
     def close_session(self, teacher_id: int, class_id: int, session_id: int) -> PblSessionRecord:
         value = self._require_owned_session(teacher_id, class_id, session_id)
@@ -81,6 +78,10 @@ class PblApplication:
         if self._classroom_scope.owned_active(teacher_id, class_id) is None:
             raise AppError("RESOURCE_NOT_FOUND", "班级不存在", 404)
         return self._repository.list_sessions_for_teacher(teacher_id, class_id)
+
+    def phase_counts(self, teacher_id: int, class_id: int, session_id: int) -> dict[str, int]:
+        self._require_owned_session(teacher_id, class_id, session_id)
+        return dict(self._repository.session_counts(session_id).get("phase_counts", {}))
 
     def participation(
         self, student_id: int, session_id: int
@@ -111,6 +112,8 @@ class PblApplication:
                 raise AppError("STATE_CONFLICT", "消息标识已用于其他内容", 409)
             self._uow.commit()
             return self._repository.participation(participation.id), duplicate
+        if participation.phase_status == "completed":
+            raise AppError("STATE_CONFLICT", "四阶段讨论已完成，不能继续发送新消息", 409)
         self._require_student_session(student_id, session_id)
         updated = self._repository.append_student_message(participation.id, client_message_id, normalized)
         if updated is None:
@@ -124,15 +127,18 @@ class PblApplication:
             raise AppError("RESOURCE_NOT_FOUND", "课堂不存在", 404)
         result = self._gateway.infer(
             InferenceRequest(
-                session.id,
-                session.topic_code,
-                normalized,
-                updated.messages[:-1][-20:],
-                updated.coze_user_ref,
-                updated.coze_conversation_ref,
-                updated.messages[-1]["id"],
-                session.case_context,
-                session.goal_point_codes,
+                session_id=session.id,
+                topic_code=session.topic_code,
+                question=normalized,
+                history=updated.messages[:-1][-20:],
+                anonymous_user_ref=updated.coze_user_ref,
+                conversation_ref=updated.coze_conversation_ref,
+                message_id=updated.messages[-1]["id"],
+                case_context=session.case_context,
+                goal_point_codes=session.goal_point_codes,
+                current_phase=updated.current_phase,
+                phase_started_revision=updated.phase_started_revision,
+                current_revision=updated.revision,
             )
         )
         snapshot = self._repository.save_result(updated.id, updated.revision, result)
@@ -200,7 +206,7 @@ class PblApplication:
         if suggestion.status not in {"proposed", "edited"} or suggestion.version != version:
             raise AppError("STATE_CONFLICT", "建议版本或状态已更新", 409)
         diagnostic = self.diagnostic(teacher_id, suggestion.snapshot_id)
-        if diagnostic.snapshot.schema_version != 2:
+        if diagnostic.snapshot.schema_version != 3:
             raise AppError("STATE_CONFLICT", "旧版诊断仅供查阅，请重新进行诊断", 409)
         session = self._repository.session_for_suggestion(suggestion.id)
         classroom = self._classroom_scope.owned_active(teacher_id, session.class_id) if session else None
@@ -231,22 +237,48 @@ class PblApplication:
             )
         )
         resources = (
-            {"task_type": "discussion", "problem_id": publication.problem_id, "prompt": prompt.strip()},
+            {
+                "task_type": "discussion",
+                "problem_id": publication.problem_id,
+                "prompt": prompt.strip(),
+                "cycle_number": 1,
+                "target_type": "discussion",
+                "target_code": "discussion",
+                "variant_code": f"suggestion:{suggestion.id}:discussion:v1",
+            },
+            {
+                "task_type": "discussion",
+                "problem_id": publication.problem_id,
+                "prompt": "第二轮反思：结合首轮反馈，重新说明你的证据链与仍不确定之处。",
+                "cycle_number": 2,
+                "target_type": "discussion",
+                "target_code": "discussion",
+                "variant_code": f"suggestion:{suggestion.id}:discussion:v2",
+            },
             *self._publication.task_resources(session.case_id, points, dimensions),
         )
         if include_case_retry:
             if session.case_id is None:
                 raise AppError("VALIDATION_ERROR", "旧课堂没有绑定病例", 422)
             self._publication.case_context(session.case_id, classroom.code, session.topic_code)
+            target_dimensions = dimensions or ("evidence_reasoning",)
             resources = (
                 *resources,
-                {
-                    "task_type": "focused_retry",
-                    "dimension_id": dimensions[0] if dimensions else "evidence_reasoning",
-                    "stage_id": "history",
-                    "problem_id": session.case_id,
-                    "prompt": "重新完成课堂病例的五个训练阶段",
-                },
+                *(
+                    {
+                        "task_type": "focused_retry",
+                        "dimension_id": target_dimensions[0],
+                        "stage_id": "history",
+                        "problem_id": session.case_id,
+                        "prompt": "重新完成课堂病例的五个训练阶段",
+                        "cycle_number": cycle,
+                        "target_type": "case_retry",
+                        "target_code": f"case:{session.case_id}",
+                        "variant_code": f"case:{session.case_id}:retry:v{cycle}",
+                        "target_dimension_ids": list(target_dimensions),
+                    }
+                    for cycle in (1, 2)
+                ),
             )
         self._learning.create(
             targets,
@@ -271,6 +303,34 @@ class PblApplication:
     def learning_plans(self, student_id: int):
         return self._learning.list(student_id=student_id)
 
+    def learning_report_page(self, student_id: int, limit: int, offset: int):
+        sources = {item.session.id: item for item in self._repository.report_participations(student_id)}
+        plans_by_session: dict[int, list[dict]] = {}
+        for plan in self._learning.list(student_id=student_id):
+            session_id = int((plan.get("source_context") or {}).get("session_id") or 0)
+            if session_id > 0:
+                plans_by_session.setdefault(session_id, []).append(plan)
+        reports = []
+        for session_id in set(sources) | set(plans_by_session):
+            session = sources[session_id].session if session_id in sources else self._repository.get_session(session_id)
+            if session is not None:
+                reports.append(build_report(session, sources.get(session_id), plans_by_session.get(session_id, [])))
+        return build_report_page(reports, limit, offset)
+
+    def learning_report(self, student_id: int, session_id: int):
+        source = next(
+            (item for item in self._repository.report_participations(student_id) if item.session.id == session_id), None
+        )
+        plans = [
+            plan
+            for plan in self._learning.list(student_id=student_id)
+            if int((plan.get("source_context") or {}).get("session_id") or 0) == session_id
+        ]
+        session = source.session if source else self._repository.get_session(session_id)
+        if session is None or (source is None and not plans):
+            raise AppError("RESOURCE_NOT_FOUND", "学情报告不存在", 404)
+        return build_report(session, source, plans)
+
     def submit_task(self, student_id: int, task_id: int, submission_id: str, answer: dict):
         result = self._learning.submit(student_id, task_id, submission_id, answer)
         self._uow.commit()
@@ -285,9 +345,7 @@ class PblApplication:
     def verify_learning(self, teacher_id: int, plan_id: int, version: int, decision: str, note: str):
         if not any(plan["id"] == plan_id for plan in self.learning_results(teacher_id)):
             raise AppError("RESOURCE_NOT_FOUND", "学习结果不存在", 404)
-        result = self._learning.verify(teacher_id, plan_id, version, decision, note)
-        self._uow.commit()
-        return result
+        raise AppError("STATE_CONFLICT", "学习结果由系统按数据自动判定，教师仅可查看", 409)
 
     def summary(self, teacher_id: int, class_id: int, session_id: int):
         self._require_owned_session(teacher_id, class_id, session_id)
@@ -299,9 +357,10 @@ class PblApplication:
             "plans": len(plans),
             "tasks": len(tasks),
             "completed_tasks": sum(task["status"] == "completed" for task in tasks),
-            "pending_verification": sum(plan["verification_status"] == "pending_teacher" for plan in plans),
+            "pending_verification": 0,
             "improved": sum(plan["verification_status"] == "improved" for plan in plans),
             "needs_reinforcement": sum(plan["verification_status"] == "needs_reinforcement" for plan in plans),
+            "automation_exhausted": sum(bool(plan["automation_exhausted"]) for plan in plans),
             "objective_retest_count": len(retests),
             "objective_retest_average": sum(retests) / len(retests) if retests else None,
         }

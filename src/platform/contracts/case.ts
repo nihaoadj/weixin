@@ -27,6 +27,8 @@ const practiceBlueprintSchema = z.object({
   allowed_variants: z.array(z.string()).optional().default([]),
   fixed_facts: z.array(z.string()).optional().default([]),
   fallback_prompt: z.string(),
+  reinforcement_prompt: z.string().nullable().optional(),
+  reinforcement_variant_code: z.string().nullable().optional(),
   answer_schema: z.enum(['short_text', 'evidence_grid', 'decision_cards']),
   criteria: z.array(practiceCriterionSchema),
 })
@@ -61,7 +63,7 @@ export const apiReferenceReasoningSchema = z.object({
 
 export const apiCaseDefinitionSchema = z.object({
   schema_version: z
-    .union([z.literal(1), z.literal(2)])
+    .union([z.literal(1), z.literal(2), z.literal(3)])
     .optional()
     .default(1),
   opening: apiCaseOpeningSchema,

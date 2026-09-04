@@ -14,6 +14,7 @@ from app.modules.content.infrastructure.models import (
 from app.modules.identity.infrastructure.models import User
 from app.modules.learning.infrastructure.models import (
     LearningPlan,
+    LearningPlanEvaluation,
     LearningTask,
     LearningTaskAttempt,
     ReviewAttempt,
@@ -54,6 +55,7 @@ __all__ = [
     "Conversation",
     "ConversationLearningContext",
     "LearningPlan",
+    "LearningPlanEvaluation",
     "LearningTask",
     "LearningTaskAttempt",
     "KnowledgeCardContribution",

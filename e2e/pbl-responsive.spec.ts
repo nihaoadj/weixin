@@ -14,6 +14,9 @@ test('PBL-first student entry keeps navigation usable from 320 to 1440 pixels', 
     expect(box?.y).toBeGreaterThan(0)
     expect((box?.y || 0) + (box?.height || 0)).toBeLessThanOrEqual(900)
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.locator('.student-nav__item').filter({ hasText: '学情' }).click()
+    await expect(page.getByText('我的病理学习档案', { exact: true })).toBeVisible()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.locator('.student-nav__item').filter({ hasText: '答疑' }).click()
     await page.getByText('退出', { exact: true }).click()
   }

@@ -63,8 +63,8 @@ def test_0005_upgrades_legacy_members_and_downgrade_preserves_data() -> None:
             engine.dispose()
 
 
-def test_actual_head_0017_upgrades_empty_and_0008_databases() -> None:
-    """Exercise the current worktree head, including the T11 PBL additions."""
+def test_actual_head_0019_upgrades_empty_and_0008_databases() -> None:
+    """Exercise the current worktree head, including the T14 and T15 additions."""
     cwd = Path(__file__).parents[1]
     with TemporaryDirectory(prefix="medical-qa-migration-head-") as directory:
         db_path = Path(directory) / "head.db"
@@ -83,6 +83,34 @@ def test_actual_head_0017_upgrades_empty_and_0008_databases() -> None:
             assert {"source_type", "source_id", "verification_status", "version"} <= {
                 column["name"] for column in inspector.get_columns("learning_plans")
             }
+            assert {"current_phase", "phase_started_revision", "phase_status", "phase_completed_at"} <= {
+                column["name"] for column in inspector.get_columns("pbl_participations")
+            }
+            assert {
+                "current_cycle",
+                "max_cycles",
+                "automation_exhausted",
+                "decision_policy_version",
+                "decision_basis",
+                "evaluated_at",
+            } <= {column["name"] for column in inspector.get_columns("learning_plans")}
+            assert {"cycle_number", "target_type", "target_code", "variant_code"} <= {
+                column["name"] for column in inspector.get_columns("learning_tasks")
+            }
+            assert {
+                "plan_id",
+                "cycle_number",
+                "policy_version",
+                "result",
+                "checks",
+                "failed_targets",
+                "automation_exhausted",
+                "record_source",
+                "evaluated_at",
+            } <= {column["name"] for column in inspector.get_columns("learning_plan_evaluations")}
+            assert "ix_learning_plan_evaluations_plan_id" in {
+                index["name"] for index in inspector.get_indexes("learning_plan_evaluations")
+            }
             with engine.begin() as connection:
                 connection.execute(
                     text(
@@ -100,6 +128,174 @@ def test_actual_head_0017_upgrades_empty_and_0008_databases() -> None:
                     connection.execute(text("SELECT COUNT(*) FROM users WHERE external_id = 'head-user'")).scalar_one()
                     == 1
                 )
+        finally:
+            engine.dispose()
+
+
+def test_0019_downgrade_refuses_append_only_evaluation_history() -> None:
+    cwd = Path(__file__).parents[1]
+    with TemporaryDirectory(prefix="medical-qa-t15-downgrade-") as directory:
+        db_path = Path(directory) / "t15.db"
+        database_url = f"sqlite:///{db_path.as_posix()}"
+        run_alembic(cwd, database_url, "upgrade", "head")
+        engine = create_engine(database_url)
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO users (id, external_id, role, nickname, avatar_url, class_ids, permissions) "
+                        "VALUES (1, 't15-student', 'student', 'student', '', '[]', '[]')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO learning_plans "
+                        "(id, student_id, source_type, source_id, due_at, status, target_dimension_ids, "
+                        "generation_mode, model_name, prompt_version, fallback_used) "
+                        "VALUES (1, 1, 'pbl_diagnostic', 91, '2026-09-11 08:00:00', 'completed', '[]', "
+                        "'deterministic', 'migration', 'migration-v1', 1)"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO learning_plan_evaluations "
+                        "(plan_id, cycle_number, policy_version, result, checks, failed_targets, evaluated_at) "
+                        "VALUES (1, 1, 'pbl-mastery-v1', 'improved', '[]', '[]', '2026-09-04 08:00:00')"
+                    )
+                )
+            environment = os.environ.copy()
+            environment["DATABASE_URL"] = database_url
+            attempted = subprocess.run(
+                [sys.executable, "-m", "alembic", "downgrade", "20260903_0018"],
+                cwd=cwd,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert attempted.returncode != 0
+            assert "pre-T15 backup" in attempted.stdout + attempted.stderr
+            with engine.connect() as connection:
+                version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                assert version == "20260904_0019"
+                assert connection.execute(text("SELECT COUNT(*) FROM learning_plan_evaluations")).scalar_one() == 1
+        finally:
+            engine.dispose()
+
+
+def test_0018_downgrade_refuses_schema_v3_business_data() -> None:
+    cwd = Path(__file__).parents[1]
+    with TemporaryDirectory(prefix="medical-qa-t14-downgrade-") as directory:
+        db_path = Path(directory) / "t14.db"
+        database_url = f"sqlite:///{db_path.as_posix()}"
+        run_alembic(cwd, database_url, "upgrade", "head")
+        engine = create_engine(database_url)
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO users (id, external_id, role, nickname, avatar_url, class_ids, permissions) "
+                        "VALUES (1, 't14-teacher', 'teacher', 'teacher', '', '[]', '[]'), "
+                        "(2, 't14-student', 'student', 'student', '', '[]', '[]')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO classes (id, name, code, teacher_id, status) "
+                        "VALUES (1, 'T14', 't14', 1, 'active')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_sessions (id, class_id, teacher_id, topic_code, provider, status) "
+                        "VALUES (1, 1, 1, 'pathology.inflammation', 'coze', 'active')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_participations (id, session_id, student_id, revision) VALUES (1, 1, 2, 1)"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_diagnostic_snapshots "
+                        "(participation_id, revision, status, schema_version, assistant_reply, knowledge_gaps, "
+                        "reasoning_issues, provider_metadata) "
+                        "VALUES (1, 1, 'probing', 3, 'continue', '[]', '[]', '{}')"
+                    )
+                )
+            environment = os.environ.copy()
+            environment["DATABASE_URL"] = database_url
+            attempted = subprocess.run(
+                [sys.executable, "-m", "alembic", "downgrade", "20260903_0017"],
+                cwd=cwd,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert attempted.returncode != 0
+            assert "pre-T14 backup" in attempted.stdout + attempted.stderr
+            with engine.connect() as connection:
+                version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                assert version == "20260903_0018"
+        finally:
+            engine.dispose()
+
+
+def test_0018_upgrades_0017_history_into_participation_level_phases() -> None:
+    cwd = Path(__file__).parents[1]
+    with TemporaryDirectory(prefix="medical-qa-t14-from-0017-") as directory:
+        db_path = Path(directory) / "from-0017.db"
+        database_url = f"sqlite:///{db_path.as_posix()}"
+        run_alembic(cwd, database_url, "upgrade", "20260903_0017")
+        engine = create_engine(database_url)
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO users (id, external_id, role, nickname, avatar_url, class_ids, permissions) "
+                        "VALUES (1, 't14-history-teacher', 'teacher', 'teacher', '', '[]', '[]'), "
+                        "(2, 't14-ready-student', 'student', 'ready', '', '[]', '[]'), "
+                        "(3, 't14-active-student', 'student', 'active', '', '[]', '[]')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO classes (id, name, code, teacher_id, status) "
+                        "VALUES (1, 'T14 history', 't14-history', 1, 'active')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_sessions (id, class_id, teacher_id, topic_code, provider, status) "
+                        "VALUES (1, 1, 1, 'pathology.inflammation', 'coze', 'active')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_participations (id, session_id, student_id, revision) "
+                        "VALUES (1, 1, 2, 4), (2, 1, 3, 3)"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_diagnostic_snapshots "
+                        "(participation_id, revision, status, schema_version, assistant_reply, knowledge_gaps, "
+                        "reasoning_issues, provider_metadata) "
+                        "VALUES (1, 4, 'ready', 2, 'legacy ready', '[]', '[]', '{}'), "
+                        "(2, 3, 'probing', 2, 'legacy probing', '[]', '[]', '{}')"
+                    )
+                )
+            run_alembic(cwd, database_url, "upgrade", "head")
+            with engine.connect() as connection:
+                rows = connection.execute(
+                    text(
+                        "SELECT id, current_phase, phase_status, phase_started_revision "
+                        "FROM pbl_participations ORDER BY id"
+                    )
+                ).all()
+                assert rows == [(1, "synthesis", "completed", 4), (2, "problem_framing", "active", 3)]
         finally:
             engine.dispose()
 

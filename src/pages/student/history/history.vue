@@ -1,6 +1,11 @@
 <template>
   <view class="safe-page history-page">
     <view class="page-heading"
+      ><button
+        class="back-link"
+        @click="openChat"
+      >
+        返回答疑</button
       ><text class="eyebrow-label">LEARNING TIMELINE</text><text class="heading-title">学习记录</text></view
     >
     <view class="topic-filter card">
@@ -91,7 +96,6 @@
     >
       加载更多
     </button>
-    <StudentPrimaryNav active="history" />
   </view>
 </template>
 
@@ -99,7 +103,6 @@
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import StudentPrimaryNav from '@/components/ui/StudentPrimaryNav.vue'
 import { requireRole } from '@/features/identity/public'
 import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
 import { getConversationSummariesAsync } from '@/features/qa/public'
@@ -204,7 +207,7 @@ function openReport(conversationId: string) {
 
 <style scoped>
 .history-page {
-  padding: 36rpx 28rpx 170rpx;
+  padding: 36rpx 28rpx 64rpx;
 }
 .page-heading {
   display: flex;
@@ -216,6 +219,15 @@ function openReport(conversationId: string) {
   color: var(--med-navy);
   font-size: 42rpx;
   font-weight: 800;
+}
+.back-link {
+  width: fit-content;
+  min-height: 64rpx;
+  margin: 0 0 14rpx;
+  padding: 0 14rpx;
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  font-size: 23rpx;
 }
 .history-card {
   margin-bottom: 22rpx;

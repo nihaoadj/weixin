@@ -81,6 +81,13 @@ def showcase_draft(topic: str = "细胞损伤与适应") -> dict[str, object]:
             "allowed_variants": ["调整追问顺序"],
             "fixed_facts": [case["observation"]],
             "fallback_prompt": case["question"] + " " + STAGES[stage],
+            "reinforcement_prompt": (
+                "第二轮等价变式：先列出一条观察、一条相反解释，再完成以下任务："
+                + case["question"]
+                + " "
+                + STAGES[stage]
+            ),
+            "reinforcement_variant_code": key + "." + dim + ".v2",
             "answer_schema": "short_text",
             "criteria": [{**{k: v for k, v in criteria(dim)[0].items() if k != "label"}, "weight": 100}],
         }
@@ -93,7 +100,7 @@ def showcase_draft(topic: str = "细胞损伤与适应") -> dict[str, object]:
         "difficulty": "basic",
         "estimated_minutes": 15,
         "case_definition": {
-            "schema_version": 2,
+            "schema_version": 3,
             "opening": {
                 "setting": case["setting"],
                 "patient_intro": case["intro"],

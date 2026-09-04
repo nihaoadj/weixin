@@ -51,8 +51,16 @@ class RecommendedQuestion(StrictModel):
     linked_findings: list[str] = Field(min_length=1, max_length=10)
 
 
+class PhaseAssessment(StrictModel):
+    phase: Literal["problem_framing", "hypothesis", "evidence", "synthesis"]
+    decision: Literal["continue", "advance", "complete"]
+    evidence_message_ids: list[str] = Field(min_length=1, max_length=10)
+    evidence_summary: str = Field(min_length=1, max_length=500)
+    missing_elements: list[str] = Field(default_factory=list, max_length=10)
+
+
 class ProviderPayload(StrictModel):
-    schema_version: Literal[2]
+    schema_version: Literal[3]
     assistant_reply: str = Field(min_length=1, max_length=4000)
     diagnostic_status: Literal["probing", "ready", "insufficient_evidence", "unavailable"]
     follow_up_question: str | None = Field(default=None, max_length=1000)
@@ -61,6 +69,7 @@ class ProviderPayload(StrictModel):
     recommended_questions: list[RecommendedQuestion] = Field(default_factory=list, max_length=5)
     safety_notice: str = Field(min_length=1, max_length=500)
     safety_status: Literal["educational", "needs_human_help"]
+    phase_assessment: PhaseAssessment
 
     @model_validator(mode="after")
     def consistent_findings(self):
@@ -78,6 +87,14 @@ class ProviderPayload(StrictModel):
             raise PydanticCustomError("probing_requires_question", "probing requires a question")
         if self.safety_status == "needs_human_help" and self.diagnostic_status == "ready":
             raise PydanticCustomError("safety_cannot_diagnose", "safety diversion cannot diagnose")
+        if self.diagnostic_status == "ready" and (
+            self.phase_assessment.phase != "synthesis" or self.phase_assessment.decision != "complete"
+        ):
+            raise PydanticCustomError("ready_requires_synthesis", "ready requires synthesis completion")
+        if self.phase_assessment.decision == "complete" and self.diagnostic_status != "ready":
+            raise PydanticCustomError("complete_requires_ready", "phase completion requires ready diagnosis")
+        if self.phase_assessment.decision != "complete" and self.diagnostic_status == "ready":
+            raise PydanticCustomError("early_ready", "ready is only valid when completing synthesis")
         if any(not set(item.linked_findings).issubset(ids) for item in self.recommended_questions):
             raise PydanticCustomError("invalid_finding_reference", "invalid finding reference")
         return self

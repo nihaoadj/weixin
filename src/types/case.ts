@@ -18,7 +18,7 @@ export interface CaseFact {
 }
 
 export interface CaseDefinition {
-  schemaVersion: 1 | 2
+  schemaVersion: 1 | 2 | 3
   opening: CaseOpening
   stageInstructions: Record<CaseStageId, string>
   facts: CaseFact[]
@@ -48,6 +48,8 @@ export interface PracticeBlueprint {
   allowedVariants: string[]
   fixedFacts: string[]
   fallbackPrompt: string
+  reinforcementPrompt?: string
+  reinforcementVariantCode?: string
   answerSchema: 'short_text' | 'evidence_grid' | 'decision_cards'
   criteria: Array<{ id: string; weight: number; keywords: string[]; feedback: string; critical: boolean }>
 }

@@ -15,6 +15,7 @@ from app.modules.learning.infrastructure.models import (
     LearningTaskAttempt,
     StudentNotification,
 )
+from app.modules.learning.infrastructure.pbl_mastery import evaluate_pbl_plan
 from app.platform.transactions import SqlAlchemyUnitOfWork
 from app.shared.actor import Actor
 from app.shared.errors import AppError
@@ -60,13 +61,17 @@ class PblLearningStore:
                 plan.tasks.append(
                     LearningTask(
                         position=position,
+                        cycle_number=int(resource.get("cycle_number", 1)),
+                        target_type=str(resource.get("target_type", "discussion")),
+                        target_code=str(resource.get("target_code", "discussion")),
+                        variant_code=str(resource.get("variant_code", f"task:{position}:v1")),
                         task_type=resource["task_type"],
                         dimension_id=resource.get("dimension_id", "discussion"),
                         stage_id=resource.get("stage_id"),
                         problem_id=resource.get("problem_id"),
                         public_definition=public,
                         private_rubric=resource.get("private_rubric", {}),
-                        status="pending",
+                        status="pending" if int(resource.get("cycle_number", 1)) == 1 else "inactive",
                     )
                 )
             self._session.add(plan)
@@ -77,7 +82,7 @@ class PblLearningStore:
                     type="learning_plan_ready",
                     entity_id=plan.id,
                     title="PBL 课后任务已发布",
-                    body="完成讨论与针对性练习后，交由教师核验。",
+                    body="完成讨论与针对性练习后，系统将按逐项目标自动判定。",
                     dedupe_key=f"pbl:{source_id}:{student_id}",
                 )
             )
@@ -95,6 +100,10 @@ class PblLearningStore:
                     "id": task.id,
                     "task_type": task.task_type,
                     "position": task.position,
+                    "cycle_number": task.cycle_number,
+                    "target_type": task.target_type,
+                    "target_code": task.target_code,
+                    "variant_code": task.variant_code,
                     "status": task.status,
                     "problem_id": task.problem_id,
                     "public_definition": task.public_definition,
@@ -120,6 +129,27 @@ class PblLearningStore:
             "verification_note": plan.verification_note,
             "verified_at": _utc(plan.verified_at),
             "version": plan.version,
+            "current_cycle": plan.current_cycle,
+            "max_cycles": plan.max_cycles,
+            "automation_exhausted": plan.automation_exhausted,
+            "decision_policy_version": plan.decision_policy_version,
+            "decision_basis": plan.decision_basis,
+            "evaluated_at": _utc(plan.evaluated_at),
+            "created_at": _utc(plan.created_at),
+            "evaluations": [
+                {
+                    "id": item.id,
+                    "cycle_number": item.cycle_number,
+                    "policy_version": item.policy_version,
+                    "result": item.result,
+                    "checks": item.checks,
+                    "failed_targets": item.failed_targets,
+                    "automation_exhausted": item.automation_exhausted,
+                    "record_source": item.record_source,
+                    "evaluated_at": _utc(item.evaluated_at),
+                }
+                for item in sorted(plan.evaluations, key=lambda value: value.cycle_number)
+            ],
             "due_at": _utc(plan.due_at),
             "tasks": tasks,
         }
@@ -156,10 +186,14 @@ class PblLearningStore:
             raise AppError("VALIDATION_ERROR", "请通过病例训练完成重练", 422)
         if task.plan.status != "active":
             raise AppError("STATE_CONFLICT", "学习计划当前不能提交", 409)
-        previous = [t for t in task.plan.tasks if t.position < task.position]
-        if any(t.status != "completed" for t in previous):
+        if task.status in {"inactive", "skipped"} or task.cycle_number != task.plan.current_cycle:
+            raise AppError("STATE_CONFLICT", "该轮任务尚未激活", 409)
+        previous = [
+            t for t in task.plan.tasks if t.cycle_number == task.cycle_number and t.position < task.position
+        ]
+        if any(t.status not in {"completed", "skipped"} for t in previous):
             raise AppError("STATE_CONFLICT", "请先完成前面的任务", 409)
-        score, evidence, feedback = None, [], "已保存学习证据，待教师核验。"
+        score, evidence, feedback = None, [], "已保存学习证据，系统将在本轮完成后自动判定。"
         if task.task_type in {"knowledge_review", "retest"}:
             option = answer.get("selected_option")
             if type(option) is not int or not 0 <= option < len(task.public_definition["options"]):
@@ -173,6 +207,8 @@ class PblLearningStore:
                 raise AppError("VALIDATION_ERROR", "请输入学习回答（1～4000 字）", 422)
             if task.task_type == "micro_drill":
                 score, evidence, feedback, _ = assess_micro(answer, task.private_rubric)
+            elif task.task_type == "discussion":
+                evidence = ["正式讨论回答已提交"]
         if task.task_type in {"knowledge_review", "retest"}:
             public = task.public_definition
             review = KnowledgeReviewApplication(
@@ -217,48 +253,6 @@ class PblLearningStore:
         self._session.add(attempt)
         self._session.flush()
         self._session.refresh(task)
-        self._finish_if_ready(task.plan)
+        evaluate_pbl_plan(self._session, task.plan, now)
         self._session.flush()
         return self._view(task.plan)
-
-    @staticmethod
-    def _finish_if_ready(plan):
-        if plan.status != "completed" and all(task.status == "completed" for task in plan.tasks):
-            plan.status = "completed"
-            plan.completed_at = datetime.now(UTC)
-            plan.verification_status = "pending_teacher"
-            plan.version += 1
-
-    def verify(self, teacher_id: int, plan_id: int, version: int, decision: str, note: str):
-        plan = self._session.scalar(
-            select(LearningPlan).where(
-                LearningPlan.id == plan_id,
-                LearningPlan.source_type == "pbl_suggestion",
-                LearningPlan.source_context["teacher_id"].as_integer() == teacher_id,
-            )
-        )
-        if not plan:
-            raise AppError("RESOURCE_NOT_FOUND", "学习结果不存在", 404)
-        self._finish_if_ready(plan)
-        if plan.verification_status != "pending_teacher" or plan.version != version:
-            raise AppError("STATE_CONFLICT", "结果尚未完成或版本已更新", 409)
-        changed = self._session.execute(
-            update(LearningPlan)
-            .where(
-                LearningPlan.id == plan.id,
-                LearningPlan.version == version,
-                LearningPlan.verification_status == "pending_teacher",
-            )
-            .values(
-                verification_status=decision,
-                verification_note=note,
-                verified_by=teacher_id,
-                verified_at=datetime.now(UTC),
-                version=version + 1,
-            )
-        )
-        if changed.rowcount != 1:
-            raise AppError("STATE_CONFLICT", "结果已被核验", 409)
-        self._session.flush()
-        self._session.refresh(plan)
-        return self._view(plan)

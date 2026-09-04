@@ -14,6 +14,7 @@
 | learning  | `src/features/learning/public.ts`  | 画像、计划、任务、微训练 attempt、通知和复盘                                                                                         |
 | classroom | `src/features/classroom/public.ts` | 教师班级、学生列表、加退班和班级更新                                                                                                 |
 | analytics | `src/features/analytics/public.ts` | 总览、病例下钻和学生下钻                                                                                                             |
+| pbl       | `src/features/pbl/public.ts`       | 学生个人阶段/消息、教师诊断与建议发布、两轮任务、只读自动结果、课堂汇总及本人 PBL 学情总览/详情                                      |
 
 所有入口内部通过 `src/bootstrap/wiring.ts` 取得已装配的 port。调用者不选择 API/Demo、不拼接 URL、不读写 storage；API 失败会保留明确错误，不会切换到 Demo。
 
@@ -25,6 +26,8 @@
 - Demo 业务集合由所属 feature 的 infrastructure store 读取，私有对话、问答线程、病例 attempt 和 assessment 使用既有 user-scoped key；API 业务响应只进入内存 cache。
 - 会话保存、退出、token 清理和 401 失效由 identity port 与 `platform/http` 协作；页面不直接操作 `apiAccessToken` 或身份 key。
 - 学生公开病例只通过 content/training 的公开结果获取；隐藏事实、参考推理、rubric、审核 digest 和内部字段不进入学生公开 DTO。
+- PBL 页面只消费个人阶段、阶段缺失要素、任务 cycle/variant 和阈值结果；不暴露正确答案、私有 rubric、完整模型提示或隐藏病例事实。教师工作区没有阶段切换和结果重判公开函数。
+- 学情页面通过 `getPblLearningReports`/`getPblLearningReport` 读取确定性报告；报告可以显示任务公开题面、本人得分与反馈，但不显示原始答案、正确选项、其他学生薄弱点、教师 ID 或 provider failure。
 
 ## 兼容入口与仓内证据
 

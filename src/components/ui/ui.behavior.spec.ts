@@ -15,6 +15,7 @@ vi.mock('@/platform/navigation', () => ({
     studentCases: '/student/question',
     studentLearning: '/student/learning',
     studentPbl: '/student/pbl',
+    studentInsights: '/student/insights',
     studentHistory: '/student/history',
   },
   goPrimary,
@@ -60,9 +61,9 @@ describe('shared UI behavior', () => {
     expect(goPrimary.mock.calls.map(([route]) => route)).toEqual([
       '/student/pbl',
       '/student/learning',
+      '/student/insights',
       '/student/question',
       '/student/chat',
-      '/student/history',
     ])
   })
 
