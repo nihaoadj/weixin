@@ -61,7 +61,7 @@ src/
 - 页面不直接散落 `uni.request`、storage key 或后端 URL。
 
 完整的数据流、缓存和错误约定见 [data-layer.md](./data-layer.md)。
-公开应用接口见 [frontend-public-interfaces.md](./frontend-public-interfaces.md)；依赖门禁由 `scripts/frontend-boundaries.mjs` 和 `config/frontend-boundaries.json` 实施，直接运行脚本（尚无 npm alias）。
+公开应用接口见 [frontend/public-interfaces.md](frontend/public-interfaces.md)；依赖门禁由 `scripts/frontend-boundaries.mjs` 和 `config/frontend-boundaries.json` 实施，直接运行脚本（尚无 npm alias）。
 
 ## 前端模块映射
 

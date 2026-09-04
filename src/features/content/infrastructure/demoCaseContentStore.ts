@@ -1,5 +1,6 @@
 import { AppError } from '@/types/errors'
 import { additionalShowcaseDrafts, showcaseDraft } from './demoSeeds'
+import catalog from './pathologyCatalog.generated.json'
 import { z } from 'zod'
 import { storage, storageKeys } from '@/platform/storage/storage'
 import { localDraftSchema, localCaseRecordSchema } from '@/platform/storage/caseSchemas'
@@ -31,7 +32,7 @@ interface DemoCaseRecord {
 }
 
 function builtInProblem(id: string): Problem | undefined {
-  const draft = id === 'cap-undergraduate-showcase' ? showcaseDraft : additionalShowcaseDrafts[id]
+  const draft = id === 'pathology.cell-injury-showcase' ? showcaseDraft : additionalShowcaseDrafts[id]
   if (!draft) return undefined
   return {
     id,
@@ -48,14 +49,14 @@ function builtInProblem(id: string): Problem | undefined {
     estimatedMinutes: draft.estimatedMinutes,
     version: 1,
     opening: draft.caseDefinition.opening,
-    medicalReviewStatus: 'approved',
+    medicalReviewStatus: 'approved', knowledgePointCodes: catalog.filter(p => p.case_slug === id).map(p => p.code),
   }
 }
 
 export function demoDraftForProblem(id: string): { problem: Problem; draft: CaseDraftGenerateResult } | undefined {
   const builtIn = builtInProblem(id)
   if (builtIn) {
-    const draft = id === 'cap-undergraduate-showcase' ? showcaseDraft : additionalShowcaseDrafts[id]
+    const draft = id === 'pathology.cell-injury-showcase' ? showcaseDraft : additionalShowcaseDrafts[id]
     return draft ? { problem: builtIn, draft } : undefined
   }
   const record = normalizedRecords().find((item) => item.problem.id === id)
@@ -142,25 +143,20 @@ function writeRecords(records: DemoCaseRecord[]) {
 }
 
 export function demoDraft(topic: string): CaseDraftGenerateResult {
-  const source = topic.includes('胸痛')
-    ? additionalShowcaseDrafts['acute-chest-pain-undergraduate-showcase']
-    : topic.includes('右下腹') || topic.includes('阑尾')
-      ? additionalShowcaseDrafts['right-lower-quadrant-pain-undergraduate-showcase']
-      : showcaseDraft
+  const point = catalog.find(p => topic === p.system_code || topic.includes(p.system_label))
+  const source = point && point.system_code !== 'pathology.cell-injury' ? additionalShowcaseDrafts[point.case_slug] : showcaseDraft
   const draft = cloneDraft(source)
-  if (!['肺炎', '胸痛', '右下腹', '阑尾'].some((keyword) => topic.includes(keyword))) {
-    draft.title = `${topic}：结构化临床推理（示例）`
-  }
+  if (!point) draft.title = `${topic}：病理学讨论（待教师补全）`
   return draft
 }
 export function demoCaseProblems(): Problem[] {
   const stored = normalizedRecords()
-  const builtIns = ['cap-undergraduate-showcase', ...Object.keys(additionalShowcaseDrafts)]
+  const builtIns = ['pathology.cell-injury-showcase', ...Object.keys(additionalShowcaseDrafts)]
     .map(builtInProblem)
     .filter((item): item is Problem => Boolean(item))
   const session = getSessionContext()
   const visibleStored = stored
-    .filter((item) => item.problem.id !== 'cap-undergraduate-showcase')
+    .filter((item) => item.problem.id !== 'pathology.cell-injury-showcase')
     .filter((item) => session?.role !== 'student' || item.problem.status === '已发布')
     .map((item) => item.problem)
   return [...builtIns, ...visibleStored]
@@ -171,7 +167,7 @@ export function demoGuidedCases(): Problem[] {
 export function demoAuthoring(id: string): CaseDraftGenerateResult | undefined {
   const user = getSessionContext()
   if (!user || user.role !== 'teacher') return undefined
-  if (id === 'cap-undergraduate-showcase' || additionalShowcaseDrafts[id]) {
+  if (id === 'pathology.cell-injury-showcase' || additionalShowcaseDrafts[id]) {
     return user.openid === 'demo_teacher' ? demoDraftForProblem(id)?.draft : undefined
   }
   return normalizedRecords().find((item) => item.problem.id === id && item.authorOpenid === user.openid)?.draft
@@ -245,7 +241,7 @@ export function demoPublishCase(id: string): Problem | undefined {
   const user = currentDemoUser()
   const records = normalizedRecords()
   const index = records.findIndex((item) => item.problem.id === id)
-  if (index < 0) return id === 'cap-undergraduate-showcase' ? demoCaseProblems()[0] : undefined
+  if (index < 0) return id === 'pathology.cell-injury-showcase' ? demoCaseProblems()[0] : undefined
   const record = records[index]
   if (record.authorOpenid !== user.openid)
     throw new AppError('只有病例作者可以发布', { code: 'FORBIDDEN', statusCode: 403 })

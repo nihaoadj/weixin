@@ -38,7 +38,7 @@ def _login(client, role: str, external_id: str, class_ids: list[str] | None = No
 
 
 def _ensure_showcase_case(db) -> Problem:
-    problem = db.scalar(select(Problem).where(Problem.slug == "cap-undergraduate-showcase", Problem.version == 1))
+    problem = db.scalar(select(Problem).where(Problem.slug == "pathology.cell-injury-showcase", Problem.version == 1))
     return problem or seed_showcase_case(db)
 
 

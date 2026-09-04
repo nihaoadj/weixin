@@ -71,3 +71,6 @@ export const reviewKnowledgeCardContribution = (id: number, decision: 'approved'
 export const disableKnowledgeCardContribution = (id: number) => content().disableKnowledgeCardContribution(id)
 
 export type { ProblemTarget, ProblemType }
+
+// Generated public metadata contains no objective answer keys.
+export { default as pathologyCatalogSnapshot } from './infrastructure/pathologyCatalog.generated.json'

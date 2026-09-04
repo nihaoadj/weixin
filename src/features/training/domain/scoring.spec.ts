@@ -5,7 +5,7 @@ import { scoreDemoCase } from '@/features/training/domain/scoring'
 
 const attempt = (answer: unknown, stageId: CaseAttempt['currentStage'] = 'management'): CaseAttempt => ({
   id: 'attempt-1',
-  problemId: 'cap-undergraduate-showcase',
+  problemId: 'pathology.cell-injury-showcase',
   problemVersion: 1,
   status: 'completed',
   currentStage: stageId,
@@ -36,12 +36,12 @@ describe('deterministic Demo case scoring', () => {
       critical: false,
     })
     const dimensions = scoreDemoCase(
-      attempt({ stageId: 'management', items: [{ action: '观察', rationale: '评估氧合' }] }),
+      attempt({ stageId: 'management', items: [{ action: '观察', rationale: '核对形态证据' }] }),
       draft,
     )
     const management = dimensions.find((item) => item.dimensionId === 'management_safety')!
     expect(management.score).toBe(50)
-    expect(management.evidence.some((item) => item.includes('评估氧合'))).toBe(true)
+    expect(management.evidence.some((item) => item.includes('核对形态证据'))).toBe(true)
     expect(management.evidence).not.toContain('氧合')
   })
 

@@ -171,7 +171,7 @@
                   data-native-name="case-title"
                   aria-labelledby="case-title-label"
                   :disabled="isReadOnly"
-                  placeholder="例如：社区获得性肺炎"
+                  placeholder="例如：细胞损伤与适应"
                 />
               </view>
               <view class="field-block">
@@ -187,7 +187,7 @@
                   data-native-name="case-specialty"
                   aria-labelledby="case-specialty-label"
                   :disabled="isReadOnly"
-                  placeholder="例如：呼吸内科"
+                  placeholder="例如：病理学"
                 />
               </view>
               <view class="field-block">
@@ -746,7 +746,7 @@ const stageItems: Array<{ id: CaseStageId; label: string }> = [
 ]
 
 const step = ref(1)
-const topic = ref('社区获得性肺炎')
+const topic = ref('细胞损伤与适应')
 const level = ref('临床医学本科生')
 const objectives = ref('训练病史采集\n训练鉴别诊断\n训练检查选择')
 const draft = ref<CaseDraftGenerateResult>()

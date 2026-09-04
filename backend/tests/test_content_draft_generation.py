@@ -34,57 +34,35 @@ def test_disabled_fallback_preserves_all_approved_topic_payloads_and_audit(clien
     token = _login(client, "content_draft_fallback")
     headers = {"Authorization": f"Bearer {token}"}
     expected = {
-        "急性胸痛": {
-            "title": "急性胸痛：危险分层与证据推理",
-            "specialty": "心血管内科/急诊教学",
-            "fact_ids": {
-                "chest_onset",
-                "chest_quality",
-                "chest_associated",
-                "chest_risk",
-                "chest_vitals",
-                "chest_ecg",
-                "chest_troponin",
-            },
-            "reference_text": "需优先危险分层。",
+        "细胞损伤与适应": {
+            "title": "细胞损伤：肾小管上皮的两种结局",
+            "specialty": "病理学",
+            "fact_ids": {"background", "morphology", "comparison"},
+            "reference_text": "ATP",
         },
-        "社区获得性肺炎": {
-            "title": "社区获得性肺炎：结构化临床推理",
-            "specialty": "呼吸内科",
-            "fact_ids": {
-                "history_onset",
-                "history_sputum",
-                "history_chest_pain",
-                "history_risk",
-                "history_allergy",
-                "exam_vitals",
-                "exam_lung",
-                "test_cbc",
-                "test_xray",
-            },
-            "reference_text": "首先考虑社区获得性肺炎。",
+        "炎症": {
+            "title": "炎症：伤口周围为什么红肿",
+            "specialty": "病理学",
+            "fact_ids": {"background", "morphology", "comparison"},
+            "reference_text": "通透性",
         },
-        "右下腹痛": {
-            "title": "右下腹痛：问题表征与检查选择",
-            "specialty": "普通外科/急诊教学",
-            "fact_ids": {"abd_migration", "abd_gi", "abd_fever", "abd_urinary", "abd_exam", "abd_blood", "abd_imaging"},
-            "reference_text": "需结合适用性选择检查。",
+        "修复": {
+            "title": "修复：创面中新生组织的作用",
+            "specialty": "病理学",
+            "fact_ids": {"background", "morphology", "comparison"},
+            "reference_text": "肉芽组织",
         },
-        "未知主题": {
-            "title": "未知主题：结构化临床推理（待教师补全）",
-            "specialty": "呼吸内科",
-            "fact_ids": {
-                "history_onset",
-                "history_sputum",
-                "history_chest_pain",
-                "history_risk",
-                "history_allergy",
-                "exam_vitals",
-                "exam_lung",
-                "test_cbc",
-                "test_xray",
-            },
-            "reference_text": "首先考虑社区获得性肺炎。",
+        "循环障碍": {
+            "title": "循环障碍：从静脉血栓到肺动脉栓塞",
+            "specialty": "病理学",
+            "fact_ids": {"background", "morphology", "comparison"},
+            "reference_text": "栓塞",
+        },
+        "肿瘤": {
+            "title": "肿瘤：异型性与浸润证据",
+            "specialty": "病理学",
+            "fact_ids": {"background", "morphology", "comparison"},
+            "reference_text": "浸润",
         },
     }
 
@@ -133,7 +111,7 @@ def test_disabled_fallback_preserves_all_approved_topic_payloads_and_audit(clien
         logs = session.scalars(
             select(AICallLog).where(AICallLog.user_id == user.id, AICallLog.task == "case_draft")
         ).all()
-        assert len(logs) == 4
+        assert len(logs) == 5
         assert {(log.model_name, log.prompt_version, log.fallback_used, log.failure_reason) for log in logs} == {
             ("deterministic-fallback", get_settings().ai_prompt_version, True, "disabled")
         }

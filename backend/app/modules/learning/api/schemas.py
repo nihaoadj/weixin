@@ -13,7 +13,7 @@ DIMENSIONS = (
     "test_selection",
     "management_safety",
 )
-TaskType = Literal["focused_retry", "micro_drill", "cross_case_transfer"]
+TaskType = Literal["focused_retry", "micro_drill", "cross_case_transfer", "discussion", "knowledge_review", "retest"]
 TaskStatus = Literal["pending", "in_progress", "completed"]
 
 
@@ -35,7 +35,9 @@ class LearningPlanRead(BaseModel):
     model_config = ConfigDict(from_attributes=True, protected_namespaces=())
     id: int
     status: Literal["active", "completed", "superseded"]
-    source_assessment_id: int
+    source_assessment_id: int | None
+    source_type: Literal["case_assessment", "pbl_suggestion"]
+    source_id: int | None
     target_dimension_ids: list[str]
     due_at: datetime
     generation_mode: str

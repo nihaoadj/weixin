@@ -194,35 +194,12 @@ def test_legacy_class_ids_and_class_members_are_unioned() -> None:
 def test_showcase_cases_have_distinct_target_facts_and_reference_paths() -> None:
     teacher = login("teacher", "demo_teacher")
     headers = {"Authorization": f"Bearer {teacher}"}
-    cases = client.get("/problems", headers=headers).json()
-    chest = next(item for item in cases if item["slug"] == "acute-chest-pain-undergraduate-showcase")
-    abdomen = next(item for item in cases if item["slug"] == "right-lower-quadrant-pain-undergraduate-showcase")
-    assert chest["capability_tags"] == ["differential_diagnosis", "evidence_reasoning", "management_safety"]
-    assert abdomen["capability_tags"] == ["problem_representation", "evidence_reasoning", "test_selection"]
-    chest_authoring = client.get(f"/problems/{chest['id']}/authoring", headers=headers).json()
-    abdomen_authoring = client.get(f"/problems/{abdomen['id']}/authoring", headers=headers).json()
-    chest_fact_ids = {item["id"] for item in chest_authoring["case_definition"]["facts"]}
-    abdomen_fact_ids = {item["id"] for item in abdomen_authoring["case_definition"]["facts"]}
-    assert chest_fact_ids == {
-        "chest_onset",
-        "chest_quality",
-        "chest_associated",
-        "chest_risk",
-        "chest_vitals",
-        "chest_ecg",
-        "chest_troponin",
-    }
-    assert abdomen_fact_ids == {
-        "abd_migration",
-        "abd_fever",
-        "abd_gi",
-        "abd_urinary",
-        "abd_exam",
-        "abd_blood",
-        "abd_imaging",
-    }
-    assert chest_fact_ids.isdisjoint(abdomen_fact_ids)
-    assert "优先危险分层" in chest_authoring["case_definition"]["reference_reasoning"]["problem_representation"]
-    assert (
-        "需结合适用性选择检查" in abdomen_authoring["case_definition"]["reference_reasoning"]["problem_representation"]
-    )
+    cases = [case for case in client.get("/problems", headers=headers).json() if case["content_type"] == "guided_case"]
+    assert len(cases) == 5
+    definitions = [
+        client.get(f"/problems/{case['id']}/authoring", headers=headers).json()["case_definition"] for case in cases
+    ]
+    assert len({definition["facts"][1]["value"] for definition in definitions}) == 5
+    assert len({definition["reference_reasoning"]["problem_representation"] for definition in definitions}) == 5
+    assert all(len(definition["practice_blueprints"]) == 6 for definition in definitions)
+    assert all(len(case["knowledge_point_codes"]) == 6 for case in cases)

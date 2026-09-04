@@ -1,10 +1,7 @@
-"""Teacher-reviewable pathology-general-v1 catalog."""
+"""Compatibility names resolved from the content-owned catalog."""
 
-PATHOLOGY_CATALOG_VERSION = "pathology-general-v1"
-PATHOLOGY_POINTS = {
-    "pathology.cell-injury": "细胞损伤与适应",
-    "pathology.inflammation": "炎症",
-    "pathology.repair": "修复",
-    "pathology.circulatory": "循环障碍",
-    "pathology.neoplasm": "肿瘤",
-}
+from app.modules.content.public import knowledge_tree_view
+
+_catalog = knowledge_tree_view()
+PATHOLOGY_CATALOG_VERSION = str(_catalog[0]["catalog_version"])
+PATHOLOGY_POINTS = {str(p["system_code"]): str(p["system_label"]) for p in _catalog}

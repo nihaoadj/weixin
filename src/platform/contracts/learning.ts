@@ -16,6 +16,10 @@ const knowledgePointSchema = z.object({
   objective: z.string(),
   reference: z.string(),
   card_count: z.number().int().nonnegative(),
+  description: z.string().optional(),
+  prerequisite_codes: z.array(z.string()).optional(),
+  related_codes: z.array(z.string()).optional(),
+  case_slug: z.string().optional(),
   catalog_version: z.string().min(1),
 })
 
@@ -98,7 +102,9 @@ export const apiLearningTaskSchema = z.object({
 export const apiLearningPlanSchema = z.object({
   id: z.number().int(),
   status: z.enum(['active', 'completed', 'superseded']),
-  source_assessment_id: z.number().int(),
+  source_assessment_id: z.number().int().nullable(),
+  source_type: z.enum(['case_assessment', 'pbl_suggestion']),
+  source_id: z.number().int().nullable(),
   target_dimension_ids: z.array(z.string()),
   due_at: timestamp,
   generation_mode: z.string(),

@@ -102,6 +102,7 @@ def test_student_question_feed_reports_answer_state() -> None:
             "description": "description",
             "published_at": initial.json()[0]["published_at"],
             "status": "unanswered",
+            "topic_codes": [],
         }
     ]
     assert (

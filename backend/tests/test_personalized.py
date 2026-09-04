@@ -59,7 +59,9 @@ def complete_case(headers: dict[str, str], problem_id: int, retry_of_id: int | N
 def test_plan_tasks_notifications_and_idempotency() -> None:
     headers = login()
     case = next(
-        item for item in client.get("/problems", headers=headers).json() if item["slug"] == "cap-undergraduate-showcase"
+        item
+        for item in client.get("/problems", headers=headers).json()
+        if item["slug"] == "pathology.cell-injury-showcase"
     )
     source_attempt = complete_case(headers, case["id"])
 
@@ -87,6 +89,18 @@ def test_plan_tasks_notifications_and_idempotency() -> None:
     assert started_attempt["started_at"]
     retry_id = started_attempt["id"]
     assert client.post(f"/learning-tasks/{first['id']}/start", headers=headers).json()["attempt"]["id"] == retry_id
+    for stage in ("history", "problem_representation"):
+        current = client.get(f"/attempts/{retry_id}", headers=headers).json()["current_stage"]
+        if current == stage:
+            answer = {"stage_id": stage, "summary": "细胞肿胀与膜完整性损伤的证据区别"}
+            if stage == "history":
+                answer["key_findings"] = ["细胞膜"]
+            assert (
+                client.post(
+                    f"/attempts/{retry_id}/stages/{stage}/submit", headers=headers, json={"answer": answer}
+                ).status_code
+                == 200
+            )
     assert (
         client.post(
             f"/attempts/{retry_id}/stages/differential/submit",

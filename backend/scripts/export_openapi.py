@@ -10,7 +10,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 for env_name in tuple(os.environ):
     normalized_name = env_name.upper()
-    if normalized_name.startswith(("AI_", "JWT_", "OPENAI_", "WECHAT_")) or normalized_name.endswith(
+    if normalized_name.startswith(("AI_", "PBL_", "COZE_", "JWT_", "OPENAI_", "WECHAT_")) or normalized_name.endswith(
         ("_KEY", "_SECRET", "_TOKEN")
     ):
         os.environ.pop(env_name, None)

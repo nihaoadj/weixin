@@ -95,7 +95,7 @@ describe('teacher report review document', () => {
     reviewReport.mockResolvedValueOnce({ ...exampleReport(), status: '已批阅' })
     await wrapper.get('.submit-button').trigger('click')
     await flushPromises()
-    expect(reviewReport).toHaveBeenLastCalledWith('report-review-test', 88, '请补充推理依据。')
+    expect(reviewReport).toHaveBeenLastCalledWith('report-review-test', 88, '请补充推理依据。', [])
     expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'reports' })
   })
 

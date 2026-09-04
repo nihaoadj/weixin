@@ -79,7 +79,7 @@ class KnowledgeReviewApplication:
         return ReviewResult(card.code, correct, rating, card.explanation, saved.due_at)
 
     def grade_supplemental(
-        self, actor: Actor, card: SupplementalChoiceCard, selected_option: int, confidence: str
+        self, actor: Actor, card: SupplementalChoiceCard, selected_option: int, confidence: str, *, commit: bool = True
     ) -> ReviewResult:
         actor.require_role("student")
         if selected_option < 0 or selected_option >= len(card.options) or confidence not in {"low", "medium", "high"}:
@@ -96,7 +96,8 @@ class KnowledgeReviewApplication:
             self._repository.upsert_item(
                 actor.id, card.point_code, card.card_code, "teacher_choice_card", card.card_code, ""
             )
-        self._uow.commit()
+        if commit:
+            self._uow.commit()
         return ReviewResult(card.card_code, correct, rating, card.explanation, saved.due_at)
 
     def capture(self, actor: Actor, point_code: str, source_type: str, source_id: str, note: str) -> ReviewItemRecord:

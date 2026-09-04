@@ -1,39 +1,29 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.modules.classroom.infrastructure.models import ClassMember, ClassRoom, MedicalReview
 from app.modules.content.domain.digest import case_digest
+from app.modules.content.domain.knowledge_catalog import CARDS, POINTS, RECALL_CARDS
+from app.modules.content.domain.pathology_data import TOPICS
 from app.modules.content.domain.templates import SAFETY_NOTICE as _SAFETY_NOTICE
 from app.modules.content.domain.templates import showcase_draft as _content_showcase_draft
-from app.modules.content.infrastructure.models import Problem, ProblemKnowledgeLink
+from app.modules.content.domain.templates import topic_for_draft
+from app.modules.content.infrastructure.models import KnowledgeCardContribution, Problem, ProblemKnowledgeLink
 from app.modules.identity.infrastructure.models import User
 
 SAFETY_NOTICE = _SAFETY_NOTICE
 
-
-_CAPABILITY_TAGS: dict[str, list[str]] = {
-    "cap-undergraduate-showcase": ["differential_diagnosis", "evidence_reasoning", "management_safety"],
-    "acute-chest-pain-undergraduate-showcase": [
-        "differential_diagnosis",
-        "evidence_reasoning",
-        "management_safety",
-    ],
-    "right-lower-quadrant-pain-undergraduate-showcase": [
-        "problem_representation",
-        "evidence_reasoning",
-        "test_selection",
-    ],
+_CAPABILITY_TAGS = {
+    f"{topic}-showcase": ["differential_diagnosis", "evidence_reasoning", "management_safety"] for topic in TOPICS
 }
-
-_KNOWLEDGE_POINT_CODES: dict[str, tuple[str, ...]] = {
-    "cap-undergraduate-showcase": ("respiratory.cap",),
-    "acute-chest-pain-undergraduate-showcase": ("cardio.acs",),
-    "right-lower-quadrant-pain-undergraduate-showcase": ("digestive.appendicitis",),
+_KNOWLEDGE_POINT_CODES = {
+    f"{topic}-showcase": tuple(point.code for point in POINTS if point.system == topic) for topic in TOPICS
 }
 
 
 def _apply_knowledge_links(problem: Problem) -> None:
-    """Keep the three built-in cases navigable from the fixed T08 catalog."""
+    """Keep synthetic cases connected to the canonical pathology catalog."""
 
     expected = _KNOWLEDGE_POINT_CODES.get(problem.slug or "", ())
     if tuple(link.point_code for link in problem.knowledge_links) == expected:
@@ -66,24 +56,20 @@ def _seed_payload(draft: dict[str, object], slug: str) -> dict[str, object]:
 def showcase_case_payload() -> dict[str, object]:
     """Build the published seed envelope around content-owned case templates."""
 
-    return _seed_payload(_content_showcase_draft("社区获得性肺炎"), "cap-undergraduate-showcase")
+    return _seed_payload(_content_showcase_draft("细胞损伤与适应"), "pathology.cell-injury-showcase")
 
 
-def showcase_draft(topic: str = "社区获得性肺炎") -> dict[str, object]:
+def showcase_draft(topic: str = "细胞损伤与适应") -> dict[str, object]:
     """Build a seed-compatible envelope from the content module's pure template."""
 
-    lowered = topic.lower()
-    if "胸痛" in lowered:
-        slug = "acute-chest-pain-undergraduate-showcase"
-    elif "右下腹" in lowered or "阑尾" in lowered:
-        slug = "right-lower-quadrant-pain-undergraduate-showcase"
-    else:
-        slug = "cap-undergraduate-showcase"
+    slug = f"{topic_for_draft(topic)}-showcase"
     return _seed_payload(_content_showcase_draft(topic), slug)
 
 
 def seed_showcase_case(db: Session) -> Problem:
-    existing = db.scalar(select(Problem).where(Problem.slug == "cap-undergraduate-showcase", Problem.version == 1))
+    if get_settings().is_production:
+        raise RuntimeError("Synthetic teaching seeds are restricted to development/test")
+    existing = db.scalar(select(Problem).where(Problem.slug == "pathology.cell-injury-showcase", Problem.version == 1))
     if existing:
         problem = existing
         if not problem.capability_tags:
@@ -106,7 +92,7 @@ def seed_showcase_case(db: Session) -> Problem:
         reviewer = User(
             external_id="demo_reviewer",
             role="teacher",
-            nickname="医学审核专家",
+            nickname="开发审核示例",
             permissions=["medical_review"],
         )
         db.add(reviewer)
@@ -118,7 +104,7 @@ def seed_showcase_case(db: Session) -> Problem:
         db.flush()
     classroom = db.scalar(select(ClassRoom).where(ClassRoom.code == "demo_class_1"))
     if classroom is None:
-        classroom = ClassRoom(name="临床一班", code="demo_class_1", teacher_id=teacher.id)
+        classroom = ClassRoom(name="病理学一班", code="demo_class_1", teacher_id=teacher.id)
         db.add(classroom)
         db.flush()
     if (
@@ -144,7 +130,7 @@ def seed_showcase_case(db: Session) -> Problem:
                 problem_id=problem.id,
                 reviewer_id=reviewer.id,
                 decision="approved",
-                comment="内置示例病例审核通过",
+                comment="开发合成样例审核演示；未经过真实医学专家审核",
                 problem_version=problem.version,
                 case_digest=digest,
             )
@@ -177,9 +163,30 @@ def seed_showcase_case(db: Session) -> Problem:
                     problem_id=item.id,
                     reviewer_id=reviewer.id,
                     decision="approved",
-                    comment="内置示例病例审核通过",
+                    comment="开发合成样例审核演示；未经过真实医学专家审核",
                     problem_version=item.version,
                     case_digest=digest,
+                )
+            )
+    for card in (*CARDS, *RECALL_CARDS):
+        existing_card = db.scalar(
+            select(KnowledgeCardContribution).where(KnowledgeCardContribution.catalog_card_code == card.code)
+        )
+        if existing_card is None:
+            db.add(
+                KnowledgeCardContribution(
+                    catalog_card_code=card.code,
+                    point_code=card.point_code,
+                    owner_id=teacher.id,
+                    reviewer_id=reviewer.id,
+                    card_type=card.card_type,
+                    prompt=card.prompt,
+                    options=list(card.options),
+                    correct_option=card.correct_option if card.card_type == "single_choice" else None,
+                    explanation=card.explanation,
+                    reference=card.reference,
+                    status="approved",
+                    review_comment="开发合成样例审核演示；未经过真实医学专家审核",
                 )
             )
     db.commit()
@@ -188,4 +195,4 @@ def seed_showcase_case(db: Session) -> Problem:
 
 
 def showcase_additional_payloads() -> list[dict[str, object]]:
-    return [showcase_draft("急性胸痛"), showcase_draft("右下腹痛")]
+    return [showcase_draft(topic) for topic in list(TOPICS)[1:]]

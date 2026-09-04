@@ -23,7 +23,7 @@
               name="case-topic"
               data-native-name="case-topic"
               aria-labelledby="case-topic-label"
-              placeholder="例如：社区获得性肺炎"
+              placeholder="例如：细胞损伤与适应"
               :disabled="busy"
               @input="emitValue('update:topic', $event)"
             />

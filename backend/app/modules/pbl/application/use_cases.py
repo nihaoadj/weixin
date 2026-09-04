@@ -1,223 +1,336 @@
-from datetime import UTC, datetime
+from dataclasses import replace
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from app.modules.classroom.infrastructure.models import ClassMember, ClassRoom
-from app.modules.content.public import QuestionPublicationPort
-from app.modules.pbl.application.ports import PblInferenceGateway
-from app.modules.pbl.application.records import InferenceRequest, InferenceResult
-from app.modules.pbl.domain.catalog import PATHOLOGY_POINTS
-from app.modules.pbl.infrastructure.models import (
-    PblDiagnosticSnapshot,
-    PblParticipation,
-    PblQuestionSuggestion,
-    PblSession,
+from app.modules.classroom.public import ClassroomScopePort
+from app.modules.content.public import PublishQuestionCommand, QuestionPublicationPort, knowledge_point_view
+from app.modules.learning.public import PblLearningPort
+from app.modules.pbl.application.ports import PblInferenceGateway, PblRepository
+from app.modules.pbl.application.records import (
+    InferenceRequest,
+    PblDiagnosticRecord,
+    PblParticipationRecord,
+    PblSessionRecord,
+    PblSnapshotRecord,
+    PblSuggestionRecord,
 )
+from app.modules.pbl.domain.catalog import PATHOLOGY_POINTS
 from app.shared.errors import AppError
+from app.shared.uow import UnitOfWork
 
 
 class PblApplication:
-    def __init__(self, session: Session, gateway: PblInferenceGateway, provider: str, mode: str | None) -> None:
-        self._db, self._gateway, self._provider, self._mode = session, gateway, provider, mode
+    """PBL orchestration over explicit ports; no ORM or provider DTO escapes here."""
 
-    def create_session(self, teacher_id: int, class_id: int, topic_code: str) -> PblSession:
-        room = self._db.get(ClassRoom, class_id)
-        if room is None or room.teacher_id != teacher_id:
+    def __init__(
+        self,
+        repository: PblRepository,
+        uow: UnitOfWork,
+        gateway: PblInferenceGateway,
+        classroom_scope: ClassroomScopePort,
+        publication: QuestionPublicationPort,
+        provider: str,
+        mode: str | None,
+        learning: PblLearningPort,
+    ) -> None:
+        self._repository = repository
+        self._uow = uow
+        self._gateway = gateway
+        self._classroom_scope = classroom_scope
+        self._publication = publication
+        self._provider = provider
+        self._mode = mode
+        self._learning = learning
+
+    def create_session(
+        self, teacher_id: int, class_id: int, topic_code: str, case_id: int, goals: tuple[str, ...]
+    ) -> PblSessionRecord:
+        classroom = self._classroom_scope.owned_active(teacher_id, class_id)
+        if classroom is None:
             raise AppError("RESOURCE_NOT_FOUND", "班级不存在", 404)
-        if topic_code not in PATHOLOGY_POINTS:
-            raise AppError("VALIDATION_ERROR", "病理学主题无效", 422)
-        item = PblSession(
-            class_id=class_id,
-            teacher_id=teacher_id,
-            topic_code=topic_code,
-            provider=self._provider,
-            invocation_mode=self._mode,
+        if topic_code not in PATHOLOGY_POINTS or not 1 <= len(set(goals)) <= 3 or len(set(goals)) != len(goals):
+            raise AppError("VALIDATION_ERROR", "请选择主题及 1～3 个不同目标知识点", 422)
+        if any(knowledge_point_view(code) is None or not code.startswith(topic_code + ".") for code in goals):
+            raise AppError("VALIDATION_ERROR", "目标知识点不属于课堂主题", 422)
+        context = self._publication.case_context(case_id, classroom.code, topic_code)
+        value = self._repository.create_session(
+            class_id, teacher_id, topic_code, self._provider, self._mode, context, goals
         )
-        self._db.add(item)
-        self._db.commit()
-        self._db.refresh(item)
-        return item
+        self._uow.commit()
+        return value
 
-    def close_session(self, teacher_id: int, class_id: int, session_id: int) -> PblSession:
-        item = self._owned(teacher_id, class_id, session_id)
-        if item.status != "closed":
-            item.status, item.closed_at = "closed", datetime.now(UTC)
-            self._db.commit()
-        return item
+    def phase(self, teacher_id: int, class_id: int, session_id: int, phase: str, version: int):
+        self._require_owned_session(teacher_id, class_id, session_id)
+        if phase not in {"problem_framing", "hypothesis", "evidence", "synthesis"}:
+            raise AppError("VALIDATION_ERROR", "讨论阶段无效", 422)
+        result = self._repository.change_phase(session_id, phase, version)
+        self._uow.commit()
+        return result
 
-    def active_for_student(self, student_id: int) -> tuple[PblSession, ...]:
-        return tuple(
-            self._db.scalars(
-                select(PblSession)
-                .join(ClassMember, ClassMember.class_id == PblSession.class_id)
-                .where(ClassMember.student_id == student_id, PblSession.status == "active")
-            ).all()
+    def close_session(self, teacher_id: int, class_id: int, session_id: int) -> PblSessionRecord:
+        value = self._require_owned_session(teacher_id, class_id, session_id)
+        if value.status != "closed":
+            value = self._repository.close_session(session_id)
+            self._uow.commit()
+        return value
+
+    def active_for_student(self, student_id: int) -> tuple[PblSessionRecord, ...]:
+        return self._repository.list_active_sessions(
+            self._classroom_scope.active_class_ids_for_student(student_id), student_id
         )
 
-    def participation(self, student_id: int, session_id: int) -> tuple[PblParticipation, PblDiagnosticSnapshot | None]:
+    def sessions_for_teacher(self, teacher_id: int, class_id: int) -> tuple[PblSessionRecord, ...]:
+        if self._classroom_scope.owned_active(teacher_id, class_id) is None:
+            raise AppError("RESOURCE_NOT_FOUND", "班级不存在", 404)
+        return self._repository.list_sessions_for_teacher(teacher_id, class_id)
+
+    def participation(
+        self, student_id: int, session_id: int
+    ) -> tuple[PblParticipationRecord, PblSnapshotRecord | None]:
+        existing = self._repository.find_participation(session_id, student_id)
+        if existing:
+            return existing, self._repository.latest_snapshot(existing.id)
         self._require_student_session(student_id, session_id)
-        part = self._db.scalar(
-            select(PblParticipation).where(
-                PblParticipation.session_id == session_id, PblParticipation.student_id == student_id
-            )
-        )
-        if part is None:
-            part = PblParticipation(
-                session_id=session_id, student_id=student_id, coze_user_ref=f"pbl-{session_id}-{student_id}"
-            )
-            self._db.add(part)
-            self._db.commit()
-            self._db.refresh(part)
-        latest = self._db.scalar(
-            select(PblDiagnosticSnapshot)
-            .where(PblDiagnosticSnapshot.participation_id == part.id)
-            .order_by(PblDiagnosticSnapshot.revision.desc())
-        )
-        return part, latest
+        participation = self._repository.get_or_create_participation(session_id, student_id)
+        self._uow.commit()
+        return participation, self._repository.latest_snapshot(participation.id)
 
     def message(
         self, student_id: int, session_id: int, client_message_id: str, content: str
-    ) -> tuple[PblParticipation, PblDiagnosticSnapshot]:
-        if not content.strip() or len(content) > 2000:
+    ) -> tuple[PblParticipationRecord, PblSnapshotRecord]:
+        normalized = content.strip()
+        if not normalized or len(normalized) > 2000:
             raise AppError("VALIDATION_ERROR", "消息长度无效", 422)
-        part, existing = self.participation(student_id, session_id)
-        if any(m.get("client_message_id") == client_message_id for m in part.messages):
-            if existing is None:
-                raise AppError("STATE_CONFLICT", "消息正在处理", 409)
-            return part, existing
-        history = list(part.messages)[-20:]
-        part.messages = [
-            *part.messages,
-            {"role": "student", "content": content.strip(), "client_message_id": client_message_id},
-        ]
-        part.revision += 1
-        revision = part.revision
-        self._db.commit()
-        session = self._db.get(PblSession, session_id)
-        result = self._gateway.infer(InferenceRequest(session_id, session.topic_code, content.strip(), tuple(history)))
-        part = self._db.get(PblParticipation, part.id)
-        if part is None or part.revision != revision:
-            raise AppError("STATE_CONFLICT", "对话已更新，请重试", 409)
-        snapshot = self._save_result(part, revision, result)
-        self._db.commit()
-        return part, snapshot
 
-    def diagnostics(self, teacher_id: int) -> tuple[PblDiagnosticSnapshot, ...]:
-        return tuple(
-            self._db.scalars(
-                select(PblDiagnosticSnapshot)
-                .join(PblParticipation)
-                .join(PblSession)
-                .where(PblSession.teacher_id == teacher_id, PblDiagnosticSnapshot.status == "ready")
-                .order_by(PblDiagnosticSnapshot.id.desc())
-            ).all()
+        # A completed duplicate remains readable after closure; new writes require an active classroom.
+        participation, _ = self.participation(student_id, session_id)
+        duplicate = self._repository.message_result(participation.id, client_message_id)
+        if duplicate:
+            original = next(
+                (m for m in participation.messages if m.get("client_message_id") == client_message_id), None
+            )
+            if not original or original["content"] != normalized:
+                raise AppError("STATE_CONFLICT", "消息标识已用于其他内容", 409)
+            self._uow.commit()
+            return self._repository.participation(participation.id), duplicate
+        self._require_student_session(student_id, session_id)
+        updated = self._repository.append_student_message(participation.id, client_message_id, normalized)
+        if updated is None:
+            raise AppError("STATE_CONFLICT", "消息正在处理", 409)
+
+        # Persist the idempotency key before the external call. The result write
+        # checks the same revision, so a concurrent outcome cannot overwrite it.
+        self._uow.commit()
+        session = self._repository.get_session(session_id)
+        if session is None:
+            raise AppError("RESOURCE_NOT_FOUND", "课堂不存在", 404)
+        result = self._gateway.infer(
+            InferenceRequest(
+                session.id,
+                session.topic_code,
+                normalized,
+                updated.messages[:-1][-20:],
+                updated.coze_user_ref,
+                updated.coze_conversation_ref,
+                updated.messages[-1]["id"],
+                session.case_context,
+                session.goal_point_codes,
+            )
         )
+        snapshot = self._repository.save_result(updated.id, updated.revision, result)
+        if snapshot is None:
+            self._uow.rollback()
+            raise AppError("STATE_CONFLICT", "对话已更新，请重试", 409)
+        self._uow.commit()
+        current = self._repository.participation(updated.id)
+        if current is None:
+            raise AppError("STATE_CONFLICT", "对话已更新，请重试", 409)
+        return current, snapshot
+
+    def _source_labels(self, teacher_id: int, value: PblDiagnosticRecord):
+        classroom = self._classroom_scope.owned_active(teacher_id, value.class_id)
+        members = self._classroom_scope.students(teacher_id, value.class_id)
+        member = next((item for item in members if item.id == value.student_id), None)
+        return replace(
+            value,
+            class_name=classroom.name if classroom else "已归档班级",
+            student_name=member.nickname if member else f"历史参与学生 {value.student_id}",
+        )
+
+    def diagnostics(self, teacher_id: int, limit: int, offset: int, filters: dict):
+        values, total = self._repository.diagnostics_for_teacher(teacher_id, limit, offset, filters)
+        return tuple(self._source_labels(teacher_id, value) for value in values), total
+
+    def diagnostic(self, teacher_id: int, snapshot_id: int) -> PblDiagnosticRecord:
+        value = self._repository.diagnostic_for_teacher(teacher_id, snapshot_id)
+        if value is None:
+            raise AppError("RESOURCE_NOT_FOUND", "诊断不存在", 404)
+        return self._source_labels(teacher_id, value)
 
     def edit_suggestion(
         self, teacher_id: int, suggestion_id: int, version: int, title: str, prompt: str, reject: bool
-    ) -> PblQuestionSuggestion:
-        item = self._suggestion_for_teacher(teacher_id, suggestion_id)
-        if item.version != version:
+    ) -> PblSuggestionRecord:
+        suggestion = self._require_suggestion(teacher_id, suggestion_id)
+        if suggestion.version != version:
             raise AppError("STATE_CONFLICT", "建议已被更新", 409)
-        if item.status in {"published", "superseded"}:
+        if suggestion.status in {"published", "superseded"}:
             raise AppError("STATE_CONFLICT", "建议不可编辑", 409)
-        item.status = "rejected" if reject else "edited"
-        item.title = title.strip() or item.title
-        item.prompt = prompt.strip() or item.prompt
-        item.version += 1
-        self._db.commit()
-        return item
-
-    def adopt(self, teacher_id: int, suggestion_id: int) -> PblQuestionSuggestion:
-        item = self._suggestion_for_teacher(teacher_id, suggestion_id)
-        if item.status == "rejected":
-            raise AppError("STATE_CONFLICT", "建议已拒绝", 409)
-        if item.problem_id is None:
-            session = self._db.scalar(
-                select(PblSession)
-                .join(PblParticipation, PblParticipation.session_id == PblSession.id)
-                .join(PblDiagnosticSnapshot, PblDiagnosticSnapshot.participation_id == PblParticipation.id)
-                .where(PblDiagnosticSnapshot.id == item.snapshot_id)
-            )
-            room = self._db.get(ClassRoom, session.class_id)
-            item.problem_id = QuestionPublicationPort(self._db).adopt_open_question(
-                teacher_id=teacher_id, source_id=item.id, title=item.title, prompt=item.prompt, class_code=room.code
-            )
-            item.status = "published"
-            item.version += 1
-            self._db.commit()
-        return item
-
-    def _save_result(self, part: PblParticipation, revision: int, result: InferenceResult) -> PblDiagnosticSnapshot:
-        gaps, issues, recs = (
-            list(result.knowledge_gaps),
-            list(result.reasoning_issues),
-            list(result.recommended_questions),
+        value = self._repository.update_suggestion(
+            suggestion.id,
+            title.strip() or suggestion.title,
+            prompt.strip() or suggestion.prompt,
+            "rejected" if reject else "edited",
+            suggestion.version + 1,
         )
-        if result.diagnostic_status == "ready" and not (gaps or issues):
-            result = InferenceResult("请补充你的判断依据。", "insufficient_evidence")
-            recs = []
-        if result.diagnostic_status != "ready":
-            recs = []
-        snap = PblDiagnosticSnapshot(
-            participation_id=part.id,
-            revision=revision,
-            status=result.diagnostic_status,
-            assistant_reply=result.assistant_reply[:4000],
-            follow_up_question=result.follow_up_question,
-            knowledge_gaps=gaps[:10],
-            reasoning_issues=issues[:10],
-            provider_metadata=result.provider_metadata or {},
-            failure_reason=result.failure_reason,
-        )
-        self._db.add(snap)
-        self._db.flush()
-        for old in self._db.scalars(
-            select(PblQuestionSuggestion)
-            .join(PblDiagnosticSnapshot)
-            .where(PblDiagnosticSnapshot.participation_id == part.id, PblQuestionSuggestion.status == "proposed")
-        ).all():
-            old.status = "superseded"
-        for q in recs[:5]:
-            links = [str(x) for x in q.get("linked_findings", [])][:5]
-            if links:
-                self._db.add(
-                    PblQuestionSuggestion(
-                        snapshot_id=snap.id,
-                        title=str(q.get("title", "PBL 讨论题"))[:200],
-                        prompt=str(q.get("prompt", ""))[:2000],
-                        linked_findings=links,
-                    )
-                )
-        return snap
+        self._uow.commit()
+        return value
 
-    def _owned(self, teacher_id: int, class_id: int, session_id: int) -> PblSession:
-        item = self._db.get(PblSession, session_id)
-        if item is None or item.class_id != class_id or item.teacher_id != teacher_id:
+    def adopt(
+        self,
+        teacher_id: int,
+        suggestion_id: int,
+        version: int,
+        title: str,
+        prompt: str,
+        target_student_ids: tuple[int, ...],
+        whole_class: bool,
+        include_case_retry: bool,
+    ):
+        suggestion = self._require_suggestion(teacher_id, suggestion_id)
+        if suggestion.problem_id is not None:
+            return suggestion
+        if suggestion.status not in {"proposed", "edited"} or suggestion.version != version:
+            raise AppError("STATE_CONFLICT", "建议版本或状态已更新", 409)
+        diagnostic = self.diagnostic(teacher_id, suggestion.snapshot_id)
+        if diagnostic.snapshot.schema_version != 2:
+            raise AppError("STATE_CONFLICT", "旧版诊断仅供查阅，请重新进行诊断", 409)
+        session = self._repository.session_for_suggestion(suggestion.id)
+        classroom = self._classroom_scope.owned_active(teacher_id, session.class_id) if session else None
+        if classroom is None:
+            raise AppError("RESOURCE_NOT_FOUND", "班级不存在", 404)
+        members = self._classroom_scope.students(teacher_id, session.class_id)
+        member_map = {member.id: member for member in members}
+        if whole_class and target_student_ids:
+            raise AppError("VALIDATION_ERROR", "全班与指定学生不能同时选择", 422)
+        targets = tuple(member_map) if whole_class else (target_student_ids or (diagnostic.student_id,))
+        if not targets or len(set(targets)) != len(targets) or not set(targets).issubset(member_map):
+            raise AppError("VALIDATION_ERROR", "目标学生必须属于本班", 422)
+        if not title.strip() or not prompt.strip():
+            raise AppError("VALIDATION_ERROR", "题目标题和内容不能为空", 422)
+        points = tuple(dict.fromkeys(str(g["point_code"]) for g in diagnostic.snapshot.knowledge_gaps))
+        dimensions = tuple(dict.fromkeys(str(g["dimension_id"]) for g in diagnostic.snapshot.reasoning_issues))
+        # Obtain a write claim before any cross-module creation; all ports share this transaction.
+        self._repository.update_suggestion(suggestion.id, title.strip(), prompt.strip(), "edited", version + 1)
+        publication = self._publication.adopt_open_question(
+            PublishQuestionCommand(
+                teacher_id=teacher_id,
+                source_id=suggestion.id,
+                title=title.strip(),
+                prompt=prompt.strip(),
+                class_code=classroom.code,
+                target_external_ids=tuple(member_map[i].external_id for i in targets),
+                point_codes=points,
+            )
+        )
+        resources = (
+            {"task_type": "discussion", "problem_id": publication.problem_id, "prompt": prompt.strip()},
+            *self._publication.task_resources(session.case_id, points, dimensions),
+        )
+        if include_case_retry:
+            if session.case_id is None:
+                raise AppError("VALIDATION_ERROR", "旧课堂没有绑定病例", 422)
+            self._publication.case_context(session.case_id, classroom.code, session.topic_code)
+            resources = (
+                *resources,
+                {
+                    "task_type": "focused_retry",
+                    "dimension_id": dimensions[0] if dimensions else "evidence_reasoning",
+                    "stage_id": "history",
+                    "problem_id": session.case_id,
+                    "prompt": "重新完成课堂病例的五个训练阶段",
+                },
+            )
+        self._learning.create(
+            targets,
+            suggestion.id,
+            {
+                "teacher_id": teacher_id,
+                "class_id": session.class_id,
+                "class_name": classroom.name,
+                "session_id": session.id,
+                "snapshot_id": diagnostic.snapshot.id,
+                "suggestion_id": suggestion.id,
+                "point_codes": list(points),
+                "dimension_ids": list(dimensions),
+                "topic_code": session.topic_code,
+            },
+            tuple(resources),
+        )
+        value = self._repository.attach_problem(suggestion.id, publication.problem_id, version + 2)
+        self._uow.commit()
+        return value
+
+    def learning_plans(self, student_id: int):
+        return self._learning.list(student_id=student_id)
+
+    def submit_task(self, student_id: int, task_id: int, submission_id: str, answer: dict):
+        result = self._learning.submit(student_id, task_id, submission_id, answer)
+        self._uow.commit()
+        return result
+
+    def learning_results(self, teacher_id: int, session_id: int | None = None):
+        plans = self._learning.list(teacher_id=teacher_id, session_id=session_id)
+        return tuple(
+            plan for plan in plans if self._classroom_scope.owned_active(teacher_id, plan["source_context"]["class_id"])
+        )
+
+    def verify_learning(self, teacher_id: int, plan_id: int, version: int, decision: str, note: str):
+        if not any(plan["id"] == plan_id for plan in self.learning_results(teacher_id)):
+            raise AppError("RESOURCE_NOT_FOUND", "学习结果不存在", 404)
+        result = self._learning.verify(teacher_id, plan_id, version, decision, note)
+        self._uow.commit()
+        return result
+
+    def summary(self, teacher_id: int, class_id: int, session_id: int):
+        self._require_owned_session(teacher_id, class_id, session_id)
+        plans = self.learning_results(teacher_id, session_id)
+        tasks = [task for plan in plans for task in plan["tasks"]]
+        retests = [task["result"]["score"] for task in tasks if task["task_type"] == "retest" and task["result"]]
+        return {
+            **self._repository.session_counts(session_id),
+            "plans": len(plans),
+            "tasks": len(tasks),
+            "completed_tasks": sum(task["status"] == "completed" for task in tasks),
+            "pending_verification": sum(plan["verification_status"] == "pending_teacher" for plan in plans),
+            "improved": sum(plan["verification_status"] == "improved" for plan in plans),
+            "needs_reinforcement": sum(plan["verification_status"] == "needs_reinforcement" for plan in plans),
+            "objective_retest_count": len(retests),
+            "objective_retest_average": sum(retests) / len(retests) if retests else None,
+        }
+
+    def revisions(self, teacher_id: int, snapshot_id: int):
+        self.diagnostic(teacher_id, snapshot_id)
+        return tuple(
+            self._source_labels(teacher_id, item)
+            for item in self._repository.revisions_for_teacher(teacher_id, snapshot_id)
+        )
+
+    def _require_owned_session(self, teacher_id: int, class_id: int, session_id: int) -> PblSessionRecord:
+        value = self._repository.get_session(session_id)
+        if value is None or value.class_id != class_id or value.teacher_id != teacher_id:
             raise AppError("RESOURCE_NOT_FOUND", "课堂不存在", 404)
-        return item
+        return value
 
-    def _require_student_session(self, student_id: int, session_id: int) -> None:
-        item = self._db.get(PblSession, session_id)
-        member = self._db.scalar(
-            select(ClassMember).where(
-                ClassMember.class_id == (item.class_id if item else -1), ClassMember.student_id == student_id
-            )
-        )
-        if item is None or item.status != "active" or member is None:
+    def _require_student_session(self, student_id: int, session_id: int) -> PblSessionRecord:
+        value = self._repository.get_session(session_id)
+        if (
+            value is None
+            or value.status != "active"
+            or not self._classroom_scope.active_member(student_id, value.class_id)
+        ):
             raise AppError("RESOURCE_NOT_FOUND", "课堂不存在", 404)
+        return value
 
-    def _suggestion_for_teacher(self, teacher_id: int, suggestion_id: int) -> PblQuestionSuggestion:
-        item = self._db.get(PblQuestionSuggestion, suggestion_id)
-        if item is None:
+    def _require_suggestion(self, teacher_id: int, suggestion_id: int) -> PblSuggestionRecord:
+        value = self._repository.suggestion_for_teacher(teacher_id, suggestion_id)
+        if value is None:
             raise AppError("RESOURCE_NOT_FOUND", "建议不存在", 404)
-        owner = self._db.scalar(
-            select(PblSession.teacher_id)
-            .join(PblParticipation, PblParticipation.session_id == PblSession.id)
-            .join(PblDiagnosticSnapshot, PblDiagnosticSnapshot.participation_id == PblParticipation.id)
-            .where(PblDiagnosticSnapshot.id == item.snapshot_id)
-        )
-        if owner != teacher_id:
-            raise AppError("RESOURCE_NOT_FOUND", "建议不存在", 404)
-        return item
+        return value

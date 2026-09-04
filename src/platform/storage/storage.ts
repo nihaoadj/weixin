@@ -94,6 +94,7 @@ export const problemSchema: ZodType<Problem> = z.object({
   medicalReviewStatus: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).optional(),
   opening: z.object({ setting: z.string(), patientIntro: z.string(), chiefComplaint: z.string() }).optional(),
   capabilityTags: z.array(z.string()).optional(),
+  knowledgePointCodes: z.array(z.string()).optional(),
 })
 
 export const questionThreadSchema: ZodType<QuestionThread> = z.object({

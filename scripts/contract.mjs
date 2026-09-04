@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import process from 'node:process'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const artifacts = ['docs/openapi.json', 'src/data/contracts/openapi.generated.ts', 'src/test/fixtures/case-draft.json']
+const artifacts = ['docs/openapi.json', 'src/data/contracts/openapi.generated.ts', 'src/test/fixtures/case-draft.json', 'src/features/content/infrastructure/pathologyCatalog.generated.json']
 
 function parseOutputDirectory(args) {
   if (args.length === 0) return projectRoot
@@ -38,6 +38,8 @@ function scrubbedEnvironment(overrides = {}) {
     if (
       normalizedName === 'DATABASE_URL' ||
       normalizedName.startsWith('AI_') ||
+      normalizedName.startsWith('PBL_') ||
+      normalizedName.startsWith('COZE_') ||
       normalizedName.startsWith('JWT_') ||
       normalizedName.startsWith('OPENAI_') ||
       normalizedName.startsWith('WECHAT_') ||
@@ -88,6 +90,9 @@ async function generate(outputDirectory) {
     outputPaths[1],
   ])
   run(process.env.PYTHON ?? 'python', ['backend/scripts/export_contract_fixtures.py', '--output', outputPaths[2]], {
+    env: contractExportEnvironment(),
+  })
+  run(process.env.PYTHON ?? 'python', ['backend/scripts/export_pathology_catalog.py', '--output', outputPaths[3]], {
     env: contractExportEnvironment(),
   })
   run(process.execPath, [

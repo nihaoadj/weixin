@@ -1,7 +1,8 @@
 <template>
   <view class="safe-page page">
+    <PathologyKnowledgeMap />
     <view class="card intro"
-      ><text class="eyebrow-label">CLINICAL CASE TRAINING</text><text class="title">临床病例训练</text
+      ><text class="eyebrow-label">PATHOLOGY CASE TRAINING</text><text class="title">病理学病例练习</text
       ><text class="muted">合成教学病例，不构成诊疗建议</text></view
     >
     <MedState
@@ -71,26 +72,45 @@
           查看报告
         </button></view
       >
-      <view class="card section"
-        ><text class="section-title">其他练习</text
-        ><view
+      <view
+        v-if="pblQuestions.length"
+        class="card section"
+      >
+        <text class="section-title">PBL 讨论题</text>
+        <view
+          v-for="item in pblQuestions"
+          :key="item.id"
+          class="question pbl-question"
+        >
+          <view
+            ><text>{{ item.title }}</text
+            ><text class="muted">{{ item.description }}</text></view
+          >
+          <text class="muted">开放讨论</text>
+        </view>
+      </view>
+      <view class="card section">
+        <text class="section-title">其他练习</text>
+        <view
           v-for="item in questions"
           :key="item.id"
           class="question"
           @click="openQuestion(item.id)"
-          ><text>{{ item.title }}</text
-          ><text class="muted">{{ item.status }}</text></view
-        ></view
-      >
+        >
+          <text>{{ item.title }}</text>
+          <text class="muted">{{ item.status }}</text>
+        </view>
+      </view>
     </template>
-    <view class="nav"><StudentNav active="question" /></view>
+    <StudentPrimaryNav active="question" />
   </view>
 </template>
 <script setup lang="ts">
+import PathologyKnowledgeMap from '@/components/student/PathologyKnowledgeMap.vue'
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import StudentNav from '@/components/ui/StudentNav.vue'
+import StudentPrimaryNav from '@/components/ui/StudentPrimaryNav.vue'
 import { getCaseAssessmentAsync, getCaseAttemptsAsync, startCaseAttemptAsync } from '@/features/training/public'
 import { requireRole } from '@/features/identity/public'
 import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
@@ -99,6 +119,7 @@ import { getStudentQuestionsAsync } from '@/features/qa/public'
 import { caseStages, type CaseAttempt, type CaseAssessment } from '@/types/case'
 import type { Problem, StudentQuestion } from '@/types/domain'
 const cases = ref<Problem[]>([])
+const pblQuestions = ref<Problem[]>([])
 const questions = ref<StudentQuestion[]>([])
 const attempts = ref<CaseAttempt[]>([])
 const recent = ref<CaseAssessment>()
@@ -106,7 +127,9 @@ const error = ref('')
 const loading = ref(false)
 const continuing = computed(() => attempts.value.find((item) => item.status === 'in_progress'))
 const hasContent = computed(() =>
-  Boolean(cases.value.length || questions.value.length || continuing.value || recent.value),
+  Boolean(
+    cases.value.length || pblQuestions.value.length || questions.value.length || continuing.value || recent.value,
+  ),
 )
 const stageLabel = (id?: string) => caseStages.find((item) => item.id === id)?.label || '训练完成'
 async function load() {
@@ -124,6 +147,9 @@ async function load() {
       ...all.filter((item) => item.contentType === 'guided_case' && item.status === '已发布'),
       ...demoCases,
     ]
+    pblQuestions.value = all.filter(
+      (item) => item.contentType === 'question' && item.type === 'open_discussion' && item.status === '已发布',
+    )
     questions.value = old.filter(
       (item) => !all.find((problem) => problem.id === item.id && problem.contentType === 'guided_case'),
     )
@@ -221,23 +247,10 @@ onShow(() => {
   justify-content: space-between;
   border-bottom: 1rpx solid var(--med-divider);
 }
-.nav {
-  position: fixed;
-  right: 24rpx;
-  bottom: calc(18rpx + env(safe-area-inset-bottom));
-  left: 24rpx;
-  padding: 8rpx;
-  background: #fff;
-  border: 1rpx solid var(--med-border);
-  border-radius: 24rpx;
-}
-@media screen and (min-width: 900px) {
-  .nav {
-    right: auto;
-    left: 50%;
-    width: calc(1080px - 48rpx);
-    max-width: calc(100% - 48rpx);
-    transform: translateX(-50%);
-  }
+.pbl-question view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8rpx;
 }
 </style>

@@ -103,7 +103,7 @@ class LearningPlanRecord:
     id: int
     student_id: int
     status: str
-    source_assessment_id: int
+    source_assessment_id: int | None
     target_dimension_ids: tuple[str, ...]
     due_at: datetime
     generation_mode: str
@@ -115,6 +115,8 @@ class LearningPlanRecord:
     completed_at: datetime | None
     superseded_at: datetime | None
     tasks: tuple[LearningTaskRecord, ...]
+    source_type: str = "case_assessment"
+    source_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

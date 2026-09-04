@@ -80,4 +80,4 @@ npm run contract:check
 
 `contract:generate` 会写入 `docs/openapi.json`、`src/data/contracts/openapi.generated.ts` 与 fixture；`contract:check` 在系统临时目录生成并按内容比较，不改写快照。远程 CI 是否已接入仍须由平台证据确认。提交必须同时包含后端改动、OpenAPI 快照、生成类型、mapper 和契约测试。
 
-# T09：`pbl_sessions`、`pbl_participations`、`pbl_diagnostic_snapshots` 和 `pbl_question_suggestions` 采用追加 revision；已处理建议不会被 AI 覆盖。content 的 `problem_origins(source_type, source_id)` 唯一关系保证采用发布幂等。
+# T11：PBL 诊断快照使用 schema v2，知识薄弱点只能引用 `pathology-general-v2` 的稳定知识点编码，推理问题单独引用能力维度。教师队列按最新有效诊断分页（每页 20 条），详情保留 revision。采用发布在一个事务中写入编辑后的正式题、来源、任务和通知；`client_message_id` 返回同一次处理结果，不以最新快照替代重试结果。学习计划的 `(student_id, source_type, source_id)` 唯一约束允许病例评估与独立 PBL 干预并存。

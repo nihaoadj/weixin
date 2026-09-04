@@ -31,7 +31,7 @@
 
 HTTP/cache、底层 storage、runtime、导航、日志和 Zod/OpenAPI conformance 收敛到 `src/platform`；页面仅依赖各 feature 的 `public.ts`。身份迁移和会话格式位于 identity infrastructure，应用只依赖窄 `SessionStoragePort`。由于 T02 已冻结现有生成命令，本轮保留 `src/data/contracts/openapi.generated.ts` 作为唯一生成输出，`src/platform/contracts` 仅持有运行时 schema 与 conformance 引用；没有手改生成物或升级 storage schema version。
 
-边界规则由 `config/frontend-boundaries.json` 声明、`scripts/frontend-boundaries.mjs` 执行，并以 TypeScript AST/SFC script 解析 alias/相对/type-only/re-export/dynamic import、平台 I/O 别名/解构和全图循环；合法/违规 fixture 自测逐项断言。覆盖率不再整包排除 `services/data`，其中只剩生成物和测试；具体证据见 [T03 交付记录](../update_plan/deliveries/T03.md)。
+边界规则由 `config/frontend-boundaries.json` 声明、`scripts/frontend-boundaries.mjs` 执行，并以 TypeScript AST/SFC script 解析 alias/相对/type-only/re-export/dynamic import、平台 I/O 别名/解构和全图循环；合法/违规 fixture 自测逐项断言。覆盖率不再整包排除 `services/data`，其中只剩生成物和测试；具体证据见 [T03 交付记录](../update_plan/03-frontend-modularization/deliveries/T03.md)。
 
 ## T03 增量修复（2026-08-30）
 
@@ -39,7 +39,7 @@ HTTP/cache、底层 storage、runtime、导航、日志和 Zod/OpenAPI conforman
 
 ## T04 后端模块化补充（2026-08-30）
 
-后端按 identity、qa、reports、content、training、learning、classroom、analytics 八个业务模块组织，每个模块保留 api/application/domain/infrastructure/public/wiring 边界。生产路由由各模块 `api` 持有；应用层拥有状态决策与事务；repository/query adapter 拥有 SQL；analytics 的跨表统计是独立只读 reader。`app/api`、`app/models`、`app/schemas` 和旧 `app/services` 仅保留兼容转发。具体 operation、表所有权和兼容入口见 [后端模块映射](../backend-module-map.md)。
+后端按 identity、qa、reports、content、training、learning、classroom、analytics 八个业务模块组织，每个模块保留 api/application/domain/infrastructure/public/wiring 边界。生产路由由各模块 `api` 持有；应用层拥有状态决策与事务；repository/query adapter 拥有 SQL；analytics 的跨表统计是独立只读 reader。`app/api`、`app/models`、`app/schemas` 和旧 `app/services` 仅保留兼容转发。具体 operation、表所有权和兼容入口见 [后端模块映射](../backend/module-map.md)。
 
 认证、报告、内容发布、病例训练、学习计划、班级成员和问答用例均通过不可变 `Actor` 合同做二次授权。`SqlAlchemyUnitOfWork` 是 request-scoped 实现，repository 只 flush，应用用例是唯一 commit/rollback 拥有者。跨模块 training→learning 采用 bootstrap composition root + `TrainingCasePort` 的显式两阶段应用调用，依靠已有唯一约束和重试读取实现顺序及并发幂等。
 

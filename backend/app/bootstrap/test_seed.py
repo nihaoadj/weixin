@@ -16,9 +16,9 @@ from app.modules.training.infrastructure.models import CaseAssessment, CaseAttem
 from app.modules.training.wiring import training_application
 from app.shared.actor import Actor
 
-TEST_CASE_SLUG = "demo-pending-chest-pain"
-TEST_QUESTION_SLUG = "demo-question-001"
-TEST_CONVERSATION_CLIENT_ID = "demo-conversation-001"
+TEST_CASE_SLUG = "pathology-demo-pending-v2"
+TEST_QUESTION_SLUG = "pathology-demo-question-v2"
+TEST_CONVERSATION_CLIENT_ID = "pathology-demo-conversation-v2"
 
 
 def _user(db: Session, external_id: str, role: str, nickname: str, permissions: list[str] | None = None) -> User:
@@ -53,10 +53,10 @@ def _pending_case(db: Session, teacher: User) -> Problem:
     problem = db.scalar(select(Problem).where(Problem.slug == TEST_CASE_SLUG, Problem.version == 1))
     if problem is not None:
         return problem
-    payload = showcase_draft("急性胸痛")
+    payload = showcase_draft("细胞损伤与适应")
     payload.update(
         {
-            "title": "【测试】急性胸痛：待审核病例",
+            "title": "【测试】细胞损伤与适应：待审核病例",
             "description": "用于测试教师提交、医学审核和发布流程的合成教学病例。",
             "slug": TEST_CASE_SLUG,
             "status": "draft",
@@ -76,8 +76,8 @@ def _question(db: Session) -> Problem:
         return problem
     problem = Problem(
         type="病例单选",
-        title="【测试】社区获得性肺炎的首要检查",
-        description="患者发热、咳嗽、黄痰，胸片提示右下肺浸润影。下一步最适合的教学讨论方向是什么？",
+        title="【测试】可逆性细胞损伤的形态依据",
+        description="合成切片见细胞肿胀与胞质淡染，核结构尚存。如何建立病理机制解释？",
         target="all",
         target_label="全体学生",
         target_ids="",
@@ -85,7 +85,7 @@ def _question(db: Session) -> Problem:
         published_at=datetime.now(UTC),
         slug=TEST_QUESTION_SLUG,
         content_type="question",
-        specialty="呼吸内科",
+        specialty="病理学",
         difficulty="basic",
         estimated_minutes=5,
         version=1,
@@ -111,17 +111,17 @@ def _conversation_and_report(db: Session, student: User) -> None:
                 Message(
                     conversation_id=conversation.id,
                     role="user",
-                    content="患者发热、咳嗽和黄痰，为什么首先考虑社区获得性肺炎？",
+                    content="组织切片中出现细胞肿胀，怎样区分可逆损伤与坏死？",
                 ),
                 Message(
                     conversation_id=conversation.id,
                     role="assistant",
-                    content="可以从病程、痰液性质、肺部体征和影像学证据进行结构化分析。",
+                    content="可以从细胞形态、核结构与组织分布进行结构化分析。",
                 ),
                 Message(
                     conversation_id=conversation.id,
                     role="user",
-                    content="还需要补充哪些危险因素和安全信息？",
+                    content="还需要观察哪些核变化才能支持坏死？",
                 ),
             ]
         )
@@ -133,11 +133,11 @@ def _conversation_and_report(db: Session, student: User) -> None:
                 student_id=student.id,
                 status="pending_review",
                 ai_score=78,
-                ai_summary="已识别主要诊断方向，但危险因素和安全边界仍需补充。",
+                ai_summary="已描述细胞损伤的形态，仍需区分可逆变化与细胞死亡。",
                 ai_analysis={
-                    "errors": [{"content": "危险因素追问不完整", "suggestion": "补充既往史、过敏史和近期住院用药史。"}],
-                    "strengths": ["能够结合症状和影像建立初步问题表征"],
-                    "general_suggestions": ["使用起病、伴随症状、危险因素和安全信息的固定提问顺序"],
+                    "errors": [{"content": "核形态观察不完整", "suggestion": "补充核固缩、核碎裂与核溶解的观察。"}],
+                    "strengths": ["能够依据形态建立初步解释"],
+                    "general_suggestions": ["按照观察、假设与证据核对的顺序讨论"],
                 },
             )
         )
@@ -157,12 +157,12 @@ def _question_thread(db: Session, student: User, problem: Problem) -> None:
             QuestionThreadMessage(
                 thread_id=thread.id,
                 role="user",
-                content="这个病例中哪些证据最支持肺炎？",
+                content="这个病例中哪些形态证据支持可逆损伤？",
             ),
             QuestionThreadMessage(
                 thread_id=thread.id,
                 role="assistant",
-                content="发热、黄痰、右下肺局灶体征和新发浸润影是主要支持证据。",
+                content="细胞肿胀而核结构尚存，需结合膜与细胞器的观察判断。",
             ),
         ]
     )
@@ -196,33 +196,21 @@ def _seed_assessed_attempt(db: Session, student: User, problem: Problem) -> Case
             "history",
             {
                 "stage_id": "history",
-                "summary": "48岁男性，急性发热、咳嗽3天，伴黄色黏痰、右侧胸痛和活动后气促。",
-                "key_findings": ["发热", "咳嗽", "黄色黏痰", "胸痛"],
+                "summary": "合成肾小管切片见上皮细胞肿胀与胞质淡染。",
+                "key_findings": ["细胞肿胀", "核结构尚存"],
             },
         ),
         (
             "problem_representation",
-            {
-                "stage_id": "problem_representation",
-                "summary": "48岁男性急性发热、咳嗽3天伴黄痰和右侧胸痛，考虑社区获得性肺炎。",
-            },
+            {"stage_id": "problem_representation", "summary": "细胞肿胀与核结构尚存提示可逆损伤，需排查坏死证据。"},
         ),
         (
             "differential",
             {
                 "stage_id": "differential",
                 "items": [
-                    {
-                        "diagnosis": "社区获得性肺炎",
-                        "supporting_evidence": ["发热", "黄痰", "湿啰音"],
-                        "opposing_evidence": [],
-                    },
-                    {"diagnosis": "病毒性肺炎", "supporting_evidence": ["发热"], "opposing_evidence": []},
-                    {
-                        "diagnosis": "肺栓塞",
-                        "supporting_evidence": ["血氧93%"],
-                        "opposing_evidence": ["反对黄痰"],
-                    },
+                    {"diagnosis": "可逆性损伤", "supporting_evidence": ["肿胀", "核尚存"], "opposing_evidence": []},
+                    {"diagnosis": "坏死", "supporting_evidence": [], "opposing_evidence": ["尚无核溶解证据"]},
                 ],
             },
         ),
@@ -231,8 +219,11 @@ def _seed_assessed_attempt(db: Session, student: User, problem: Problem) -> Case
             {
                 "stage_id": "tests",
                 "items": [
-                    {"test_name": "胸部影像", "rationale": "确认浸润并评估范围", "priority": "necessary"},
-                    {"test_name": "血常规和炎症指标", "rationale": "评估感染和炎症程度", "priority": "necessary"},
+                    {
+                        "test_name": "补充核与细胞膜的形态观察",
+                        "rationale": "核对细胞死亡的支持和反对证据",
+                        "priority": "necessary",
+                    }
                 ],
             },
         ),
@@ -240,11 +231,8 @@ def _seed_assessed_attempt(db: Session, student: User, problem: Problem) -> Case
             "management",
             {
                 "stage_id": "management",
-                "items": [
-                    {"action": "评估氧合和严重程度", "rationale": "识别恶化风险"},
-                    {"action": "支持治疗并复评", "rationale": "监测症状和氧合变化"},
-                ],
-                "safety_considerations": ["监测血氧", "及时复评"],
+                "items": [{"action": "总结损伤与形态关系", "rationale": "说明现有证据与解释的限制"}],
+                "safety_considerations": ["合成教学内容不能代替临床诊断"],
             },
         ),
     ]
@@ -265,7 +253,7 @@ def seed_test_data(db: Session) -> dict[str, int]:
     second_student = _user(db, "demo_student_b", "student", "示例学生（二）")
     classroom = db.scalar(select(ClassRoom).where(ClassRoom.code == "demo_class_1"))
     if classroom is None:
-        classroom = ClassRoom(name="临床一班", code="demo_class_1", teacher_id=teacher.id)
+        classroom = ClassRoom(name="病理学一班", code="demo_class_1", teacher_id=teacher.id)
         db.add(classroom)
         db.flush()
     _ensure_member(db, classroom, student)

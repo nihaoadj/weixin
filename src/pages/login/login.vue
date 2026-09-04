@@ -13,7 +13,7 @@
             <text class="brand-note">记录学习过程，连接学生与教师</text>
           </view>
         </view>
-        <text class="title">临床思维学习助手</text>
+        <text class="title">病理学 PBL 学习助手</text>
         <text class="subtitle">从一个病例问题开始，完成推理、反馈与复盘。</text>
         <view
           class="loop-note"

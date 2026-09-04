@@ -124,6 +124,7 @@ export interface Problem {
   medicalReviewStatus?: 'not_submitted' | 'pending' | 'approved' | 'rejected'
   opening?: import('./case').CaseOpening
   capabilityTags?: string[]
+  knowledgePointCodes?: string[]
 }
 
 export interface StudentQuestion {

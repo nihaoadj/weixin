@@ -34,7 +34,8 @@
       >
         <view class="workspace-content">
           <TeacherOverview
-            v-if="currentWorkspace === 'overview'"
+            v-if="openedWorkspaces.overview"
+            v-show="currentWorkspace === 'overview'"
             :loading="overviewLoading"
             :is-reviewer="isReviewer"
             :pending-reports="pendingReports"
@@ -49,16 +50,22 @@
             @retry="refreshOverview"
           />
           <TeacherReportList
-            v-else-if="currentWorkspace === 'reports'"
+            v-if="openedWorkspaces.reports"
+            v-show="currentWorkspace === 'reports'"
             ref="reportList"
             @select="openReport"
             @manage="switchWorkspace('problems')"
           />
           <TeacherProblemList
-            v-else-if="currentWorkspace === 'problems'"
+            v-if="openedWorkspaces.problems"
+            v-show="currentWorkspace === 'problems'"
             ref="problemList"
           />
-          <TeacherPblQueue v-else />
+          <TeacherPblQueue
+            v-if="openedWorkspaces.pbl"
+            v-show="currentWorkspace === 'pbl'"
+            ref="pblQueue"
+          />
         </view>
       </scroll-view>
     </view>
@@ -77,14 +84,21 @@ import TeacherPblQueue from '@/components/teacher/TeacherPblQueue.vue'
 import { requireRole, logout, getSession } from '@/features/identity/public'
 import { getReportSummariesAsync } from '@/features/reports/public'
 import { getReviewQueue } from '@/features/content/public'
-import { goDetail, goReplace, ROUTES } from '@/platform/navigation'
+import { goDetail, ROUTES } from '@/platform/navigation'
 
 interface Refreshable {
   refresh: () => Promise<void>
 }
-const currentWorkspace = ref<TeacherWorkspace>('reports')
+const currentWorkspace = ref<TeacherWorkspace>('pbl')
+const openedWorkspaces = ref<Record<TeacherWorkspace, boolean>>({
+  overview: false,
+  reports: false,
+  problems: false,
+  pbl: true,
+})
 const reportList = ref<Refreshable | null>(null)
 const problemList = ref<Refreshable | null>(null)
+const pblQueue = ref<Refreshable | null>(null)
 const isReviewer = ref(false)
 const pendingReports = ref<number>()
 const pendingReview = ref<number>()
@@ -101,8 +115,11 @@ const workspaceTitle = computed(() => workspaceCopy[currentWorkspace.value].titl
 const workspaceDescription = computed(() => workspaceCopy[currentWorkspace.value].description)
 
 onLoad((query) => {
-  if (query?.tab === 'overview' || query?.tab === 'reports' || query?.tab === 'problems' || query?.tab === 'pbl') {
-    currentWorkspace.value = query.tab
+  const tab = query?.tab
+  if (tab === 'overview' || tab === 'reports' || tab === 'problems' || tab === 'pbl') {
+    const workspace: TeacherWorkspace = tab
+    currentWorkspace.value = workspace
+    openedWorkspaces.value[workspace] = true
   }
 })
 
@@ -110,14 +127,22 @@ onShow(async () => {
   if (!requireRole('teacher')) return
   isReviewer.value = getSession()?.permissions?.includes('medical_review') || false
   await nextTick()
-  if (currentWorkspace.value === 'overview') void refreshOverview()
-  else if (currentWorkspace.value === 'reports') void reportList.value?.refresh()
-  else if (currentWorkspace.value === 'problems') void problemList.value?.refresh()
+  void refreshWorkspace(currentWorkspace.value)
 })
 
 function switchWorkspace(workspace: TeacherWorkspace) {
   if (workspace === currentWorkspace.value) return
-  goReplace(ROUTES.teacherWorkspace, { tab: workspace })
+  openedWorkspaces.value[workspace] = true
+  currentWorkspace.value = workspace
+  void refreshWorkspace(workspace)
+}
+
+async function refreshWorkspace(workspace: TeacherWorkspace) {
+  await nextTick()
+  if (workspace === 'overview') return refreshOverview()
+  if (workspace === 'reports') return reportList.value?.refresh()
+  if (workspace === 'problems') return problemList.value?.refresh()
+  return pblQueue.value?.refresh()
 }
 
 async function refreshOverview() {

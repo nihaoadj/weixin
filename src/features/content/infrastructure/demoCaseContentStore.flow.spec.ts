@@ -34,7 +34,7 @@ const user = (openid: string, role: 'teacher' | 'student', permissions?: string[
 describe('Demo guided case state machine', () => {
   it('requires review, preserves author isolation and supports clone', () => {
     user('flow-author', 'teacher')
-    expect(demoDraft('急性胸痛').title).toContain('急性胸痛')
+    expect(demoDraft('炎症').title).toContain('炎症')
     const saved = demoSaveCaseDraft(demoDraftTitle('自定义病例', true))
     expect(saved.medicalReviewStatus).toBe('not_submitted')
     expect(demoAuthoring(saved.id)).toBeTruthy()
@@ -71,14 +71,14 @@ describe('Demo guided case state machine', () => {
     user('flow-student', 'student')
     const problems = demoCaseProblems()
     expect(problems.map((item) => item.id)).toEqual(
-      expect.arrayContaining(['cap-undergraduate-showcase', ...Object.keys(additionalShowcaseDrafts)]),
+      expect.arrayContaining(['pathology.cell-injury-showcase', ...Object.keys(additionalShowcaseDrafts)]),
     )
-    const attempt = demoStart('acute-chest-pain-undergraduate-showcase')
+    const attempt = demoStart('pathology.inflammation-showcase')
     expect(attempt.problemVersion).toBe(1)
-    expect(attempt.opening.chiefComplaint).toContain('胸痛')
-    const first = demoMessage(attempt.id, '请问心电图结果')
-    expect(first.messages.at(-1)?.content).toContain('缺血性')
-    const second = demoMessage(attempt.id, '再问一次心电图')
+    expect(attempt.opening.chiefComplaint).toContain('证据')
+    const first = demoMessage(attempt.id, '请问形态观察')
+    expect(first.messages.at(-1)?.content).toContain('血流')
+    const second = demoMessage(attempt.id, '再问一次形态')
     expect(second.messages.at(-1)?.content).toContain('具体了解')
     demoMessage(attempt.id, '还有什么情况？')
     for (const stage of [
@@ -91,7 +91,7 @@ describe('Demo guided case state machine', () => {
           { diagnosis: '肺栓塞', supportingEvidence: [], opposingEvidence: [] },
         ],
       },
-      { stageId: 'tests', items: [{ testName: '心电图', rationale: '证据', priority: 'necessary' }] },
+      { stageId: 'tests', items: [{ testName: '形态', rationale: '证据', priority: 'necessary' }] },
       { stageId: 'management', items: [{ action: '监护', rationale: '安全' }], safetyConsiderations: ['复评'] },
     ] as never[]) {
       demoSubmit(attempt.id, stage as never)
@@ -103,8 +103,8 @@ describe('Demo guided case state machine', () => {
 
   it('rejects unauthorised and invalid state transitions', () => {
     user('flow-student', 'student')
-    expect(demoAuthoring('cap-undergraduate-showcase')).toBeUndefined()
-    expect(() => demoCloneCase('cap-undergraduate-showcase')).toThrow('只有教师')
+    expect(demoAuthoring('pathology.cell-injury-showcase')).toBeUndefined()
+    expect(() => demoCloneCase('pathology.cell-injury-showcase')).toThrow('只有教师')
     expect(() => demoStart('missing-case')).toThrow('病例不存在')
     expect(demoFind('missing-attempt')).toBeUndefined()
     expect(() => demoMessage('missing-attempt', '问题')).toThrow('病史阶段')

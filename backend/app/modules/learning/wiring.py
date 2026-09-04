@@ -20,3 +20,9 @@ def learning_application(session: Session, *, case_attempts: CaseAttemptPort) ->
 
 def knowledge_review_application(session: Session) -> KnowledgeReviewApplication:
     return KnowledgeReviewApplication(SqlAlchemyReviewRepository(session), SqlAlchemyUnitOfWork(session))
+
+
+def pbl_learning_port(session: Session):
+    from app.modules.learning.infrastructure.pbl_interventions import PblLearningStore
+
+    return PblLearningStore(session)

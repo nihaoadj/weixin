@@ -10,7 +10,7 @@ describe('teacher workspace navigation', () => {
       global: { stubs: { MedIcon: true } },
     })
     expect(wrapper.attributes('aria-label')).toBe('教师主导航')
-    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['工作台', '报告', '问题'])
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['工作台', '报告', '问题', 'PBL'])
     expect(wrapper.findAll('[aria-current="page"]')).toHaveLength(1)
     expect(wrapper.get('[aria-current="page"]').text()).toBe('报告')
     await wrapper.findAll('button')[2].trigger('click')

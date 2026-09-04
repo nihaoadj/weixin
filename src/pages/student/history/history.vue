@@ -91,7 +91,7 @@
     >
       加载更多
     </button>
-    <view class="nav-shell"><StudentNav active="history" /></view>
+    <StudentPrimaryNav active="history" />
   </view>
 </template>
 
@@ -99,7 +99,7 @@
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import StudentNav from '@/components/ui/StudentNav.vue'
+import StudentPrimaryNav from '@/components/ui/StudentPrimaryNav.vue'
 import { requireRole } from '@/features/identity/public'
 import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
 import { getConversationSummariesAsync } from '@/features/qa/public'
@@ -302,25 +302,5 @@ function openReport(conversationId: string) {
   color: var(--med-brand);
   background: transparent;
   font-size: 24rpx;
-}
-.nav-shell {
-  position: fixed;
-  right: 24rpx;
-  bottom: calc(18rpx + env(safe-area-inset-bottom));
-  left: 24rpx;
-  padding: 8rpx;
-  background: #fff;
-  border: 1rpx solid var(--med-border);
-  border-radius: 24rpx;
-  box-shadow: 0 14rpx 40rpx rgba(11, 34, 57, 0.12);
-}
-@media screen and (min-width: 900px) {
-  .nav-shell {
-    right: auto;
-    left: 50%;
-    width: calc(1080px - 48rpx);
-    max-width: calc(100% - 48rpx);
-    transform: translateX(-50%);
-  }
 }
 </style>

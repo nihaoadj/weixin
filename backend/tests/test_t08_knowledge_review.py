@@ -78,18 +78,17 @@ class Repository:
 NOW = datetime(2026, 8, 31, tzinfo=UTC)
 
 
-def test_versioned_internal_medicine_catalog_covers_six_systems_with_objective_cards() -> None:
-    assert len(POINTS) == 24
+def test_versioned_pathology_catalog_has_five_topics_and_thirty_points() -> None:
+    assert len(POINTS) == 30 and len(CARDS) == 60
     assert {point.system for point in POINTS} == {
-        "respiratory",
-        "cardio",
-        "digestive",
-        "renal",
-        "hematology",
-        "endocrine",
+        "pathology.cell-injury",
+        "pathology.inflammation",
+        "pathology.repair",
+        "pathology.circulatory",
+        "pathology.neoplasm",
     }
-    assert all(sum(point.system == system for point in POINTS) >= 4 for system in {point.system for point in POINTS})
-    assert {card.point_code for card in CARDS} >= {point.code for point in POINTS}
+    assert all(sum(point.system == system for point in POINTS) == 6 for system in {point.system for point in POINTS})
+    assert {card.point_code for card in CARDS} == {point.code for point in POINTS}
 
 
 def _student_token(client) -> str:
@@ -115,14 +114,14 @@ def test_exit_quiz_never_exposes_answers_and_wrong_answer_creates_review_evidenc
     uow = Uow()
     service = KnowledgeReviewApplication(repository, uow)
 
-    quiz = service.exit_quiz(ACTOR, ("respiratory.cap",))
-    assert len(quiz) == 1
-    assert not hasattr(quiz[0], "correct_option") and "生命体征和血氧情况" in quiz[0].options
+    quiz = service.exit_quiz(ACTOR, ("pathology.cell-injury.reversible",))
+    assert len(quiz) == 2
+    assert not hasattr(quiz[0], "correct_option") and len(quiz[0].options) == 4
 
     result = service.grade(ACTOR, quiz[0].card_code, 0, "high")
     assert result.correct is False and result.rating == "again"
     assert repository.state is not None and repository.state.interval_days == 1
-    assert repository.items[0].point_code == "respiratory.cap"
+    assert repository.items[0].point_code == "pathology.cell-injury.reversible"
     assert uow.commits == 1
 
 
@@ -140,19 +139,21 @@ def test_knowledge_map_uses_student_review_evidence_not_catalog_browsing() -> No
     repository = Repository()
     service = KnowledgeReviewApplication(repository, Uow())
     initial = {item.code: item.status for item in service.knowledge_map(ACTOR)}
-    assert initial["respiratory.cap"] == "not_started"
+    assert initial["pathology.cell-injury.reversible"] == "not_started"
 
-    service.capture(ACTOR, "respiratory.cap", "assistant_message", "message-1", "")
+    service.capture(ACTOR, "pathology.cell-injury.reversible", "assistant_message", "message-1", "")
     captured = {item.code: item.status for item in service.knowledge_map(ACTOR)}
-    assert captured["respiratory.cap"] == "weak"
+    assert captured["pathology.cell-injury.reversible"] == "weak"
 
 
 def test_review_http_contract_hides_answer_until_grade(client) -> None:
     headers = {"Authorization": f"Bearer {_student_token(client)}"}
-    response = client.post("/learning/exit-quiz", headers=headers, json={"topic_codes": ["respiratory.cap"]})
+    response = client.post(
+        "/learning/exit-quiz", headers=headers, json={"topic_codes": ["pathology.cell-injury.reversible"]}
+    )
     assert response.status_code == 200
     card = response.json()["cards"][0]
-    assert card["point_code"] == "respiratory.cap"
+    assert card["point_code"] == "pathology.cell-injury.reversible"
     assert "correct_option" not in card and "explanation" not in card
 
     graded = client.post(
@@ -164,7 +165,7 @@ def test_review_http_contract_hides_answer_until_grade(client) -> None:
     assert graded.json()["correct"] is False and graded.json()["rating"] == "again"
     dashboard = client.get("/learning/review-dashboard", headers=headers)
     assert dashboard.status_code == 200
-    assert dashboard.json()["weak_point_codes"] == ["respiratory.cap"]
+    assert dashboard.json()["weak_point_codes"] == ["pathology.cell-injury.reversible"]
 
 
 def test_conversation_learning_context_is_persisted_and_catalog_validated(client) -> None:
@@ -175,21 +176,21 @@ def test_conversation_learning_context_is_persisted_and_catalog_validated(client
         json={
             "client_id": "t08-context",
             "messages": [{"role": "user", "content": "解释肺炎的学习重点"}],
-            "topic_codes": ["respiratory.cap"],
+            "topic_codes": ["pathology.cell-injury.reversible"],
         },
     )
     assert created.status_code == 200
-    assert created.json()["topic_codes"] == ["respiratory.cap"]
+    assert created.json()["topic_codes"] == ["pathology.cell-injury.reversible"]
     reloaded = client.get("/conversations/by-client/t08-context", headers=headers)
-    assert reloaded.status_code == 200 and reloaded.json()["topic_codes"] == ["respiratory.cap"]
+    assert reloaded.status_code == 200 and reloaded.json()["topic_codes"] == ["pathology.cell-injury.reversible"]
     context = client.get(f"/conversations/{created.json()['id']}/learning-context", headers=headers)
-    assert context.status_code == 200 and context.json()["topic_codes"] == ["respiratory.cap"]
+    assert context.status_code == 200 and context.json()["topic_codes"] == ["pathology.cell-injury.reversible"]
     changed = client.put(
         f"/conversations/{created.json()['id']}/learning-context",
         headers=headers,
-        json={"topic_codes": ["cardio.acs"]},
+        json={"topic_codes": ["pathology.inflammation.vascular"]},
     )
-    assert changed.status_code == 200 and changed.json()["topic_codes"] == ["cardio.acs"]
+    assert changed.status_code == 200 and changed.json()["topic_codes"] == ["pathology.inflammation.vascular"]
     preserved = client.get("/conversations/by-client/t08-context", headers=headers)
     assert preserved.status_code == 200 and len(preserved.json()["messages"]) == 1
 
@@ -203,7 +204,10 @@ def test_conversation_learning_context_is_persisted_and_catalog_validated(client
 
 def test_conversation_summaries_filter_by_confirmed_topic_without_breaking_pagination(client) -> None:
     headers = {"Authorization": f"Bearer {_student_token(client)}"}
-    for client_id, topic_code in (("t08-history-cap", "respiratory.cap"), ("t08-history-acs", "cardio.acs")):
+    for client_id, topic_code in (
+        ("t08-history-cap", "pathology.cell-injury.reversible"),
+        ("t08-history-acs", "pathology.inflammation.vascular"),
+    ):
         created = client.post(
             "/conversations",
             headers=headers,
@@ -216,18 +220,19 @@ def test_conversation_summaries_filter_by_confirmed_topic_without_breaking_pagin
         assert created.status_code == 200
 
     page = client.get(
-        "/conversations/summaries?limit=20&offset=0&knowledge_point_code=respiratory.cap", headers=headers
+        "/conversations/summaries?limit=20&offset=0&knowledge_point_code=pathology.cell-injury.reversible",
+        headers=headers,
     )
     assert page.status_code == 200
     assert page.json()["total"] == 1
     assert page.json()["items"][0]["client_id"] == "t08-history-cap"
-    assert page.json()["items"][0]["topic_codes"] == ["respiratory.cap"]
+    assert page.json()["items"][0]["topic_codes"] == ["pathology.cell-injury.reversible"]
 
 
 def test_teacher_contribution_requires_medical_approval_before_student_visibility(client) -> None:
     teacher_headers = {"Authorization": f"Bearer {_teacher_token(client, 't08-card-author')}"}
     payload = {
-        "point_code": "respiratory.cap",
+        "point_code": "pathology.cell-injury.reversible",
         "card_type": "single_choice",
         "prompt": "课堂补充题：哪项是教学情境中的优先公开评估线索？",
         "options": ["生命体征", "爱好"],
@@ -241,7 +246,7 @@ def test_teacher_contribution_requires_medical_approval_before_student_visibilit
     assert client.post(f"/knowledge/teacher/cards/{card_id}/submit", headers=teacher_headers).status_code == 200
 
     student_headers = {"Authorization": f"Bearer {_student_token(client)}"}
-    before = client.get("/knowledge/cards?point_code=respiratory.cap", headers=student_headers)
+    before = client.get("/knowledge/cards?point_code=pathology.cell-injury.reversible", headers=student_headers)
     assert before.status_code == 200 and before.json() == []
 
     reviewer_headers = {"Authorization": f"Bearer {_teacher_token(client, 'demo_reviewer')}"}
@@ -254,10 +259,12 @@ def test_teacher_contribution_requires_medical_approval_before_student_visibilit
     )
     assert approved.status_code == 200 and approved.json()["status"] == "approved"
 
-    visible = client.get("/knowledge/cards?point_code=respiratory.cap", headers=student_headers)
+    visible = client.get("/knowledge/cards?point_code=pathology.cell-injury.reversible", headers=student_headers)
     assert visible.status_code == 200
     assert visible.json()[0]["correct_option"] is None and visible.json()[0]["explanation"] == ""
-    quiz = client.post("/learning/exit-quiz", headers=student_headers, json={"topic_codes": ["respiratory.cap"]})
+    quiz = client.post(
+        "/learning/exit-quiz", headers=student_headers, json={"topic_codes": ["pathology.cell-injury.reversible"]}
+    )
     assert quiz.status_code == 200
     teacher_card = next(item for item in quiz.json()["cards"] if item["card_code"] == f"teacher-choice:{card_id}")
     assert "correct_option" not in teacher_card and "explanation" not in teacher_card
@@ -282,10 +289,12 @@ def test_problem_knowledge_binding_is_public_but_rejects_unknown_catalog_codes(c
         "type": "讨论题",
         "title": "肺炎知识点绑定题",
         "description": "从病例线索组织学习性解释。",
-        "knowledge_point_codes": ["respiratory.cap"],
+        "knowledge_point_codes": ["pathology.cell-injury.reversible"],
     }
     created = client.post("/problems", headers=headers, json=payload)
-    assert created.status_code == 200 and created.json()["knowledge_point_codes"] == ["respiratory.cap"]
+    assert created.status_code == 200 and created.json()["knowledge_point_codes"] == [
+        "pathology.cell-injury.reversible"
+    ]
     invalid = client.post(
         "/problems",
         headers=headers,
@@ -322,14 +331,14 @@ def test_teacher_review_topics_are_catalog_validated_and_create_student_review_i
         json={
             "teacher_score": 68,
             "teacher_feedback": "请复习并重组支持肺炎诊断的线索。",
-            "review_topic_codes": ["respiratory.cap"],
+            "review_topic_codes": ["pathology.cell-injury.reversible"],
         },
     )
     assert reviewed.status_code == 200
-    assert reviewed.json()["review_topic_codes"] == ["respiratory.cap"]
+    assert reviewed.json()["review_topic_codes"] == ["pathology.cell-injury.reversible"]
     dashboard = client.get("/learning/review-dashboard", headers=student_headers)
     assert dashboard.status_code == 200
-    assert dashboard.json()["weak_point_codes"] == ["respiratory.cap"]
+    assert dashboard.json()["weak_point_codes"] == ["pathology.cell-injury.reversible"]
 
     invalid = client.post(
         f"/reports/{report_id}/review",
@@ -359,7 +368,7 @@ def test_approved_recall_card_reveals_then_self_rates_without_objective_answer(c
         "/knowledge/teacher/cards",
         headers=teacher_headers,
         json={
-            "point_code": "respiratory.cap",
+            "point_code": "pathology.cell-injury.reversible",
             "card_type": "recall",
             "prompt": "不看资料，概述肺炎教学病例中的优先评估线索。",
             "options": [],
@@ -375,11 +384,14 @@ def test_approved_recall_card_reveals_then_self_rates_without_objective_answer(c
     assert client.post(f"/learning/recall-cards/{card_id}/reveal", headers=student_headers).status_code == 404
 
     reviewer_headers = {"Authorization": f"Bearer {_teacher_token(client, 'demo_reviewer')}"}
-    assert client.post(
-        f"/knowledge/teacher/cards/{card_id}/review",
-        headers=reviewer_headers,
-        json={"decision": "approved", "comment": "可用于主动回忆"},
-    ).status_code == 200
+    assert (
+        client.post(
+            f"/knowledge/teacher/cards/{card_id}/review",
+            headers=reviewer_headers,
+            json={"decision": "approved", "comment": "可用于主动回忆"},
+        ).status_code
+        == 200
+    )
     revealed = client.post(f"/learning/recall-cards/{card_id}/reveal", headers=student_headers)
     assert revealed.status_code == 200
     assert revealed.json()["explanation"] and "correct_option" not in revealed.json()

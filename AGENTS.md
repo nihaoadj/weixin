@@ -7,14 +7,27 @@
 - 总体规则、任务阶段与交付格式：[docs/update_plan/README.md](docs/update_plan/README.md)。该目录是计划和证据索引，不是当前实现的替代说明。
 - 当前架构和目录边界：[docs/architecture.md](docs/architecture.md)。
 - 数据访问、API/Demo、契约、缓存和错误边界：[docs/data-layer.md](docs/data-layer.md)。
-- 开发命令与现有说明：[docs/development.md](docs/development.md)。其中与测试安全、路径或命令有关的旧说明须以本文件的“当前安全前置条件”和 T01/T02 后续事实更新为准。
-- 数据库及迁移限制：[docs/database.md](docs/database.md)。
-- 权限、敏感数据、AI 与凭据处置：[docs/security.md](docs/security.md)。
-- 环境和发布条件：[docs/deployment.md](docs/deployment.md)。
+- 开发命令与现有说明：[docs/operations/development.md](docs/operations/development.md)。其中与测试安全、路径或命令有关的旧说明须以本文件的“当前安全前置条件”和 T01/T02 后续事实更新为准。
+- 数据库及迁移限制：[docs/backend/database.md](docs/backend/database.md)。
+- 权限、敏感数据、AI 与凭据处置：[docs/governance/security.md](docs/governance/security.md)。
+- 环境和发布条件：[docs/operations/deployment.md](docs/operations/deployment.md)。
 - 重大数据层取舍：[docs/adr/0001-data-layer-contracts.md](docs/adr/0001-data-layer-contracts.md)。
 - 病理学 PBL 教学助手的最低产品要求、接口/数据目标与当前差距：[docs/update_plan/09-pathology-pbl-teaching-assistant/README.md](docs/update_plan/09-pathology-pbl-teaching-assistant/README.md)。
 
 改动涉及的领域要先阅读对应权威文档，而不是一次复制整套文档。目录内新增局部 `AGENTS.md` 仅能补充确有差异的规则，不能放宽本文件。
+
+## 每次更新的强制步骤
+
+所有功能、修复、重构、依赖、迁移、契约或工程规则更新都必须按以下顺序执行；不得先改运行时代码再补计划：
+
+1. **核查当前事实**：阅读本文件和相关权威文档，执行只读 `git status`，记录当前分支、既有未提交改动、公开接口、API/Demo、权限、数据、迁移、AI 和生成物影响。
+2. **建立 UpdatePlan**：在 `docs/update_plan/` 下按 `NN-short-name/` 新建或更新本次更新的独立目录；至少写明当前事实、目标与非目标、接口/数据/模块设计、实施顺序、测试验收、外部阻塞和回退。大型更新还须提供 `deliveries/template.md`。
+3. **计划门禁**：对 UpdatePlan 执行格式、相对链接、尾随空白及工程 skill self-check。计划必须区分“已核实事实”和“待实现目标”，且足以让执行者无需自行补产品或架构决策。
+4. **按计划实施**：只有计划门禁通过后才能修改运行时代码；按文档顺序逐项实施，保持模块公开边界、API/Demo 隔离、生成契约流程、权限与敏感数据约束。发现会改变既定范围的新事实时，先修订 UpdatePlan 再继续。
+5. **分阶段验证**：每完成一个阶段，运行与风险匹配的最小检查；API/schema、模型/迁移、AI、身份或跨模块改动必须执行对应的契约、数据库安全、迁移、权限和边界测试。不得以跳过或降级门禁伪造通过。
+6. **交付与提交**：在 UpdatePlan 的 `deliveries/` 中记录命令、时间、退出码、未执行项、风险和回退。提交前检查暂存范围、秘密和生成物；只有用户明确授权才可提交或推送。提交不能把“仓库内完成”误写为“真实外部服务或生产已验证”。
+
+如果更新前已经存在未按本流程实施的代码，只能先创建补充 UpdatePlan 和当前差距审计，再继续修改；补写计划不能倒推为先前实现已通过门禁。
 
 ## 当前已核实的边界
 
@@ -55,6 +68,6 @@
 
 ## 交付自检
 
-交付说明应至少列出：范围和已有改动保护情况、公开接口/合同及 API-Demo 影响、数据或迁移影响、已执行命令及退出码、未执行项与原因、安全/权限检查、回退方式。涉及计划任务时，将证据写入 `docs/update_plan/deliveries/Txx.md`，并明确“当前事实”“待实现目标”“仓库内证据”和“外部阻塞”。
+交付说明应至少列出：范围和已有改动保护情况、公开接口/合同及 API-Demo 影响、数据或迁移影响、已执行命令及退出码、未执行项与原因、安全/权限检查、回退方式。涉及计划任务时，将证据写入对应计划目录的 `deliveries/Txx.md`；T01–T07 的共享阶段证据位于 `docs/update_plan/01-07-engineering-governance/deliveries/`，并明确“当前事实”“待实现目标”“仓库内证据”和“外部阻塞”。
 
 本文件不创建全局设置、不替代 CI，也不自动批准外部操作。

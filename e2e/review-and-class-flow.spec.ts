@@ -35,7 +35,7 @@ async function loginAsReviewer(page: import('@playwright/test').Page) {
 test('teacher manages a class and completes the guided-case review flow', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'The workflow runs once in the mobile project.')
 
-  const title = '急性胸痛：危险分层与证据推理'
+  const title = '细胞损伤：肾小管上皮的两种结局'
 
   await page.goto('/')
   await page.locator('.role-button.teacher').click()
@@ -58,7 +58,7 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await page.locator('.teacher-nav__item').filter({ hasText: '问题' }).click()
   await page.getByText('生成病例', { exact: true }).click()
   await expect(page.getByText('病例五步编排器')).toBeVisible()
-  await page.locator('input').first().fill('急性胸痛')
+  await page.locator('input').first().fill('细胞损伤与适应')
   await page.getByText('生成病例草稿', { exact: true }).click()
   await expect(page.locator('input').first()).toHaveValue(title)
   for (let step = 0; step < 4; step += 1) {

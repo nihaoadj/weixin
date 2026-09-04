@@ -24,7 +24,9 @@ export interface LearningTask {
 export interface LearningPlan {
   id: number
   status: 'active' | 'completed' | 'superseded'
-  sourceAssessmentId: number
+  sourceAssessmentId: number | null
+  sourceType: 'case_assessment' | 'pbl_suggestion'
+  sourceId: number | null
   targetDimensionIds: string[]
   dueAt: string
   generationMode: string

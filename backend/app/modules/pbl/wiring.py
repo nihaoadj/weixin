@@ -1,9 +1,15 @@
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.modules.classroom.wiring import classroom_scope_port
+from app.modules.content.wiring import question_publication_port
+from app.modules.learning.wiring import pbl_learning_port
 from app.modules.pbl.application.records import InferenceRequest, InferenceResult
 from app.modules.pbl.application.use_cases import PblApplication
+from app.modules.pbl.infrastructure.checked_gateway import CheckedGateway
 from app.modules.pbl.infrastructure.providers import CozeBotGateway, CozeWorkflowGateway, OpenAICompatibleGateway
+from app.modules.pbl.infrastructure.providers.coze_client import build_coze_client
+from app.modules.pbl.infrastructure.repositories import SqlAlchemyPblRepository
 
 
 class DisabledGateway:
@@ -11,8 +17,61 @@ class DisabledGateway:
         return InferenceResult("PBL 教学助手当前未启用。", "unavailable", failure_reason="disabled")
 
 
+class LocalMockGateway:
+    """Deterministic test-only provider used by the API-mode local E2E suite."""
+
+    def infer(self, request: InferenceRequest) -> InferenceResult:
+        if not request.history:
+            return InferenceResult(
+                "请先说明你认为红肿形成的直接病理基础。",
+                "probing",
+                follow_up_question="血管通透性和血流变化分别会造成什么表现？",
+                provider_metadata={"provider": "local_mock", "mode": "test"},
+            )
+        return InferenceResult(
+            "你已经开始联系血管反应与炎症表现，但还需要区分不同机制。",
+            "ready",
+            knowledge_gaps=(
+                {
+                    "id": "gap-1",
+                    "point_code": request.goal_point_codes[0]
+                    if request.goal_point_codes
+                    else "pathology.inflammation.vascular",
+                    "summary": "机制解释需要补充",
+                    "confidence": "medium",
+                    "evidence_message_ids": [request.message_id],
+                    "evidence_summary": "学生的第二次解释尚未区分相关机制。",
+                },
+            ),
+            reasoning_issues=(
+                {
+                    "id": "reason-1",
+                    "dimension_id": "evidence_reasoning",
+                    "issue_type": "missing_evidence",
+                    "summary": "结论与组织学依据连接不足",
+                    "evidence_message_ids": [request.message_id],
+                    "evidence_summary": "解释未明确指出支持结论的形态证据。",
+                    "improvement": "先列出观察，再说明推断。",
+                },
+            ),
+            recommended_questions=(
+                {
+                    "title": "炎症早期的血管反应",
+                    "prompt": "请用血流变化和通透性变化解释红、肿、热。",
+                    "objective": "区分观察与推断",
+                    "linked_findings": ["gap-1", "reason-1"],
+                },
+            ),
+            provider_metadata={"provider": "local_mock", "mode": "test"},
+        )
+
+
 def _gateway():
     s = get_settings()
+    if s.pbl_mock_enabled:
+        if s.app_env.strip().lower() != "test":
+            raise RuntimeError("PBL 本地 Mock 仅允许测试环境")
+        return LocalMockGateway(), "local_mock", "test"
     if not s.pbl_ai_enabled:
         return DisabledGateway(), "disabled", None
     if s.pbl_ai_provider not in {"coze", "openai_compatible"}:
@@ -35,17 +94,22 @@ def _gateway():
         )
     if not s.coze_api_token or s.coze_invocation_mode not in {"bot", "workflow"}:
         raise RuntimeError("Coze PBL 配置不完整")
-    from cozepy import Coze, TokenAuth
-
-    client = Coze(auth=TokenAuth(token=s.coze_api_token), base_url=s.coze_api_base or None)
+    client = build_coze_client(s.coze_api_token, s.coze_api_base)
     if s.coze_invocation_mode == "bot":
         if not s.coze_bot_id:
             raise RuntimeError("COZE_BOT_ID 必填")
         return CozeBotGateway(client, s.coze_bot_id, s.pbl_ai_prompt_version), "coze", "bot"
-    if not s.coze_workflow_id or not (s.coze_app_id or s.coze_bot_id):
+    resource_ids = [item for item in (s.coze_app_id, s.coze_bot_id) if item]
+    if not s.coze_workflow_id or len(resource_ids) != 1:
         raise RuntimeError("Workflow 资源配置不完整")
     return (
-        CozeWorkflowGateway(client, s.coze_workflow_id, s.coze_bot_id or s.coze_app_id, s.pbl_ai_prompt_version),
+        CozeWorkflowGateway(
+            client,
+            s.coze_workflow_id,
+            resource_ids[0],
+            "app" if s.coze_app_id else "bot",
+            s.pbl_ai_prompt_version,
+        ),
         "coze",
         "workflow",
     )
@@ -53,4 +117,13 @@ def _gateway():
 
 def pbl_application(session: Session) -> PblApplication:
     gateway, provider, mode = _gateway()
-    return PblApplication(session, gateway, provider, mode)
+    return PblApplication(
+        SqlAlchemyPblRepository(session),
+        session,
+        CheckedGateway(gateway),
+        classroom_scope_port(session),
+        question_publication_port(session),
+        provider,
+        mode,
+        pbl_learning_port(session),
+    )

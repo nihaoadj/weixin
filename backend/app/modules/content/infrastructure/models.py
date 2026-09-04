@@ -77,6 +77,7 @@ class KnowledgeCardContribution(Base):
     __tablename__ = "knowledge_card_contributions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    catalog_card_code: Mapped[str | None] = mapped_column(String(160), nullable=True, unique=True)
     point_code: Mapped[str] = mapped_column(String(120), index=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     class_code: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)

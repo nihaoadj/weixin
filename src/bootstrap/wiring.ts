@@ -82,7 +82,7 @@ export function getApplicationServices(): ApplicationServices {
   const learning: LearningRepository = mode === 'api' ? apiLearningRepository : demoLearningRepository
   const classroom: ClassroomRepository = mode === 'api' ? apiClassroomRepository : demoClassroomRepository
   const analytics: AnalyticsRepository = mode === 'api' ? apiAnalyticsRepository : demoAnalyticsRepository
-  const pbl: PblRepository = mode === 'api' ? new ApiPblRepository() : new DemoPblRepository()
+  const pbl: PblRepository = mode === 'api' ? new ApiPblRepository() : new DemoPblRepository(content)
 
   services = {
     mode,

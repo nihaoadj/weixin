@@ -70,7 +70,7 @@ describe('Demo case adapter', () => {
       avatarUrl: '',
       createdAt: new Date(0).toISOString(),
     })
-    const attempt = await startCaseAttemptAsync('cap-undergraduate-showcase')
+    const attempt = await startCaseAttemptAsync('pathology.cell-injury-showcase')
     expect(await getCaseAttemptAsync(attempt.id)).toBeTruthy()
     await sendPatientMessageAsync(attempt.id, '发热多久')
     await submitCaseStageAsync(attempt.id, { stageId: 'history', summary: '发热', keyFindings: ['发热'] })
@@ -105,11 +105,11 @@ describe('Demo case adapter', () => {
       avatarUrl: '',
       createdAt: new Date(0).toISOString(),
     })
-    const attempt = await startCaseAttemptAsync('acute-chest-pain-undergraduate-showcase')
+    const attempt = await startCaseAttemptAsync('pathology.inflammation-showcase')
     expect(attempt.problemVersion).toBe(1)
-    expect(attempt.opening.chiefComplaint).toContain('胸痛')
-    const response = await sendPatientMessageAsync(attempt.id, '请问心电图结果')
-    expect(response.content).toContain('缺血性')
+    expect(attempt.opening.chiefComplaint).toContain('证据')
+    const response = await sendPatientMessageAsync(attempt.id, '请问形态观察')
+    expect(response.content).toContain('血流')
     expect(response.content).not.toContain('黄色黏痰')
   })
 

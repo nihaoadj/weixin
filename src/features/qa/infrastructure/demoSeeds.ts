@@ -1,7 +1,7 @@
 import type { Conversation, Report, StudentQuestion } from '@/types/domain'
 
 const demoStudentId = 'demo_student'
-const demoConversationId = 'demo-conversation-001'
+const demoConversationId = 'pathology-demo-conversation-v2'
 const demoCreatedAt = '2026-08-28T10:00:00.000Z'
 
 export function createDemoConversations(): Conversation[] {
@@ -14,19 +14,19 @@ export function createDemoConversations(): Conversation[] {
         {
           id: 'demo-msg-1',
           role: 'user',
-          content: '患者发热、咳嗽和黄痰，为什么首先考虑社区获得性肺炎？',
+          content: '组织切片中出现细胞肿胀，怎样区分可逆损伤与坏死？',
           timestamp: '10:00',
         },
         {
           id: 'demo-msg-2',
           role: 'assistant',
-          content: '可从病程、痰液性质、肺部体征和影像学证据进行结构化分析。',
+          content: '先描述细胞形态与核的改变，再比较可逆损伤与坏死的证据。',
           timestamp: '10:01',
         },
         {
           id: 'demo-msg-3',
           role: 'user',
-          content: '还需要补充哪些危险因素和安全信息？',
+          content: '还需要观察哪些核变化才能支持坏死？',
           timestamp: '10:02',
         },
       ],
@@ -38,20 +38,20 @@ export function createDemoReports(): Report[] {
   const [conversation] = createDemoConversations()
   return [
     {
-      id: 'demo-report-001',
+      id: 'pathology-demo-report-v2',
       conversationId: conversation.conversationId,
       messages: conversation.messages,
       analysis: {
         score: 78,
-        summary: '已识别主要诊断方向，但危险因素和安全边界仍需补充。',
+        summary: '已描述细胞损伤的形态，仍需区分可逆变化与细胞死亡。',
         errors: [
           {
-            content: '危险因素追问不完整。',
-            suggestion: '补充既往史、过敏史和近期住院用药史。',
+            content: '核变化的证据不完整。',
+            suggestion: '补充核固缩、核碎裂与核溶解的观察。',
           },
         ],
-        strengths: ['能够结合症状和影像建立初步问题表征。'],
-        generalSuggestions: ['使用起病、伴随症状、危险因素和安全信息的固定提问顺序。'],
+        strengths: ['能够结合形态观察建立初步解释。'],
+        generalSuggestions: ['按观察、假设、证据比较和机制解释的顺序讨论。'],
       },
       createdAt: demoCreatedAt,
       studentId: demoStudentId,
@@ -61,23 +61,4 @@ export function createDemoReports(): Report[] {
   ]
 }
 
-export const builtInQuestions: StudentQuestion[] = [
-  { id: '1', title: '肺炎的典型症状有哪些？', type: '医学常识', time: '2026-03-08', status: '未回答' },
-  { id: '2', title: '高血压的诊断标准是什么？', type: '医学常识', time: '2026-03-07', status: '未回答' },
-  { id: '3', title: '糖尿病的并发症有哪些？', type: '医学常识', time: '2026-03-06', status: '未回答' },
-  {
-    id: '4',
-    title: '医生您好，我今年65岁，从2小时前开始胸口持续压榨样疼痛，我应该如何判断？',
-    type: '模拟诊疗',
-    time: '2026-03-05',
-    status: '未回答',
-  },
-  { id: '5', title: '分析急性阑尾炎的诊断思路和治疗方案', type: '病例分析', time: '2026-03-04', status: '未回答' },
-  {
-    id: '6',
-    title: '患者近期明显口渴、多尿并伴随体重下降，请进行模拟问诊。',
-    type: '模拟诊疗',
-    time: '2026-03-02',
-    status: '未回答',
-  },
-]
+export const builtInQuestions: StudentQuestion[] = []

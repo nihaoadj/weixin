@@ -8,11 +8,21 @@ from app.platform.database import Base
 
 class LearningPlan(Base):
     __tablename__ = "learning_plans"
-    __table_args__ = (UniqueConstraint("student_id", "source_assessment_id", name="uq_learning_plan_source"),)
+    __table_args__ = (UniqueConstraint("student_id", "source_type", "source_id", name="uq_learning_plan_source_v2"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    source_assessment_id: Mapped[int] = mapped_column(ForeignKey("case_assessments.id"), unique=True, index=True)
+    source_assessment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("case_assessments.id"), unique=True, index=True, nullable=True
+    )
+    source_type: Mapped[str] = mapped_column(String(30), default="case_assessment", server_default="case_assessment")
+    source_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_context: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
+    verification_status: Mapped[str] = mapped_column(String(30), default="not_ready", server_default="not_ready")
+    verification_note: Mapped[str] = mapped_column(Text, default="", server_default="")
+    verified_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", name="fk_learning_verifier"), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     status: Mapped[str] = mapped_column(String(20), default="active", index=True)
     target_dimension_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -60,6 +70,7 @@ class LearningTaskAttempt(Base):
     __tablename__ = "learning_task_attempts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_submission_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("learning_tasks.id", ondelete="CASCADE"), unique=True, index=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     status: Mapped[str] = mapped_column(String(20), default="in_progress", index=True)

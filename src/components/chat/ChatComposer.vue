@@ -57,7 +57,7 @@
           aria-label="医学学习问题"
           autocomplete="off"
           confirm-type="send"
-          placeholder="例如：如何区分不同类型的胸痛…"
+          placeholder="例如：如何区分坏死与凋亡…"
           :maxlength="2000"
           :disabled="loading"
           :cursor-spacing="24"

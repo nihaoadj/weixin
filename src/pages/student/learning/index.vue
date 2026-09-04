@@ -1,5 +1,6 @@
 <template>
   <view class="safe-page page">
+    <PblTaskList />
     <MedState
       v-if="loading"
       variant="loading"
@@ -233,7 +234,7 @@
         </button>
       </view>
       <view class="card section"
-        ><text class="section-title">临床病例训练</text><text class="muted">待完成病例</text
+        ><text class="section-title">病理病例训练</text><text class="muted">待完成病例</text
         ><button
           tabindex="0"
           role="button"
@@ -245,16 +246,17 @@
         </button></view
       >
     </template>
-    <view class="nav"><StudentNav active="learning" /></view>
+    <StudentPrimaryNav active="learning" />
   </view>
 </template>
 
 <script setup lang="ts">
+import PblTaskList from '@/components/student/PblTaskList.vue'
 import { activateButtonOnKey } from '@/components/ui/keyboard'
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import StudentNav from '@/components/ui/StudentNav.vue'
+import StudentPrimaryNav from '@/components/ui/StudentPrimaryNav.vue'
 import { requireRole } from '@/features/identity/public'
 import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
 import { getLearningNotifications, getLearningProfile, markLearningNotificationsRead } from '@/features/learning/public'

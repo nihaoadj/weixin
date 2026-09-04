@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -9,7 +10,7 @@ from app.modules.content.api.schemas import (
     KnowledgeCardReviewDecision,
 )
 from app.modules.content.application.records import KnowledgeCardContributionCommand
-from app.modules.content.domain.knowledge_catalog import point_view, tree_view
+from app.modules.content.domain.knowledge_catalog import CATALOG_VERSION, point_view, tree_view
 from app.modules.content.public import knowledge_card_contribution_view
 from app.modules.content.wiring import content_application
 from app.modules.identity.infrastructure.models import User
@@ -19,12 +20,35 @@ from app.shared.errors import AppError
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
 
-@router.get("/tree")
+class KnowledgePointRead(BaseModel):
+    code: str
+    system_code: str
+    system_label: str
+    topic: str
+    title: str
+    objective: str
+    reference: str
+    card_count: int
+    catalog_version: str
+    parent_code: str
+    description: str
+    prerequisite_codes: list[str]
+    related_codes: list[str]
+    relationship_note: str
+    case_slug: str
+
+
+class KnowledgeTreeRead(BaseModel):
+    catalog_version: str
+    items: list[KnowledgePointRead]
+
+
+@router.get("/tree", response_model=KnowledgeTreeRead)
 def knowledge_tree(_user: User = Depends(get_current_user)) -> dict[str, object]:
-    return {"catalog_version": "internal-medicine-v1", "items": tree_view()}
+    return {"catalog_version": CATALOG_VERSION, "items": tree_view()}
 
 
-@router.get("/points/{code}")
+@router.get("/points/{code}", response_model=KnowledgePointRead)
 def knowledge_point(code: str, _user: User = Depends(get_current_user)) -> dict[str, object]:
     point = point_view(code)
     if point is None:

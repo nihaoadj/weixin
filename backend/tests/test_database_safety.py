@@ -362,8 +362,8 @@ def test_e2e_launcher_seeds_api_data_and_matches_cors_origin() -> None:
             )
             with urlopen(problems_request, timeout=5) as response:  # noqa: S310 - loopback URL from child log
                 problems = json.loads(response.read())
-            assert len(problems) == 5
-            assert any(item["slug"] == "demo-pending-chest-pain" for item in problems)
+            assert len(problems) == 7
+            assert any(item["slug"] == "pathology-demo-pending-v2" for item in problems)
             assert resource_root.joinpath("app.sqlite3").exists()
         finally:
             stop_e2e_server(process, log_path, shutdown_path)

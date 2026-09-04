@@ -47,6 +47,7 @@ test('invalid summary DTO produces a retryable contract error, not an empty stat
   )
   await page.goto('/')
   await page.locator('.role-button.teacher').click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '报告' }).click()
   await expect(page.getByText('报告加载失败', { exact: true })).toBeVisible()
   await expect(page.getByText('服务响应不符合数据契约', { exact: true })).toBeVisible()
   await expect(page.getByText('还没有学生报告', { exact: true })).toHaveCount(0)

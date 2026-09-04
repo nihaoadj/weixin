@@ -9,6 +9,7 @@ def test_normalized_production_environment_disables_demo_and_seed() -> None:
     """SEC-07: whitespace/casing must not make production behave like development."""
     production = Settings(
         app_env=" Production ",
+        pbl_ai_provider="coze",
         enable_demo_auth=True,
         seed_showcase_case=True,
         jwt_secret="T06 local test fixture, never a deployable credential",

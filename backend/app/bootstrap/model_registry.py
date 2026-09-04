@@ -5,7 +5,12 @@ model is loaded without making domain/application code depend on the registry.
 """
 
 from app.modules.classroom.infrastructure.models import ClassMember, ClassRoom, MedicalReview
-from app.modules.content.infrastructure.models import KnowledgeCardContribution, Problem, ProblemKnowledgeLink, ProblemOrigin
+from app.modules.content.infrastructure.models import (
+    KnowledgeCardContribution,
+    Problem,
+    ProblemKnowledgeLink,
+    ProblemOrigin,
+)
 from app.modules.identity.infrastructure.models import User
 from app.modules.learning.infrastructure.models import (
     LearningPlan,
@@ -15,6 +20,13 @@ from app.modules.learning.infrastructure.models import (
     ReviewItem,
     ReviewState,
     StudentNotification,
+)
+from app.modules.pbl.infrastructure.models import (
+    PblDiagnosticSnapshot,
+    PblMessage,
+    PblParticipation,
+    PblQuestionSuggestion,
+    PblSession,
 )
 from app.modules.qa.infrastructure.models import (
     Conversation,
@@ -31,7 +43,6 @@ from app.modules.training.infrastructure.models import (
     CaseAttemptMessage,
     StageSubmission,
 )
-from app.modules.pbl.infrastructure.models import PblDiagnosticSnapshot, PblParticipation, PblQuestionSuggestion, PblSession
 
 __all__ = [
     "AICallLog",
@@ -52,6 +63,7 @@ __all__ = [
     "ProblemKnowledgeLink",
     "ProblemOrigin",
     "PblDiagnosticSnapshot",
+    "PblMessage",
     "PblParticipation",
     "PblQuestionSuggestion",
     "PblSession",

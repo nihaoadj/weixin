@@ -5,7 +5,10 @@
   "sharedRoots": ["src/shared", "src/types", "src/utils"],
   "allowedOtherPaths": ["src/main.ts"],
   "legacyRoots": ["src/services", "src/data", "src/config"],
-  "generatedPaths": ["src/data/contracts/openapi.generated.ts"],
+  "generatedPaths": [
+    "src/data/contracts/openapi.generated.ts",
+    "src/features/content/infrastructure/pathologyCatalog.generated.json"
+  ],
   "aliases": { "@/": "src/" },
   "frameworkModules": [
     "vue",

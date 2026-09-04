@@ -133,6 +133,7 @@ export const apiProblemSchema = z.object({
   medical_review_status: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).default('not_submitted'),
   opening: openingSchema.nullable().optional(),
   capability_tags: z.array(z.string()).optional().default([]),
+  knowledge_point_codes: z.array(z.string()).optional().default([]),
 })
 
 export const apiProblemListSchema = z.array(apiProblemSchema)

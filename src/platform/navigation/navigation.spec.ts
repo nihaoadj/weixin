@@ -32,7 +32,7 @@ describe('navigation semantics', () => {
   })
 
   it('maps each session role to one canonical home', () => {
-    expect(roleHome('student')).toBe(ROUTES.studentChat)
+    expect(roleHome('student')).toBe(ROUTES.studentPbl)
     expect(roleHome('teacher')).toBe(ROUTES.teacherWorkspace)
     expect(roleHome(null)).toBe(ROUTES.login)
   })
@@ -126,7 +126,7 @@ describe('navigation semantics', () => {
 
     vi.mocked(getCurrentPages).mockReturnValue([])
     backOrHome('student')
-    expect(uni.reLaunch).toHaveBeenCalledWith(expect.objectContaining({ url: ROUTES.studentChat }))
+    expect(uni.reLaunch).toHaveBeenCalledWith(expect.objectContaining({ url: ROUTES.studentPbl }))
   })
 
   it('falls back to the page-specific entry when history is missing or navigateBack fails', () => {

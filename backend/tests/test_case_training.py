@@ -35,15 +35,13 @@ def test_structured_case_training_keeps_hidden_fields_private() -> None:
     started = client.post(f"/problems/{case['id']}/attempts", headers=headers, json={})
     assert started.status_code == 200
     attempt_id = started.json()["id"]
-    patient = client.post(
-        f"/attempts/{attempt_id}/messages", headers=headers, json={"content": "发热多久，最高体温多少？"}
-    )
+    patient = client.post(f"/attempts/{attempt_id}/messages", headers=headers, json={"content": "请说明切片形态观察。"})
     assert patient.status_code == 200
-    assert "39.1" in patient.json()["content"]
+    assert authoring.json()["case_definition"]["facts"][1]["value"] in patient.json()["content"]
     assert "revealed_fact_ids" not in patient.json()
 
     submissions = [
-        ("history", {"stage_id": "history", "summary": "急性发热咳嗽3天", "key_findings": ["发热"]}),
+        ("history", {"stage_id": "history", "summary": "异型性与基底膜浸润的形态观察", "key_findings": ["异型性"]}),
         ("problem_representation", {"stage_id": "problem_representation", "summary": "48岁男性急性发热咳嗽，考虑肺炎"}),
         (
             "differential",
@@ -82,7 +80,7 @@ def test_structured_case_training_keeps_hidden_fields_private() -> None:
     assert len(report.json()["dimensions"]) == 6
     assert report.json()["fallback_used"] is True
     evidence = [snippet for dimension in report.json()["dimensions"] for snippet in dimension["evidence"]]
-    assert any("发热" in snippet or "氧合" in snippet for snippet in evidence)
+    assert any("异型性" in snippet or "基底膜" in snippet for snippet in evidence)
     assert all("命中" not in snippet for snippet in evidence)
     assert client.get(f"/attempts/{attempt_id}/assessment", headers=headers).status_code == 200
     assert client.post(f"/attempts/{attempt_id}/complete", headers=headers).status_code == 200

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from dataclasses import dataclass
+from typing import Protocol
 
 from app.modules.content.application.records import (
     CaseDraftResult,
@@ -17,43 +17,31 @@ from app.modules.content.domain.knowledge_catalog import (
     point_view,
     tree_view,
 )
-from app.modules.content.infrastructure.models import Problem, ProblemOrigin
 
 
-class QuestionPublicationPort:
-    """Stable content bridge for teacher-reviewed PBL open questions."""
+@dataclass(frozen=True, slots=True)
+class PublishQuestionCommand:
+    teacher_id: int
+    source_id: int
+    title: str
+    prompt: str
+    class_code: str
+    target_external_ids: tuple[str, ...] = ()
+    point_codes: tuple[str, ...] = ()
 
-    def __init__(self, session: Session) -> None:
-        self._session = session
 
-    def adopt_open_question(self, *, teacher_id: int, source_id: int, title: str, prompt: str, class_code: str) -> int:
-        existing = self._session.scalar(
-            select(ProblemOrigin).where(
-                ProblemOrigin.source_type == "pbl_suggestion", ProblemOrigin.source_id == source_id
-            )
-        )
-        if existing is not None:
-            return existing.problem_id
-        problem = Problem(
-            type="open_discussion",
-            title=title,
-            description=prompt,
-            target="class",
-            target_label=class_code,
-            target_ids=class_code,
-            status="published",
-            content_type="question",
-            specialty="pathology",
-            difficulty="basic",
-            estimated_minutes=10,
-            version=1,
-            author_id=teacher_id,
-        )
-        self._session.add(problem)
-        self._session.flush()
-        self._session.add(ProblemOrigin(problem_id=problem.id, source_type="pbl_suggestion", source_id=source_id))
-        self._session.flush()
-        return problem.id
+@dataclass(frozen=True, slots=True)
+class PublishedQuestionRecord:
+    problem_id: int
+
+
+class QuestionPublicationPort(Protocol):
+    def case_context(self, case_id: int, class_code: str, topic_code: str) -> dict[str, object]: ...
+    def task_resources(
+        self, case_id: int | None, point_codes: tuple[str, ...], dimensions: tuple[str, ...]
+    ) -> tuple[dict[str, object], ...]: ...
+
+    def adopt_open_question(self, command: PublishQuestionCommand) -> PublishedQuestionRecord: ...
 
 
 def knowledge_point_view(code: str) -> dict[str, object] | None:

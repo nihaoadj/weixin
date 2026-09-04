@@ -33,14 +33,15 @@ import MedIcon from '@/components/ui/MedIcon.vue'
 
 import { goPrimary, ROUTES, type StudentPrimaryRoute } from '@/platform/navigation'
 
-export type StudentTab = 'chat' | 'question' | 'learning' | 'history'
+export type StudentTab = 'chat' | 'question' | 'learning' | 'pbl' | 'history'
 
 defineProps<{ active: StudentTab }>()
 
 const items = [
-  { key: 'chat' as const, label: '助手', icon: 'chat' as const },
-  { key: 'question' as const, label: '病例', icon: 'book' as const },
-  { key: 'learning' as const, label: '学习', icon: 'report' as const },
+  { key: 'pbl' as const, label: '课堂', icon: 'report' as const },
+  { key: 'learning' as const, label: '任务', icon: 'report' as const },
+  { key: 'question' as const, label: '知识', icon: 'book' as const },
+  { key: 'chat' as const, label: '答疑', icon: 'chat' as const },
   { key: 'history' as const, label: '记录', icon: 'history' as const },
 ]
 
@@ -49,6 +50,7 @@ function open(key: StudentTab) {
     chat: ROUTES.studentChat,
     question: ROUTES.studentCases,
     learning: ROUTES.studentLearning,
+    pbl: ROUTES.studentPbl,
     history: ROUTES.studentHistory,
   }
   goPrimary(routes[key])

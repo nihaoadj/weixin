@@ -33,3 +33,6 @@ Thumbs.db
 
 # WeChat DevTools personal settings
 project.private.config.json
+
+# Local T11 execution evidence and consistent database backups.
+/output/t11/

@@ -7,6 +7,10 @@ export interface KnowledgePoint {
   objective: string
   reference: string
   cardCount: number
+  description?: string
+  prerequisiteCodes?: string[]
+  relatedCodes?: string[]
+  caseSlug?: string
   catalogVersion: string
 }
 

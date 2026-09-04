@@ -118,6 +118,8 @@ class SqlAlchemyLearningRepository(LearningRepository):
             student_id=plan.student_id,
             status=plan.status,
             source_assessment_id=plan.source_assessment_id,
+            source_type=plan.source_type,
+            source_id=plan.source_id,
             target_dimension_ids=tuple(plan.target_dimension_ids or []),
             due_at=plan.due_at,
             generation_mode=plan.generation_mode,
@@ -170,7 +172,11 @@ class SqlAlchemyLearningRepository(LearningRepository):
     def find_active_plan(self, student_id: int) -> LearningPlanRecord | None:
         plan = self._session.scalar(
             select(LearningPlan)
-            .where(LearningPlan.student_id == student_id, LearningPlan.status == "active")
+            .where(
+                LearningPlan.student_id == student_id,
+                LearningPlan.status == "active",
+                LearningPlan.source_type == "case_assessment",
+            )
             .order_by(LearningPlan.id.desc())
             .options(selectinload(LearningPlan.tasks).selectinload(LearningTask.attempt))
         )
@@ -277,7 +283,11 @@ class SqlAlchemyLearningRepository(LearningRepository):
     def create_plan(self, draft: LearningPlanDraft) -> LearningPlanRecord:
         now = datetime.now(UTC)
         old = self._session.scalar(
-            select(LearningPlan).where(LearningPlan.student_id == draft.student_id, LearningPlan.status == "active")
+            select(LearningPlan).where(
+                LearningPlan.student_id == draft.student_id,
+                LearningPlan.status == "active",
+                LearningPlan.source_type == "case_assessment",
+            )
         )
         if old is not None:
             old.status = "superseded"
@@ -285,6 +295,8 @@ class SqlAlchemyLearningRepository(LearningRepository):
         plan = LearningPlan(
             student_id=draft.student_id,
             source_assessment_id=draft.source_assessment_id,
+            source_type="case_assessment",
+            source_id=draft.source_assessment_id,
             status="active",
             target_dimension_ids=list(draft.target_dimension_ids),
             due_at=draft.due_at,
@@ -412,6 +424,36 @@ class SqlAlchemyLearningRepository(LearningRepository):
         if task is not None and task.status != "completed":
             task.status = "completed"
             task.completed_at = completed_at
+            if task.plan.source_type == "pbl_suggestion":
+                assessed = self._session.scalar(
+                    select(CaseAssessment)
+                    .join(CaseAttempt)
+                    .where(
+                        CaseAttempt.learning_task_id == task.id,
+                        CaseAttempt.student_id == student_id,
+                        CaseAttempt.status == "assessed",
+                    )
+                )
+                if assessed is not None and task.attempt is None:
+                    self._session.add(
+                        LearningTaskAttempt(
+                            task_id=task.id,
+                            student_id=student_id,
+                            status="assessed",
+                            answer={"case_attempt_id": assessed.attempt_id},
+                            score=assessed.total_score,
+                            evidence=[f"病例训练记录 {assessed.attempt_id}；评估记录 {assessed.id}"],
+                            feedback="病例重练已完成，待教师结合评估证据核验。",
+                            assessed_at=completed_at,
+                            model_name="case_assessment",
+                            prompt_version="pbl-learning-v2",
+                        )
+                    )
+                if all(item.status == "completed" for item in task.plan.tasks):
+                    task.plan.status = "completed"
+                    task.plan.completed_at = completed_at
+                    task.plan.verification_status = "pending_teacher"
+                    task.plan.version += 1
 
     def complete_plan(self, student_id: int, plan_id: int, completed_at: datetime) -> LearningPlanRecord:
         plan = self._session.scalar(
@@ -424,6 +466,9 @@ class SqlAlchemyLearningRepository(LearningRepository):
         if plan.status != "completed":
             plan.status = "completed"
             plan.completed_at = completed_at
+            if plan.source_type == "pbl_suggestion":
+                plan.verification_status = "pending_teacher"
+                plan.version += 1
         self._session.flush()
         return self._plan_record(plan)
 

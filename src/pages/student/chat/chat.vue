@@ -126,6 +126,7 @@
       <view class="scroll-spacer" />
     </scroll-view>
 
+    <StudentNav active="chat" />
     <ChatComposer
       v-model="inputValue"
       :loading="isLoading"
@@ -143,6 +144,7 @@ import { activateButtonOnKey } from '@/components/ui/keyboard'
 import { computed, nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import MedIcon from '@/components/ui/MedIcon.vue'
+import StudentNav from '@/components/ui/StudentNav.vue'
 import ChatWelcome from '@/components/chat/ChatWelcome.vue'
 import ChatComposer from '@/components/chat/ChatComposer.vue'
 import { requireRole, logout } from '@/features/identity/public'
@@ -156,7 +158,7 @@ import type { KnowledgePoint } from '@/types/knowledge'
 import { formatClock } from '@/utils/date'
 import { analyzeConversation } from '@/utils/report'
 
-const quickQuestions = ['给我一个医学案例让我诊断。', '肺炎的典型症状有哪些？', '高血压的诊断标准是什么？']
+const quickQuestions = ['给我一个病理情境练习机制解释。', '坏死与凋亡有哪些区别？', '炎症如何引起局部红肿？']
 const messages = ref<ChatMessage[]>([])
 const inputValue = ref('')
 const conversationId = ref('')
@@ -463,6 +465,13 @@ async function endConversation() {
   box-sizing: border-box;
   flex: 1;
 }
+.chat-page > .student-nav {
+  flex: none;
+  margin: 0 20rpx;
+  border: 1rpx solid var(--med-border);
+  border-bottom: 0;
+  border-radius: var(--med-radius-md) var(--med-radius-md) 0 0;
+}
 .message-row {
   display: flex;
   max-width: 800px;
@@ -574,6 +583,9 @@ async function endConversation() {
   }
   .chat-scroll {
     padding: 28px 32px;
+  }
+  .chat-page > .student-nav {
+    margin: 0 24px;
   }
   .avatar {
     width: 40px;

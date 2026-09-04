@@ -51,6 +51,10 @@ export async function getKnowledgeCatalog(): Promise<KnowledgePoint[]> {
     reference: item.reference,
     cardCount: item.card_count,
     catalogVersion: item.catalog_version,
+    description: item.description,
+    prerequisiteCodes: item.prerequisite_codes,
+    relatedCodes: item.related_codes,
+    caseSlug: item.case_slug,
   }))
 }
 
@@ -232,6 +236,8 @@ function toPlan(value: ReturnType<typeof apiLearningPlanSchema.parse>): Learning
     id: value.id,
     status: value.status,
     sourceAssessmentId: value.source_assessment_id,
+    sourceType: value.source_type,
+    sourceId: value.source_id,
     targetDimensionIds: value.target_dimension_ids,
     dueAt: value.due_at,
     generationMode: value.generation_mode,

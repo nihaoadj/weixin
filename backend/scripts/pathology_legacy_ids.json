@@ -1,0 +1,38 @@
+{
+  "catalog_version": "internal-medicine-v1",
+  "point_codes": [
+    "cardio.acs",
+    "cardio.arrhythmia",
+    "cardio.heart-failure",
+    "cardio.hypertension",
+    "digestive.appendicitis",
+    "digestive.gi-bleed",
+    "digestive.hepatitis",
+    "digestive.pancreatitis",
+    "endocrine.adrenal",
+    "endocrine.diabetes",
+    "endocrine.dka",
+    "endocrine.thyroid",
+    "hematology.anemia",
+    "hematology.bleeding",
+    "hematology.leukocytosis",
+    "hematology.thrombosis",
+    "renal.aki",
+    "renal.ckd",
+    "renal.electrolyte",
+    "renal.uti",
+    "respiratory.asthma",
+    "respiratory.cap",
+    "respiratory.copd",
+    "respiratory.pleural-effusion"
+  ],
+  "problem_slugs": [
+    "cap-undergraduate-showcase",
+    "acute-chest-pain-undergraduate-showcase",
+    "right-lower-quadrant-pain-undergraduate-showcase",
+    "demo-pending-chest-pain",
+    "demo-question-001"
+  ],
+  "conversation_client_ids": ["demo-conversation-001"],
+  "student_external_ids": ["demo_student", "demo_student_b"]
+}

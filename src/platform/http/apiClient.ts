@@ -40,6 +40,7 @@ export interface ApiRequestOptions<TBody = unknown, TResponse = unknown> {
   query?: Record<string, QueryValue>
   body?: TBody
   auth?: boolean
+  timeoutMs?: number
   cacheTtlMs?: number
   invalidateCache?: string[]
   schema?: ResponseSchema<TResponse>
@@ -193,7 +194,7 @@ export function apiRequest<TResponse, TBody = unknown>(
       method: method as UniApp.RequestOptions['method'],
       data: options.body as UniApp.RequestOptions['data'],
       header,
-      timeout: 30000,
+      timeout: options.timeoutMs ?? 30000,
       success: (response: UniApp.RequestSuccessCallbackResult) => {
         if (requestAuthEpoch !== authEpoch) {
           reject(new AppError('会话已变更，请重新加载', { code: 'STALE_SESSION' }))

@@ -2,11 +2,11 @@
 
 from sqlalchemy.orm import Session
 
-from app.modules.learning.application.use_cases import LearningApplication
 from app.modules.learning.application.knowledge_review import KnowledgeReviewApplication
+from app.modules.learning.application.use_cases import LearningApplication
 from app.modules.learning.infrastructure.case_attempt_adapter import TrainingCaseAttemptAdapter
-from app.modules.learning.wiring import learning_application as build_learning_application
 from app.modules.learning.wiring import knowledge_review_application as build_knowledge_review_application
+from app.modules.learning.wiring import learning_application as build_learning_application
 from app.modules.training.application.ports import AssessmentGateway, PatientReplyGateway
 from app.modules.training.application.use_cases import TrainingApplication
 from app.modules.training.public import CaseAttemptContract, TrainingCasePort, attempt_contract

@@ -5,6 +5,7 @@ import MedIcon from './MedIcon.vue'
 import MedState from './MedState.vue'
 import SafetyBanner from './SafetyBanner.vue'
 import StudentNav from './StudentNav.vue'
+import StudentPrimaryNav from './StudentPrimaryNav.vue'
 
 const goPrimary = vi.hoisted(() => vi.fn())
 
@@ -13,6 +14,7 @@ vi.mock('@/platform/navigation', () => ({
     studentChat: '/student/chat',
     studentCases: '/student/question',
     studentLearning: '/student/learning',
+    studentPbl: '/student/pbl',
     studentHistory: '/student/history',
   },
   goPrimary,
@@ -54,12 +56,19 @@ describe('shared UI behavior', () => {
     const wrapper = mount(StudentNav, { props: { active: 'learning' } })
     expect(wrapper.findAll('.active')).toHaveLength(1)
     for (const item of wrapper.findAll('.student-nav__item')) await item.trigger('click')
-    expect(goPrimary).toHaveBeenCalledTimes(4)
+    expect(goPrimary).toHaveBeenCalledTimes(5)
     expect(goPrimary.mock.calls.map(([route]) => route)).toEqual([
-      '/student/chat',
-      '/student/question',
+      '/student/pbl',
       '/student/learning',
+      '/student/question',
+      '/student/chat',
       '/student/history',
     ])
+  })
+
+  it('keeps the primary student navigation in a reusable fixed shell', () => {
+    const wrapper = mount(StudentPrimaryNav, { props: { active: 'pbl' } })
+    expect(wrapper.classes()).toContain('student-primary-nav')
+    expect(wrapper.find('[aria-current="page"]').text()).toBe('课堂')
   })
 })

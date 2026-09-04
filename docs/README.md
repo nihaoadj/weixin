@@ -1,27 +1,30 @@
 # 项目文档
 
-本文档集按“少量主文档、职责清晰分离”的方式组织，不再按审计编号或技术主题碎片化拆分。
+从此页进入当前权威文档。历史验收、旧迁移路线和已完成计划均作为阶段资料单列，不能替代当前实现说明或生产验收。
 
-| 文档                                                                         | 职责                                            |
-| ---------------------------------------------------------------------------- | ----------------------------------------------- |
-| [architecture.md](./architecture.md)                                         | 总体架构、技术栈、目录边界和端侧支持            |
-| [data-layer.md](./data-layer.md)                                             | 数据访问分层、契约、缓存、存储和错误规范        |
-| [features.md](./features.md)                                                 | 当前功能、角色流程和后续功能规划                |
-| [api.md](./api.md)                                                           | FastAPI 接口契约、认证方式和主要请求响应        |
-| [database.md](./database.md)                                                 | SQLite 开发库、核心表结构和未来 PostgreSQL 迁移 |
-| [deployment.md](./deployment.md)                                             | 本地运行、构建、环境变量和部署路径              |
-| [migration.md](./migration.md)                                               | 从微信云函数/本地 Demo 迁移到 FastAPI 的路线    |
-| [development.md](./development.md)                                           | 开发规范、质量门禁、测试和 Git 注意事项         |
-| [dependency-upgrade.md](./dependency-upgrade.md)                             | 依赖安全基线、兼容矩阵与升级维护流程            |
-| [audit/initial-version-comparison.md](./audit/initial-version-comparison.md) | 初始版本功能映射、安全泄露和迁移差异            |
+## 首先阅读
 
-当前路线：
+| 文档                                         | 职责                                       |
+| -------------------------------------------- | ------------------------------------------ |
+| [architecture.md](architecture.md)           | 技术栈、模块边界与当前接入状态             |
+| [data-layer.md](data-layer.md)               | 数据访问、API/Demo、契约、缓存与错误边界   |
+| [更新计划索引](update_plan/README.md)        | 当前产品与工程更新计划、计划门禁和交付入口 |
+| [ADR 0001](adr/0001-data-layer-contracts.md) | 数据层的重大工程取舍                       |
+| [openapi.json](openapi.json)                 | 已生成的 API 契约快照                      |
 
-数据层关键决策见 [ADR 0001](./adr/0001-data-layer-contracts.md)；生成契约快照见 [openapi.json](./openapi.json)。
+## 按职责阅读
 
-```text
-前端：uni-app + Vue 3 + TypeScript + Vite
-后端：Python + FastAPI
-数据库：SQLite
-后续生产库：PostgreSQL
-```
+| 区域 | 入口                                  | 内容                               |
+| ---- | ------------------------------------- | ---------------------------------- |
+| 产品 | [功能与角色流程](product/features.md) | 当前功能、学生与教师流程、后续方向 |
+| 前端 | [前端文档](frontend/README.md)        | 视觉设计、公开接口和页面边界       |
+| 后端 | [后端文档](backend/README.md)         | API、数据库与模块责任              |
+| 运行 | [运行文档](operations/README.md)      | 开发、构建、部署和依赖维护         |
+| 治理 | [安全边界](governance/security.md)    | 权限、敏感数据、AI 与凭据处置      |
+
+## 历史资料
+
+- [前端阶段记录](records/frontend/README.md)：已完成的动效设计与视觉验收。
+- [架构迁移路线](records/architecture/cloud-demo-to-fastapi-migration.md)：从云函数和本地 Demo 到 FastAPI 的历史路线。
+- [初始版本比较](audit/initial-version-comparison.md)：初始版本的功能、安全与迁移差异。
+- [T01–T07 工程治理记录](update_plan/01-07-engineering-governance/README.md)：任务书、执行状态和交付证据。

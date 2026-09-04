@@ -23,6 +23,8 @@ const plan = {
   id: 1,
   status: 'active',
   source_assessment_id: 1,
+  source_type: 'case_assessment',
+  source_id: 1,
   target_dimension_ids: ['test_selection'],
   due_at: now,
   generation_mode: 'fallback',
@@ -203,7 +205,7 @@ describe('teacher adapter boundaries', () => {
 })
 
 describe('Demo adapter capability boundary', () => {
-  it('returns empty read models and explicitly rejects unavailable writes without HTTP', async () => {
+  it('keeps the synthetic classroom readable and rejects unavailable writes without HTTP', async () => {
     expect(await demoLearning.getLearningProfile()).toMatchObject({ unreadCount: 0 })
     expect(await demoLearning.getCurrentLearningPlan()).toBeUndefined()
     expect(await demoLearning.getLearningNotifications()).toEqual({ items: [], unreadCount: 0 })
@@ -221,8 +223,8 @@ describe('Demo adapter capability boundary', () => {
       () => demoTeacher.removeStudentFromClass(1, 2),
     ]
     for (const action of unsupported) await expect(action()).rejects.toMatchObject({ code: 'UNSUPPORTED_OPERATION' })
-    expect(await demoTeacher.getTeacherClasses()).toEqual([])
-    expect(await demoTeacher.getClassStudents(1)).toEqual([])
+    expect(await demoTeacher.getTeacherClasses()).toMatchObject([{ id: 1, code: 'demo_class_1' }])
+    expect(await demoTeacher.getClassStudents(1)).toHaveLength(2)
     expect(await demoTeacher.getAnalyticsOverview()).toMatchObject({ studentCount: 0, completionRate: null })
     expect(await demoTeacher.getAnalyticsOverview(1, now, now)).toMatchObject({ scope: { classId: 1 } })
     expect(await demoTeacher.getAnalyticsCase(1)).toMatchObject({ completedPairs: 0 })

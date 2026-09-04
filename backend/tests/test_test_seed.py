@@ -11,7 +11,7 @@ def test_test_seed_is_idempotent_and_builds_each_demo_path() -> None:
         assert first == second
         assert first["users"] == 4
         assert first["class_members"] == 2
-        assert first["problems"] == 5
+        assert first["problems"] == 7
         assert first["pending_cases"] == 1
         assert first["conversations"] == 1
         assert first["reports"] == 1

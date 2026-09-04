@@ -30,6 +30,7 @@ export function toProblem(dto: ApiProblem): Problem {
     authorId: problem.author_id ?? undefined,
     medicalReviewStatus: problem.medical_review_status,
     capabilityTags: problem.capability_tags || [],
+    knowledgePointCodes: problem.knowledge_point_codes,
     opening: problem.opening
       ? {
           setting: problem.opening.setting,

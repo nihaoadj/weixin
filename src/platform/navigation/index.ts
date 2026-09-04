@@ -12,6 +12,7 @@ export const ROUTES = {
   studentChat: '/pages/student/chat/chat',
   studentCases: '/pages/student/question/question',
   studentLearning: '/pages/student/learning/index',
+  studentPbl: '/pages/student/pbl/pbl',
   studentHistory: '/pages/student/history/history',
   // 学生端二级页面
   studentCaseTraining: '/pages/student/case-training/case-training',
@@ -40,13 +41,17 @@ export const ROUTES = {
 } as const
 
 export type StudentPrimaryRoute =
-  typeof ROUTES.studentChat | typeof ROUTES.studentCases | typeof ROUTES.studentLearning | typeof ROUTES.studentHistory
+  | typeof ROUTES.studentChat
+  | typeof ROUTES.studentCases
+  | typeof ROUTES.studentLearning
+  | typeof ROUTES.studentPbl
+  | typeof ROUTES.studentHistory
 
 type NavigationParams = Record<string, string | number | null | undefined>
 type BackPressSource = 'backbutton' | 'navigateBack'
 
 export function roleHome(role: UserRole | null | undefined): string {
-  if (role === 'student') return ROUTES.studentChat
+  if (role === 'student') return ROUTES.studentPbl
   if (role === 'teacher') return ROUTES.teacherWorkspace
   return ROUTES.login
 }

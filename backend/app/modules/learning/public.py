@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Protocol
+
 from app.modules.learning.application.records import (
     LearningPlanRecord,
     LearningProfileRecord,
@@ -15,6 +17,17 @@ from app.modules.learning.application.review_records import (
     ReviewResult,
 )
 from app.modules.training.public import CaseAttemptContract, case_attempt_view
+
+
+class PblLearningPort(Protocol):
+    def create(
+        self, student_ids: tuple[int, ...], source_id: int, context: dict, resources: tuple[dict, ...]
+    ) -> tuple[int, ...]: ...
+    def list(
+        self, *, student_id: int | None = None, teacher_id: int | None = None, session_id: int | None = None
+    ) -> tuple[dict, ...]: ...
+    def submit(self, student_id: int, task_id: int, submission_id: str, answer: dict) -> dict: ...
+    def verify(self, teacher_id: int, plan_id: int, version: int, decision: str, note: str) -> dict: ...
 
 
 def task_view(task: LearningTaskRecord) -> dict[str, object]:
@@ -37,6 +50,8 @@ def plan_view(plan: LearningPlanRecord) -> dict[str, object]:
         "id": plan.id,
         "status": plan.status,
         "source_assessment_id": plan.source_assessment_id,
+        "source_type": plan.source_type,
+        "source_id": plan.source_id,
         "target_dimension_ids": list(plan.target_dimension_ids),
         "due_at": plan.due_at,
         "generation_mode": plan.generation_mode,

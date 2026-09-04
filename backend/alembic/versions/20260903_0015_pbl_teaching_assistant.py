@@ -4,6 +4,7 @@ Revision ID: 20260903_0015
 Revises: 20260831_0014
 """
 import sqlalchemy as sa
+
 from alembic import op
 
 revision="20260903_0015"
@@ -26,4 +27,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     if "pbl_sessions" not in set(sa.inspect(op.get_bind()).get_table_names()):
         return
-    op.drop_table("problem_origins"); op.drop_table("pbl_question_suggestions"); op.drop_table("pbl_diagnostic_snapshots"); op.drop_table("pbl_participations"); op.drop_index("ix_pbl_sessions_class_status",table_name="pbl_sessions"); op.drop_table("pbl_sessions")
+    op.drop_table("problem_origins")
+    op.drop_table("pbl_question_suggestions")
+    op.drop_table("pbl_diagnostic_snapshots")
+    op.drop_table("pbl_participations")
+    op.drop_index("ix_pbl_sessions_class_status", table_name="pbl_sessions")
+    op.drop_table("pbl_sessions")
