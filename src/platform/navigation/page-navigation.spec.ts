@@ -8,6 +8,7 @@ const secondaryPages = [
   '../../pages/student/case-report/case-report.vue',
   '../../pages/student/case-training/case-training.vue',
   '../../pages/student/question-detail/question-detail.vue',
+  '../../pages/student/question/question.vue',
   '../../pages/student/learning/plan.vue',
   '../../pages/student/learning/drill.vue',
   '../../pages/student/learning/review.vue',

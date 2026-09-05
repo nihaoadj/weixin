@@ -1,37 +1,44 @@
 <template>
   <view class="safe-page chat-page">
-    <view class="top-actions">
-      <view class="session-context">
-        <text class="session-title">{{ selectedTopics.length ? '主题问答' : '自由问答' }}</text>
-        <text class="session-summary">记录推理过程，保留学习依据</text>
-        <view class="topic-row">
-          <text class="topic-label">本次主题</text>
-          <view
-            v-if="selectedTopics.length"
-            class="topic-chips"
+    <text
+      class="sr-only"
+      role="heading"
+      aria-level="1"
+      >医学答疑</text
+    >
+    <PageContextBar
+      class="top-actions"
+      :label="selectedTopics.length ? '主题问答' : '自由问答'"
+      description="记录推理过程，保留学习依据"
+      aria-label="当前答疑会话"
+    >
+      <view class="topic-row">
+        <text class="topic-label">本次主题</text>
+        <view
+          v-if="selectedTopics.length"
+          class="topic-chips"
+        >
+          <button
+            v-for="topic in selectedTopics"
+            :key="topic.code"
+            class="topic-chip"
+            :aria-label="`移除学习主题 ${topic.title}`"
+            @click="removeTopic(topic.code)"
           >
-            <button
-              v-for="topic in selectedTopics"
-              :key="topic.code"
-              class="topic-chip"
-              :aria-label="`移除学习主题 ${topic.title}`"
-              @click="removeTopic(topic.code)"
-            >
-              {{ topic.title }} ×
-            </button>
-          </view>
-          <picker
-            v-if="topicOptions.length"
-            class="topic-picker"
-            :range="topicOptions"
-            range-key="label"
-            @change="addTopic"
-          >
-            <button class="topic-add">选择主题</button>
-          </picker>
+            {{ topic.title }} ×
+          </button>
         </view>
+        <picker
+          v-if="topicOptions.length"
+          class="topic-picker"
+          :range="topicOptions"
+          range-key="label"
+          @change="addTopic"
+        >
+          <button class="topic-add">选择主题</button>
+        </picker>
       </view>
-      <view class="top-actions-right">
+      <template #actions>
         <button
           tabindex="0"
           role="button"
@@ -52,8 +59,8 @@
         >
           退出
         </button>
-      </view>
-    </view>
+      </template>
+    </PageContextBar>
 
     <scroll-view
       class="chat-scroll"
@@ -144,6 +151,7 @@ import { activateButtonOnKey } from '@/components/ui/keyboard'
 import { computed, nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import MedIcon from '@/components/ui/MedIcon.vue'
+import PageContextBar from '@/components/ui/PageContextBar.vue'
 import StudentNav from '@/components/ui/StudentNav.vue'
 import ChatWelcome from '@/components/chat/ChatWelcome.vue'
 import ChatComposer from '@/components/chat/ChatComposer.vue'
@@ -382,33 +390,6 @@ async function endConversation() {
   flex-direction: column;
   background: var(--med-page);
 }
-.top-actions {
-  display: flex;
-  padding: 16rpx 28rpx;
-  align-items: center;
-  justify-content: space-between;
-  flex: none;
-  gap: 20rpx;
-  background: var(--med-surface);
-  border-bottom: 1rpx solid var(--med-border);
-}
-.session-context {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 4rpx;
-}
-.session-title {
-  color: var(--med-ink);
-  font-size: 30rpx;
-  font-weight: 800;
-}
-.session-summary {
-  color: var(--med-muted);
-  font-size: 22rpx;
-  line-height: 1.5;
-}
 .topic-row,
 .topic-chips {
   display: flex;
@@ -438,12 +419,6 @@ async function endConversation() {
   color: var(--med-text-secondary);
   background: transparent;
   border: 1rpx solid var(--med-border);
-}
-.top-actions-right {
-  display: flex;
-  align-items: center;
-  flex: none;
-  gap: 4rpx;
 }
 .history-link,
 .logout {
@@ -552,21 +527,11 @@ async function endConversation() {
   height: 24rpx;
 }
 @media screen and (max-width: 360px) {
-  .session-summary {
-    font-size: 11px;
-  }
   .bubble {
     font-size: 14px;
   }
 }
 @media screen and (min-width: 600px) {
-  .top-actions {
-    padding: 16px 32px;
-  }
-  .session-title {
-    font-size: 22px;
-  }
-  .session-summary,
   .history-link,
   .logout {
     font-size: 14px;

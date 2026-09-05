@@ -23,6 +23,7 @@
 | [T13 文档信息架构整理](13-documentation-information-architecture/README.md)      | 当前文档分组、阶段资料与链接治理       |
 | [T14 PBL 自动阶段与自动巩固闭环](14-pbl-automatic-mastery-loop/README.md)        | 参与级阶段、两轮任务与系统自动判定     |
 | [T15 学生 PBL 学情报告与改善轨迹](15-pbl-student-learning-report/README.md)      | 学生累计学情、单课证据与改善对照       |
+| [T16 前端信息架构与导航精简](16-frontend-information-architecture/README.md)     | 四项主导航、跳转层级与页面空间治理     |
 
 ## 共享工程治理记录
 

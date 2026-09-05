@@ -20,12 +20,6 @@
     />
     <template v-else-if="report">
       <view class="report-cover">
-        <button
-          class="back-link"
-          @click="back"
-        >
-          返回学情
-        </button>
         <view
           class="specimen-mark"
           aria-hidden="true"
@@ -316,15 +310,6 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentInsights))
 }
 .specimen-mark text:nth-child(even) {
   background: var(--med-alert, #9f2f2f);
-}
-.back-link {
-  width: fit-content;
-  min-height: 64rpx;
-  margin: 0;
-  padding: 0 14rpx;
-  color: var(--med-clinical);
-  background: var(--med-wash);
-  font-size: 22rpx;
 }
 .page-title {
   color: var(--med-navy);

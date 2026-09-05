@@ -1,9 +1,5 @@
 <template>
   <view class="pbl-workspace">
-    <view class="heading"
-      ><text class="title">PBL 教学工作区</text
-      ><text class="muted">组织课堂讨论，审阅学习线索，并跟进干预结果。</text></view
-    >
     <view
       v-if="error"
       class="notice"
@@ -574,15 +570,10 @@ defineExpose({ refresh })
   gap: 24rpx;
   min-width: 0;
 }
-.heading,
 .panel {
   display: flex;
   flex-direction: column;
   gap: 18rpx;
-}
-.title {
-  font-size: 40rpx;
-  font-weight: 800;
 }
 .section-title {
   font-size: 31rpx;
@@ -694,9 +685,6 @@ checkbox-group {
   }
   .controls > picker {
     width: 100%;
-  }
-  .title {
-    font-size: 34rpx;
   }
 }
 </style>

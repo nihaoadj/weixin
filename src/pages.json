@@ -14,11 +14,11 @@
     },
     {
       "path": "pages/student/chat/chat",
-      "style": { "navigationBarTitleText": "医学问答助手" }
+      "style": { "navigationBarTitleText": "医学答疑" }
     },
     {
       "path": "pages/student/pbl/pbl",
-      "style": { "navigationBarTitleText": "病理学 PBL 课堂" }
+      "style": { "navigationBarTitleText": "PBL 课堂" }
     },
     {
       "path": "pages/student/history/history",
@@ -26,7 +26,7 @@
     },
     {
       "path": "pages/student/question/question",
-      "style": { "navigationBarTitleText": "练习问题" }
+      "style": { "navigationBarTitleText": "病例与练习" }
     },
     {
       "path": "pages/student/question-detail/question-detail",
@@ -42,11 +42,11 @@
     },
     {
       "path": "pages/student/learning/index",
-      "style": { "navigationBarTitleText": "个性化学习" }
+      "style": { "navigationBarTitleText": "学习" }
     },
     {
       "path": "pages/student/insights/index",
-      "style": { "navigationBarTitleText": "我的 PBL 学情" }
+      "style": { "navigationBarTitleText": "学情" }
     },
     {
       "path": "pages/student/insights/detail",

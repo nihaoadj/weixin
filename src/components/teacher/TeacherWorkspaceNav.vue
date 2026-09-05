@@ -35,9 +35,9 @@ export type TeacherWorkspace = 'overview' | 'reports' | 'problems' | 'pbl'
 defineProps<{ active: TeacherWorkspace }>()
 defineEmits<{ change: [workspace: TeacherWorkspace] }>()
 const items = [
-  { key: 'overview' as const, label: '工作台', icon: 'teacher' as const },
-  { key: 'reports' as const, label: '报告', icon: 'report' as const },
-  { key: 'problems' as const, label: '问题', icon: 'book' as const },
+  { key: 'overview' as const, label: '待办', icon: 'teacher' as const },
+  { key: 'reports' as const, label: '学情', icon: 'report' as const },
+  { key: 'problems' as const, label: '内容', icon: 'book' as const },
   { key: 'pbl' as const, label: 'PBL', icon: 'report' as const },
 ]
 </script>

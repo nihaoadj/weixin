@@ -1,5 +1,22 @@
 import { expect, test } from '@playwright/test'
 
+test('student learning groups cases, knowledge, and questions behind one secondary resource page', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('.role-button.student').click()
+  await page.locator('.student-nav__item').filter({ hasText: '学习' }).click()
+  await expect(page.locator('.student-nav__item')).toHaveCount(4)
+  await expect(page.getByText('自主训练', { exact: true })).toBeVisible()
+  await page.locator('.resource-row').filter({ hasText: '病例训练' }).click()
+  await expect(page.locator('.resource-tab')).toHaveCount(3)
+  await expect(page.locator('.resource-tab.active')).toHaveText('病例')
+  await page.locator('.resource-tab').filter({ hasText: '知识' }).click()
+  await expect(page.getByText('病理学知识地图', { exact: true })).toBeVisible()
+  await page.locator('.resource-tab').filter({ hasText: '练习' }).click()
+  await expect(page.getByText('PBL 讨论题', { exact: true })).toBeVisible()
+  await page.locator('.student-nav__item').filter({ hasText: '学习' }).click()
+  await expect(page.getByText('自主训练', { exact: true })).toBeVisible()
+})
+
 test('Demo preserves the report workflow and actionable empty states without API requests', async ({ page }) => {
   const apiRequests: string[] = []
   page.on('request', (request) => {
@@ -14,16 +31,16 @@ test('Demo preserves the report workflow and actionable empty states without API
   await page.locator('.report-button').click()
   await expect(page.getByText('AI 形成性评分', { exact: true })).toBeVisible()
   await page.locator('.actions .primary-button').click()
-  await expect(page.getByText('我的 PBL 课堂', { exact: true })).toBeVisible()
+  await expect(page.locator('[aria-label="当前课堂上下文"]')).toBeVisible()
   await page.locator('.student-nav__item').filter({ hasText: '答疑' }).click()
   await page.getByText('退出', { exact: true }).click()
   await page.locator('.role-button.teacher').click()
-  await page.locator('.teacher-nav__item').filter({ hasText: '报告' }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '学情' }).click()
   await page.locator('.report-card').first().click()
   await page.getByRole('spinbutton').fill('88')
   await page.getByRole('textbox').fill('结构完整，请继续复习。')
   await page.locator('.submit-bar .primary-button').click()
-  await expect(page.getByText('教学查房')).toBeVisible()
+  await expect(page.locator('.teacher-nav__item.active')).toHaveText('学情')
   await page.evaluate(() => {
     uni.setStorageSync('reports', [])
     uni.setStorageSync('conversationHistory:demo_student', [])
@@ -36,7 +53,7 @@ test('Demo preserves the report workflow and actionable empty states without API
   await page.getByText('开始医学问答', { exact: true }).click()
   await page.getByText('退出', { exact: true }).click()
   await page.locator('.role-button.teacher').click()
-  await page.locator('.teacher-nav__item').filter({ hasText: '报告' }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '学情' }).click()
   await expect(page.getByText('还没有学生报告', { exact: true })).toBeVisible()
   expect(apiRequests).toEqual([])
 })
@@ -44,7 +61,7 @@ test('Demo preserves the report workflow and actionable empty states without API
 test('Demo PBL automatically activates a failed target and exhausts after the second cycle', async ({ page }) => {
   await page.goto('/')
   await page.locator('.role-button.student').click()
-  await expect(page.getByText('我的 PBL 课堂', { exact: true })).toBeVisible()
+  await expect(page.locator('[aria-label="当前课堂上下文"]')).toBeVisible()
   const question = page.locator('textarea').first()
   for (const [answer, phase] of [
     ['局部红肿涉及血管反应，我先明确需要解释的问题。', '提出假设'],
@@ -60,11 +77,12 @@ test('Demo PBL automatically activates a failed target and exhausts after the se
     if (phase !== '已完成') await expect(question).toHaveValue('')
   }
   await page.locator('.student-nav__item').filter({ hasText: '学情' }).click()
-  await expect(page.getByText('我的病理学习档案', { exact: true })).toBeVisible()
+  await expect(page.getByText('当前重点', { exact: true })).toBeVisible()
   await expect(page.getByText('待发布学习', { exact: true }).first()).toBeVisible()
   await page.locator('.report-row').first().click()
   await expect(page.getByText('四阶段讨论证据', { exact: true })).toBeVisible()
-  await page.getByText('返回学情', { exact: true }).click()
+  await page.goBack()
+  await expect(page.getByText('当前重点', { exact: true })).toBeVisible()
   await page.locator('.student-nav__item').filter({ hasText: '答疑' }).click()
   await page.getByText('退出', { exact: true }).click()
 
@@ -75,7 +93,7 @@ test('Demo PBL automatically activates a failed target and exhausts after the se
   await page.getByText('退出', { exact: true }).click()
 
   await page.locator('.role-button.student').click()
-  await page.locator('.student-nav__item').filter({ hasText: '任务' }).click()
+  await page.locator('.student-nav__item').filter({ hasText: '学习' }).click()
   for (let step = 0; step < 3; step += 1) {
     const task = page.locator('.task--next')
     await expect(task).toBeVisible()
@@ -110,7 +128,8 @@ test('Demo PBL automatically activates a failed target and exhausts after the se
   await page.locator('.report-row').first().click()
   await expect(page.getByText('目标改善对照', { exact: true })).toBeVisible()
   await expect(page.getByText('自动轮次结束，仍需线下支持', { exact: true })).toBeVisible()
-  await page.getByText('返回学情', { exact: true }).click()
+  await page.goBack()
+  await expect(page.getByText('当前重点', { exact: true })).toBeVisible()
   await page.locator('.student-nav__item').filter({ hasText: '答疑' }).click()
   await page.getByText('退出', { exact: true }).click()
   await page.locator('.role-button.teacher').click()

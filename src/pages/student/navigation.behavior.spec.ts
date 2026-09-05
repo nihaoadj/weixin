@@ -7,6 +7,7 @@ describe('student page navigation contracts', () => {
   it('registers native-back fallbacks for every student secondary page', async () => {
     const expectedFallbacks = [
       ['./question-detail/question-detail.vue', 'studentCases'],
+      ['./question/question.vue', 'studentLearning'],
       ['./case-training/case-training.vue', 'studentCases'],
       ['./case-report/case-report.vue', 'studentCases'],
       ['./learning/plan.vue', 'studentLearning'],
@@ -25,6 +26,18 @@ describe('student page navigation contracts', () => {
     expect(reportSource).toContain('onBackPress')
     expect(reportSource).toContain('handleBackPress')
     expect(reportSource).toContain('ROUTES.studentChat')
+  })
+
+  it('treats training resources as a learning detail with three URL-addressable views', async () => {
+    const [learning, resources] = await Promise.all([
+      pageSource('./learning/index.vue'),
+      pageSource('./question/question.vue'),
+    ])
+
+    expect(learning).toContain('goDetail(ROUTES.studentCases')
+    expect(resources).toContain("type ResourceView = 'cases' | 'knowledge' | 'questions'")
+    expect(resources).toContain('<StudentPrimaryNav active="learning" />')
+    expect(resources).toContain('handleBackPress(from, ROUTES.studentLearning)')
   })
 
   it('keeps completed-case replacements while preserving the micro-drill return route', async () => {

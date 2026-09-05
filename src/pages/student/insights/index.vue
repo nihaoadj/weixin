@@ -1,10 +1,11 @@
 <template>
   <view class="safe-page insight-page">
-    <view class="report-heading">
-      <text class="eyebrow-label">LEARNING EVIDENCE</text>
-      <text class="page-title">我的病理学习档案</text>
-      <text class="heading-note">从讨论证据到两轮改善，按每个知识与推理目标回看。</text>
-    </view>
+    <text
+      class="sr-only"
+      role="heading"
+      aria-level="1"
+      >学情</text
+    >
 
     <MedState
       v-if="loading"
@@ -205,21 +206,6 @@ onShow(() => {
   padding: 30rpx 26rpx 180rpx;
   background: var(--med-page);
 }
-.report-heading {
-  display: flex;
-  max-width: 980px;
-  margin: 0 auto 24rpx;
-  padding: 24rpx 6rpx 12rpx;
-  flex-direction: column;
-  gap: 8rpx;
-}
-.page-title {
-  color: var(--med-navy);
-  font-size: 44rpx;
-  font-weight: 850;
-  line-height: 1.25;
-}
-.heading-note,
 .section-note,
 .topic,
 .summary {
@@ -368,12 +354,6 @@ onShow(() => {
 @media (min-width: 768px) {
   .insight-page {
     padding: 32px 32px 128px;
-  }
-  .report-heading {
-    margin-bottom: 20px;
-  }
-  .page-title {
-    font-size: 34px;
   }
   .evidence-sheet {
     padding: 32px;

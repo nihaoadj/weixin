@@ -15,6 +15,7 @@
 - 病理学 PBL 教学助手的最低产品要求、接口/数据目标与当前差距：[docs/update_plan/09-pathology-pbl-teaching-assistant/README.md](docs/update_plan/09-pathology-pbl-teaching-assistant/README.md)。
 - PBL 参与级自动阶段、两轮巩固和系统判定的当前实现与证据：[docs/update_plan/14-pbl-automatic-mastery-loop/README.md](docs/update_plan/14-pbl-automatic-mastery-loop/README.md)。
 - 学生 PBL 学情报告、评价历史和改善轨迹的当前实现与证据：[docs/update_plan/15-pbl-student-learning-report/README.md](docs/update_plan/15-pbl-student-learning-report/README.md)。
+- 学生/教师四项导航、页面标题和训练资源归类的当前实现与证据：[docs/update_plan/16-frontend-information-architecture/README.md](docs/update_plan/16-frontend-information-architecture/README.md)。
 
 改动涉及的领域要先阅读对应权威文档，而不是一次复制整套文档。目录内新增局部 `AGENTS.md` 仅能补充确有差异的规则，不能放宽本文件。
 
@@ -52,6 +53,7 @@
 - 该闭环必须遵守 API/Demo 隔离、教师班级/学生数据范围、最小必要外发、去标识化、日志不记录完整对话/提示词/学生回答、医学安全分流和人工审核要求。Demo 只能演示同一界面合同，不能作为 API 模式、真实 Coze 调用或教师授权闭环的验收证据。
 - 仓库内 T14 闭环已实现并保留本地 API/Demo、权限、迁移、provider 合同和敏感数据负向证据，详见上述 T14 文档。真实 Coze schema v3 联调、微信真机、医学专家审核和生产部署仍是外部验收项；完成前只能声明“仓库内完成”，不能声明生产教学闭环已验证。
 - T15 在 T14 主线上增加学生只读“学情”总览与单课详情，并以 `(plan_id, cycle_number)` 唯一的评价历史展示两轮改善轨迹。报告只组合本人讨论、本人计划和课堂共同训练，不计算综合分、不调用 AI 总结、不暴露其他学生诊断或教学私有字段；真实生产回填和真机仍属外部验收。
+- T16 将学生一级导航固定为“课堂、学习、学情、答疑”，将病例、知识和练习归入学习二级资源页；教师四工作区显示为“待办、学情、内容、PBL”，内部 query key 保持不变。一级页面以原生栏为唯一可见页面标题，正文不得再次堆叠同义 Hero；二级路径与旧链接继续兼容。
 
 ## 当前安全前置条件
 

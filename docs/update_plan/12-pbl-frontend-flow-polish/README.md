@@ -21,3 +21,5 @@
 5. [交付记录](deliveries/T12.md)
 
 计划与实现需遵守仓库根目录 [AGENTS.md](../../../AGENTS.md) 的 API/Demo 隔离、公开接口和验证要求。
+
+后继更新：[T16 前端信息架构、导航与页面空间优化](../16-frontend-information-architecture/README.md) 将学生一级导航收敛为四项，并统一页面标题和训练资源归类；本文件保留 T12 当时的历史结论。

@@ -142,3 +142,9 @@ backend/
 # T15：学生 PBL 学情报告读模型
 
 `pbl` application 通过窄 port 读取本人 participation/阶段快照和本人 learning plans，将同一 session 的个人讨论、课堂共同训练、任务、attempt 与不可覆盖的轮次评价组装为只读报告。报告状态和说明由确定性规则生成，不调用 AI、不计算综合分。前端 `features/pbl` 的 API/Demo adapter 实现同一 `reports/report` 合同，“学情”总览与详情页面只经 `features/pbl/public.ts` 读取。
+
+# T16：前端信息架构与导航
+
+学生一级导航固定为课堂、学习、学情、答疑，对应 `StudentPrimaryRoute` 的四个根页面；病例训练、知识地图和练习题继续使用既有 `studentCases` 路径，但由 `view=cases|knowledge|questions` 在学习模块的二级资源页中切换。一级切换使用 `reLaunch`，一级进入详情使用 `navigateTo`，连续训练步骤使用 `redirectTo`；二级页通过明确的逻辑父页面处理直接打开和返回兜底。
+
+教师工作区仍使用 `overview|reports|problems|pbl` 内部 key 和 `?tab=` 深链接，并以 `v-show` 保留切换状态；展示标签收敛为待办、学情、内容、PBL。H5/微信原生导航栏是一级页面唯一可见标题，正文使用不可见页面标题和紧凑上下文条提供无障碍名称，不重复渲染同义 Hero。此变化只影响前端路由语义、页面组合和样式，不改变 feature API、API/Demo 装配、后端接口或数据合同。

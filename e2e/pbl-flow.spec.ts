@@ -8,7 +8,7 @@ test('PBL API-mode loop advances four stages, publishes work and exposes automat
 
   await page.goto('/')
   await page.locator('.role-button.teacher').click()
-  await expect(page.getByText('PBL 教学工作区')).toBeVisible()
+  await expect(page.getByText('课堂与诊断', { exact: true })).toBeVisible()
   await page.getByText('细胞适应', { exact: true }).click()
   const createResponse = page.waitForResponse(
     (response) => response.request().method() === 'POST' && /\/classes\/\d+\/pbl-sessions$/.test(response.url()),
@@ -19,7 +19,7 @@ test('PBL API-mode loop advances four stages, publishes work and exposes automat
   await page.getByText('退出', { exact: true }).click()
 
   await page.locator('.role-button.student').click()
-  await expect(page.getByText('我的 PBL 课堂')).toBeVisible()
+  await expect(page.locator('[aria-label="当前课堂上下文"]')).toBeVisible()
   const question = page.locator('textarea').first()
   await expect(question).toBeVisible()
   await question.fill('细胞肿胀是否一定说明细胞已经坏死？')
@@ -38,7 +38,7 @@ test('PBL API-mode loop advances four stages, publishes work and exposes automat
   await expect(page.getByText('机制解释需要补充')).toBeVisible()
   await expect(page.getByText(/四阶段讨论已完成，输入已关闭/)).toBeVisible()
   await page.locator('.student-nav__item').filter({ hasText: '学情' }).click()
-  await expect(page.getByText('我的病理学习档案', { exact: true })).toBeVisible()
+  await expect(page.getByText('当前重点', { exact: true })).toBeVisible()
   await expect(page.getByText('待发布学习', { exact: true }).first()).toBeVisible()
   await page.locator('.report-row').first().click()
   await expect(page.getByText('四阶段讨论证据', { exact: true })).toBeVisible()
@@ -48,7 +48,8 @@ test('PBL API-mode loop advances four stages, publishes work and exposes automat
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   }
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByText('返回学情', { exact: true }).click()
+  await page.goBack()
+  await expect(page.getByText('当前重点', { exact: true })).toBeVisible()
   await page.locator('.student-nav__item').filter({ hasText: '答疑' }).click()
   await page.getByText('退出', { exact: true }).click()
 
@@ -65,7 +66,7 @@ test('PBL API-mode loop advances four stages, publishes work and exposes automat
   await page.getByText('退出', { exact: true }).click()
 
   await page.locator('.role-button.student').click()
-  await page.locator('.student-nav__item').filter({ hasText: '任务' }).click()
+  await page.locator('.student-nav__item').filter({ hasText: '学习' }).click()
   await expect(page.getByText('PBL 课后任务', { exact: true })).toBeVisible()
   await expect(page.getByText('第 1 轮 · 正式讨论题', { exact: true })).toBeVisible()
   await expect(page.getByText(/第 1\/2 轮 · pbl-mastery-v1/)).toBeVisible()
@@ -97,7 +98,8 @@ test('PBL API-mode loop advances four stages, publishes work and exposes automat
   await page.locator('.report-row').first().click()
   await expect(page.getByText('目标改善对照', { exact: true })).toBeVisible()
   await expect(page.getByText('本轮目标全部达标', { exact: true })).toBeVisible()
-  await page.getByText('返回学情', { exact: true }).click()
+  await page.goBack()
+  await expect(page.getByText('当前重点', { exact: true })).toBeVisible()
   await page.locator('.student-nav__item').filter({ hasText: '答疑' }).click()
   await page.getByText('退出', { exact: true }).click()
 

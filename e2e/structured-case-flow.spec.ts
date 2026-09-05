@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
 
-test('student opens a pathology showcase case from the PBL-first knowledge entry', async ({ page }) => {
+test('student opens a pathology showcase case from the learning resources', async ({ page }) => {
   await page.goto('/')
   await page.locator('.role-button.student').click()
-  await page.locator('.student-nav__item').filter({ hasText: '知识' }).click()
-  await expect(page.getByText('病理学病例练习')).toBeVisible()
-  const showcase = page.getByText('细胞损伤：肾小管上皮的两种结局', { exact: true }).first()
+  await page.locator('.student-nav__item').filter({ hasText: '学习' }).click()
+  await page.locator('.resource-row').filter({ hasText: '病例训练' }).click()
+  await expect(page.locator('.resource-tab.active')).toHaveText('病例')
+  const showcase = page.getByRole('listitem', { name: '开始病例：细胞损伤：肾小管上皮的两种结局' }).first()
   await expect(showcase).toBeVisible()
   await showcase.click()
   await expect(page.getByText('虚拟患者对话')).toBeVisible()

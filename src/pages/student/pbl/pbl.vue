@@ -1,14 +1,10 @@
 <template>
   <view class="safe-page pbl">
-    <view class="header"
-      ><text class="eyebrow">PATHOLOGY · PBL</text><text class="title">我的 PBL 课堂</text
-      ><text class="muted">从问题出发，用证据解释病理变化。</text>
-      <button
-        class="header-action"
-        @click="goPrimary(ROUTES.studentLearning)"
-      >
-        查看课后任务
-      </button></view
+    <text
+      class="sr-only"
+      role="heading"
+      aria-level="1"
+      >PBL 课堂</text
     >
     <MedState
       v-if="error"
@@ -122,6 +118,13 @@
           ><text class="muted">下一步：{{ issue.improvement }}</text></view
         >
         <text class="muted">{{ diagnostic.safetyNotice }}</text>
+        <button
+          v-if="diagnostic.diagnosticStatus === 'ready'"
+          class="secondary-action"
+          @click="goPrimary(ROUTES.studentLearning)"
+        >
+          查看后续学习
+        </button>
       </view>
       <view
         v-if="session.status === 'active' && session.phaseStatus !== 'completed'"
@@ -144,7 +147,13 @@
       <view
         v-else-if="session.phaseStatus === 'completed'"
         class="notice"
-        >四阶段讨论已完成，输入已关闭。教师采用发布建议题后，系统会按两轮规则自动判定学习结果。</view
+        ><text>四阶段讨论已完成，输入已关闭。教师采用发布建议题后，系统会按两轮规则自动判定学习结果。</text
+        ><button
+          class="secondary-action"
+          @click="goPrimary(ROUTES.studentLearning)"
+        >
+          查看后续学习
+        </button></view
       >
       <view
         v-else
@@ -259,29 +268,16 @@ onShow(load)
   flex-direction: column;
   gap: 24rpx;
 }
-.header,
 .panel {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
 }
-.header {
-  padding: 28rpx 8rpx 12rpx;
-}
-.eyebrow {
-  font-size: 22rpx;
-  letter-spacing: 3rpx;
-  color: var(--med-primary);
-}
-.title {
-  font-size: 44rpx;
-  font-weight: 800;
-}
 .section-title {
   font-size: 32rpx;
   font-weight: 700;
 }
-.header-action {
+.secondary-action {
   width: fit-content;
   min-height: 80rpx;
   margin: 4rpx 0 0;
@@ -372,19 +368,19 @@ button {
   font-size: 28rpx;
 }
 .notice {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
   border: 1px solid var(--med-border, #ddd);
 }
 @media (min-width: 768px) {
   .pbl {
     padding: 32px;
   }
-  .title {
-    font-size: 34px;
-  }
   .message {
     max-width: 75%;
   }
-  .header-action {
+  .secondary-action {
     min-height: 44px;
     padding: 0 16px;
     font-size: 14px;

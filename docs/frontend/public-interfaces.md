@@ -18,6 +18,14 @@
 
 所有入口内部通过 `src/bootstrap/wiring.ts` 取得已装配的 port。调用者不选择 API/Demo、不拼接 URL、不读写 storage；API 失败会保留明确错误，不会切换到 Demo。
 
+## 页面导航合同
+
+- 学生一级导航只包含 `pbl | learning | insights | chat`，分别显示为课堂、学习、学情、答疑；`StudentPrimaryRoute` 只接受这四个根路由。
+- `ROUTES.studentCases` 保留公开兼容路径，但属于学习的二级资源页；用 `view=cases|knowledge|questions` 选择病例、知识或练习，非法值回退到病例。
+- 一级页面切换经 `goPrimary`/`reLaunch`，一级到详情经 `goDetail`/`navigateTo`，连续训练替换经 `replaceDetail`/`redirectTo`。二级页返回失败时必须回到其逻辑父页面。
+- 教师 workspace 公开 key 仍为 `overview | reports | problems | pbl`，显示为待办、学情、内容、PBL；`?tab=` 深链接和页面内 `v-show` 状态保留不变。
+- 页面组件只使用导航平台公开函数，不直接拼接页面 URL 或调用散落的 `uni.navigate*`。
+
 ## 数据与身份边界
 
 - API DTO 只在 `src/platform/contracts` 和所属 infrastructure mapper 中出现。生成类型的唯一现有输出仍是 `src/data/contracts/openapi.generated.ts`，由 `npm run contract:generate` 管理，禁止手改。

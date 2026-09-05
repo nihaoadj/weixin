@@ -114,8 +114,8 @@ describe('navigation semantics', () => {
 
   it('treats primary navigation as an atomic tab switch', () => {
     vi.mocked(getCurrentPages).mockReturnValue([{ route: 'pages/student/chat/chat' }] as never)
-    goPrimary(ROUTES.studentCases)
-    expect(uni.reLaunch).toHaveBeenCalledWith(expect.objectContaining({ url: ROUTES.studentCases }))
+    goPrimary(ROUTES.studentLearning)
+    expect(uni.reLaunch).toHaveBeenCalledWith(expect.objectContaining({ url: ROUTES.studentLearning }))
     expect(uni.redirectTo).not.toHaveBeenCalled()
   })
 

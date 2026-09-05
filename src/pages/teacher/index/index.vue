@@ -1,25 +1,32 @@
 <template>
   <view class="safe-page teacher-page">
-    <view class="workspace-header">
-      <view class="header-copy">
-        <text class="eyebrow-label">教学查房</text>
-        <text class="workspace-title">{{ workspaceTitle }}</text>
-        <text class="workspace-description">{{ workspaceDescription }}</text>
-      </view>
-      <button
-        hover-class="is-pressed"
-        :hover-start-time="0"
-        :hover-stay-time="80"
-        tabindex="0"
-        role="button"
-        class="logout"
-        aria-label="退出教师工作台"
-        @keydown="activateButtonOnKey"
-        @click="logout"
-      >
-        退出
-      </button>
-    </view>
+    <text
+      class="sr-only"
+      role="heading"
+      aria-level="1"
+      >教师工作台</text
+    >
+    <PageContextBar
+      :label="workspaceTitle"
+      :description="workspaceDescription"
+      aria-label="当前教师工作区"
+    >
+      <template #actions>
+        <button
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
+          class="logout"
+          aria-label="退出教师工作台"
+          @keydown="activateButtonOnKey"
+          @click="logout"
+        >
+          退出
+        </button>
+      </template>
+    </PageContextBar>
     <view class="workspace-body">
       <view class="workspace-navigation">
         <TeacherWorkspaceNav
@@ -33,6 +40,27 @@
         :aria-label="workspaceTitle"
       >
         <view class="workspace-content">
+          <view
+            v-if="currentWorkspace === 'reports' || currentWorkspace === 'problems'"
+            class="workspace-shortcuts"
+            aria-label="工作区快捷入口"
+          >
+            <button
+              v-if="currentWorkspace === 'reports'"
+              @click="openAnalytics"
+            >
+              查看教学学情
+            </button>
+            <template v-else>
+              <button @click="openKnowledgeCards">知识补充卡</button>
+              <button
+                v-if="isReviewer"
+                @click="openReview"
+              >
+                医学审核
+              </button>
+            </template>
+          </view>
           <TeacherOverview
             v-if="openedWorkspaces.overview"
             v-show="currentWorkspace === 'overview'"
@@ -81,6 +109,7 @@ import TeacherOverview from '@/components/teacher/TeacherOverview.vue'
 import TeacherProblemList from '@/components/TeacherProblemList.vue'
 import TeacherReportList from '@/components/TeacherReportList.vue'
 import TeacherPblQueue from '@/components/teacher/TeacherPblQueue.vue'
+import PageContextBar from '@/components/ui/PageContextBar.vue'
 import { requireRole, logout, getSession } from '@/features/identity/public'
 import { getReportSummariesAsync } from '@/features/reports/public'
 import { getReviewQueue } from '@/features/content/public'
@@ -106,10 +135,10 @@ const overviewLoading = ref(false)
 const reportQueueError = ref(false)
 const reviewQueueError = ref(false)
 const workspaceCopy: Record<TeacherWorkspace, { title: string; description: string }> = {
-  overview: { title: '工作台', description: '查看待办，管理班级与学习进展。' },
-  reports: { title: '报告批阅', description: '阅读学生推理记录，给出下一步学习建议。' },
-  problems: { title: '教学内容', description: '创建、审核并发布练习问题与结构化病例。' },
-  pbl: { title: 'PBL 教学助手', description: '审阅病理学讨论中的薄弱分析与建议题。' },
+  overview: { title: '工作概览', description: '查看待办，管理班级与学习进展。' },
+  reports: { title: '学生学习记录', description: '阅读推理记录并查看班级学习变化。' },
+  problems: { title: '内容管理', description: '创建、审核并发布练习问题与结构化病例。' },
+  pbl: { title: '课堂与诊断', description: '组织课堂，审阅薄弱分析与建议题。' },
 }
 const workspaceTitle = computed(() => workspaceCopy[currentWorkspace.value].title)
 const workspaceDescription = computed(() => workspaceCopy[currentWorkspace.value].description)
@@ -196,35 +225,6 @@ function openReport(id: string) {
   flex-direction: column;
   background: var(--med-page);
 }
-.workspace-header {
-  display: flex;
-  padding: 24rpx 28rpx;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24rpx;
-  background: var(--med-surface);
-  border-bottom: 1rpx solid var(--med-border);
-}
-.header-copy {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-}
-.workspace-title {
-  margin-top: 6rpx;
-  color: var(--med-ink);
-  font-size: 38rpx;
-  font-weight: 800;
-  line-height: 1.4;
-}
-.workspace-description {
-  margin-top: 8rpx;
-  color: var(--med-muted);
-  font-size: 24rpx;
-  line-height: 1.5;
-}
 .logout {
   min-width: 44px;
   min-height: 44px;
@@ -258,27 +258,40 @@ function openReport(id: string) {
   padding: 0 24rpx 24rpx;
   box-sizing: border-box;
 }
+.workspace-shortcuts {
+  display: flex;
+  padding-top: 20rpx;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.workspace-shortcuts button {
+  min-height: 72rpx;
+  margin: 0;
+  padding: 0 22rpx;
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  font-size: 23rpx;
+}
 @media screen and (max-width: 360px) {
-  .workspace-description {
-    font-size: 12px;
-  }
   .logout {
     font-size: 13px;
   }
 }
 @media screen and (min-width: 600px) {
-  .workspace-header {
-    padding: 20px 28px;
-  }
-  .workspace-title {
-    font-size: 26px;
-  }
-  .workspace-description,
   .logout {
     font-size: 14px;
   }
   .workspace-content {
     padding: 0 28px 28px;
+  }
+  .workspace-shortcuts {
+    padding-top: 20px;
+    gap: 8px;
+  }
+  .workspace-shortcuts button {
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 14px;
   }
 }
 @media screen and (min-width: 900px) {

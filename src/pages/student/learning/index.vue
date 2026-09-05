@@ -1,5 +1,11 @@
 <template>
   <view class="safe-page page">
+    <text
+      class="sr-only"
+      role="heading"
+      aria-level="1"
+      >学习</text
+    >
     <PblTaskList />
     <MedState
       v-if="loading"
@@ -81,21 +87,6 @@
       </view>
     </view>
     <template v-else>
-      <view class="card section knowledge-entry">
-        <view class="section-head">
-          <text class="section-title">知识巩固</text><text class="evidence-label">问答联动</text>
-        </view>
-        <text class="muted">从知识主题开始问答、完成小测，并把错题带入下一次复习。</text>
-        <button
-          tabindex="0"
-          role="button"
-          class="secondary"
-          @keydown="activateButtonOnKey"
-          @click="openKnowledgeLoop"
-        >
-          查看知识地图与复习
-        </button>
-      </view>
       <view
         v-if="plan"
         class="card today-card"
@@ -177,6 +168,40 @@
           进入病例训练
         </button>
       </view>
+    </template>
+    <view
+      v-if="!loading"
+      class="card section resource-entry"
+    >
+      <view class="section-head">
+        <text class="section-title">自主训练</text><text class="evidence-label">按需要选择</text>
+      </view>
+      <view
+        class="resource-grid"
+        role="list"
+        aria-label="自主训练资源"
+      >
+        <button
+          v-for="resource in resources"
+          :key="resource.view"
+          class="resource-row"
+          role="listitem"
+          @keydown="activateButtonOnKey"
+          @click="openResource(resource.view)"
+        >
+          <view>
+            <text class="resource-title">{{ resource.title }}</text>
+            <text class="muted">{{ resource.description }}</text>
+          </view>
+          <text
+            class="resource-arrow"
+            aria-hidden="true"
+            >›</text
+          >
+        </button>
+      </view>
+    </view>
+    <template v-if="!loading && !error && !isFirstUse">
       <view class="card evidence-section">
         <view class="section-head"
           ><text class="section-title">能力画像</text><text class="evidence-label">评估证据</text></view
@@ -233,18 +258,6 @@
           全部标记已读
         </button>
       </view>
-      <view class="card section"
-        ><text class="section-title">病理病例训练</text><text class="muted">待完成病例</text
-        ><button
-          tabindex="0"
-          role="button"
-          class="secondary"
-          @keydown="activateButtonOnKey"
-          @click="openCases"
-        >
-          查看病例列表
-        </button></view
-      >
     </template>
     <StudentPrimaryNav active="learning" />
   </view>
@@ -270,6 +283,11 @@ const profile = ref<LearningProfile>({
 })
 const plan = ref<LearningPlan>()
 const notifications = ref<LearningNotification[]>([])
+const resources = [
+  { view: 'cases' as const, title: '病例训练', description: '用结构化病例练习诊断思路' },
+  { view: 'knowledge' as const, title: '知识地图', description: '按病理主题定位概念与关联' },
+  { view: 'questions' as const, title: '练习题', description: '查看教师发布的讨论题与练习' },
+]
 const error = ref('')
 const loading = ref(false)
 const dimensions = computed(() => profile.value.formalDimensions.slice(0, 6))
@@ -320,13 +338,13 @@ async function load() {
   }
 }
 function openCases() {
-  goPrimary(ROUTES.studentCases)
+  goDetail(ROUTES.studentCases, { view: 'cases' })
 }
 function openReview() {
   goDetail(ROUTES.studentLearningReview)
 }
-function openKnowledgeLoop() {
-  goDetail(ROUTES.studentKnowledgeLoop)
+function openResource(view: (typeof resources)[number]['view']) {
+  goDetail(ROUTES.studentCases, { view })
 }
 function openChat() {
   goPrimary(ROUTES.studentChat)
@@ -517,6 +535,42 @@ onShow(() => {
   flex-direction: column;
   gap: 6rpx;
   border-bottom: 1rpx solid var(--med-divider);
+}
+.resource-grid {
+  display: flex;
+  flex-direction: column;
+}
+.resource-row {
+  display: flex;
+  width: 100%;
+  min-height: 96rpx;
+  margin: 0;
+  padding: 18rpx 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  color: var(--med-text);
+  background: transparent;
+  border-top: 1rpx solid var(--med-divider);
+  border-radius: 0;
+  text-align: left;
+}
+.resource-row > view {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5rpx;
+}
+.resource-title {
+  color: var(--med-ink);
+  font-size: 27rpx;
+  font-weight: 700;
+}
+.resource-arrow {
+  flex: none;
+  color: var(--med-clinical);
+  font-size: 34rpx;
 }
 .plan-progress {
   display: grid;

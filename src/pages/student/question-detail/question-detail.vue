@@ -92,10 +92,12 @@ const isLoading = ref(false)
 const lastMessageId = ref('')
 const loadError = ref('')
 let questionId = ''
+let returnView = 'questions'
 
 onLoad((options) => {
   if (!requireRole('student')) return
   questionId = typeof options?.id === 'string' ? options.id : ''
+  returnView = options?.returnView === 'knowledge' || options?.returnView === 'cases' ? options.returnView : 'questions'
   void loadQuestion(questionId)
 })
 
@@ -116,7 +118,7 @@ async function loadQuestion(id: string) {
 }
 
 function back() {
-  backOrRoute(ROUTES.studentCases)
+  backOrRoute(ROUTES.studentCases, { view: returnView })
 }
 
 function newMessage(role: ChatMessage['role'], content: string): ChatMessage {
@@ -169,7 +171,7 @@ async function submitAnswer() {
   }
 }
 
-onBackPress(({ from }) => handleBackPress(from, ROUTES.studentCases))
+onBackPress(({ from }) => handleBackPress(from, ROUTES.studentCases, { view: returnView }))
 </script>
 
 <style scoped>

@@ -32,3 +32,5 @@
 7. [T15 交付记录](deliveries/T15.md)
 
 实施遵守根目录 [AGENTS.md](../../../AGENTS.md)。计划门禁在运行时代码修改前通过，实际证据、已知基线失败和外部阻塞见 [T15 交付记录](deliveries/T15.md)。
+
+后继更新：[T16 前端信息架构、导航与页面空间优化](../16-frontend-information-architecture/README.md) 保留本报告口径与路径，将学生一级导航统一为四项并压缩重复页面标题；本文件不改写 T15 的历史验收结论。

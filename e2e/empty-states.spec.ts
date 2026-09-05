@@ -21,7 +21,7 @@ test('fresh student and teacher accounts receive actionable empty states', async
 
   await page.getByText('退出', { exact: true }).click()
   await page.locator('.role-button.teacher').click()
-  await page.locator('.teacher-nav__item').filter({ hasText: '报告' }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '学情' }).click()
   await expect(page.getByText('还没有学生报告', { exact: true })).toBeVisible()
   await expect(page.getByText('管理教学内容', { exact: true })).toBeVisible()
 })

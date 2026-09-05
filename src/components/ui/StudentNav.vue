@@ -33,22 +33,20 @@ import MedIcon from '@/components/ui/MedIcon.vue'
 
 import { goPrimary, ROUTES, type StudentPrimaryRoute } from '@/platform/navigation'
 
-export type StudentTab = 'chat' | 'question' | 'learning' | 'pbl' | 'insights'
+export type StudentTab = 'chat' | 'learning' | 'pbl' | 'insights'
 
 defineProps<{ active: StudentTab }>()
 
 const items = [
   { key: 'pbl' as const, label: '课堂', icon: 'report' as const },
-  { key: 'learning' as const, label: '任务', icon: 'report' as const },
+  { key: 'learning' as const, label: '学习', icon: 'book' as const },
   { key: 'insights' as const, label: '学情', icon: 'history' as const },
-  { key: 'question' as const, label: '知识', icon: 'book' as const },
   { key: 'chat' as const, label: '答疑', icon: 'chat' as const },
 ]
 
 function open(key: StudentTab) {
   const routes: Record<StudentTab, StudentPrimaryRoute> = {
     chat: ROUTES.studentChat,
-    question: ROUTES.studentCases,
     learning: ROUTES.studentLearning,
     pbl: ROUTES.studentPbl,
     insights: ROUTES.studentInsights,

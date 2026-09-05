@@ -39,9 +39,9 @@ test('teacher manages a class and completes the guided-case review flow', async 
 
   await page.goto('/')
   await page.locator('.role-button.teacher').click()
-  await expect(page.getByText('教学查房')).toBeVisible()
+  await expect(page.getByText('课堂与诊断', { exact: true })).toBeVisible()
 
-  await page.locator('.teacher-nav__item').filter({ hasText: '工作台' }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '待办' }).click()
   await page.getByText('班级管理', { exact: true }).click()
   await expect(page.getByText('班级管理', { exact: true }).first()).toBeVisible()
   await page.locator('input').nth(0).fill('E2E 春季班')
@@ -55,7 +55,7 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await expect(page.getByText(/demo_student/)).toBeVisible()
 
   await page.goBack()
-  await page.locator('.teacher-nav__item').filter({ hasText: '问题' }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '内容' }).click()
   await page.getByText('生成病例', { exact: true }).click()
   await expect(page.getByText('病例五步编排器')).toBeVisible()
   await page.locator('input').first().fill('细胞损伤与适应')
@@ -72,8 +72,8 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await page.goBack()
   await page.getByText('退出', { exact: true }).click()
   await loginAsReviewer(page)
-  await expect(page.getByText('教学查房')).toBeVisible()
-  await page.locator('.teacher-nav__item').filter({ hasText: '工作台' }).click()
+  await expect(page.getByText('课堂与诊断', { exact: true })).toBeVisible()
+  await page.locator('.teacher-nav__item').filter({ hasText: '待办' }).click()
   await page
     .locator('.quick-links')
     .getByText(/医学审核/)
@@ -87,7 +87,7 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await page.goBack()
   await page.getByText('退出', { exact: true }).click()
   await page.locator('.role-button.teacher').click()
-  await page.locator('.teacher-nav__item').filter({ hasText: '问题' }).click()
+  await page.locator('.teacher-nav__item').filter({ hasText: '内容' }).click()
   const card = page.locator('.problem-card').filter({ hasText: title })
   await card.getByText('发布', { exact: true }).click()
   await page.getByText('OK', { exact: true }).click()

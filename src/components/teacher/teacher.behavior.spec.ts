@@ -4,15 +4,15 @@ import TeacherWorkspaceNav from './TeacherWorkspaceNav.vue'
 import TeacherOverview from './TeacherOverview.vue'
 
 describe('teacher workspace navigation', () => {
-  it('exposes three named destinations and only one current page', async () => {
+  it('exposes four intent-based destinations and only one current page', async () => {
     const wrapper = mount(TeacherWorkspaceNav, {
       props: { active: 'reports' },
       global: { stubs: { MedIcon: true } },
     })
     expect(wrapper.attributes('aria-label')).toBe('教师主导航')
-    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['工作台', '报告', '问题', 'PBL'])
+    expect(wrapper.findAll('button').map((button) => button.text())).toEqual(['待办', '学情', '内容', 'PBL'])
     expect(wrapper.findAll('[aria-current="page"]')).toHaveLength(1)
-    expect(wrapper.get('[aria-current="page"]').text()).toBe('报告')
+    expect(wrapper.get('[aria-current="page"]').text()).toBe('学情')
     await wrapper.findAll('button')[2].trigger('click')
     expect(wrapper.emitted('change')).toEqual([['problems']])
   })
