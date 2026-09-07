@@ -25,6 +25,7 @@
 | [T15 学生 PBL 学情报告与改善轨迹](15-pbl-student-learning-report/README.md)      | 学生累计学情、单课证据与改善对照       |
 | [T16 前端信息架构与导航精简](16-frontend-information-architecture/README.md)     | 四项主导航、跳转层级与页面空间治理     |
 | [T17 统一学习研讨与 PBL 闭环](17-unified-learning-dialogue/README.md)            | 沟通策略统一、诊断与巩固单一闭环       |
+| [T18 学习资料溯源与学情统计可信度](18-learning-evidence-trust/README.md)         | v4 聚合、资料来源和统计口径一致性      |
 
 ## 共享工程治理记录
 

@@ -630,6 +630,7 @@ class ReportListItem(BaseModel):
 
 class ReportPageSummary(BaseModel):
     total_reports: int
+    completed_personal_discussions: int
     status_counts: dict[str, int]
     recurring_targets: list[ReportRecurringTarget]
     next_action: ReportPageAction | None
@@ -661,6 +662,7 @@ class ReportTask(BaseModel):
     target_code: str
     target_label: str
     prompt: str
+    reference: str | None
     score: float | None
     feedback: str
     evidence_present: bool

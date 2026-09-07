@@ -142,6 +142,10 @@
               <text>{{ taskStatus(task.status) }}</text>
             </view>
             <text class="task-prompt">{{ task.prompt }}</text>
+            <text class="task-target">学习目标：{{ task.targetLabel }}</text>
+            <text class="evidence-copy"
+              >资料来源：{{ task.reference || '教师采用的 PBL 训练，未提供单独资料来源。' }}</text
+            >
             <text
               v-if="task.score != null"
               class="task-result"

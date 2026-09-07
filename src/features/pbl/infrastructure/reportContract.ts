@@ -63,6 +63,7 @@ const listItem = z.object({
 export const reportPageSchema = z.object({
   summary: z.object({
     total_reports: z.number(),
+    completed_personal_discussions: z.number(),
     status_counts: z.record(z.string(), z.number()),
     recurring_targets: z.array(
       z.object({ target_type: z.string(), target_code: z.string(), label: z.string(), occurrences: z.number() }),
@@ -135,6 +136,7 @@ export const reportDetailSchema = z.object({
           target_code: z.string(),
           target_label: z.string(),
           prompt: z.string(),
+          reference: z.string().nullable(),
           score: z.number().nullable(),
           feedback: z.string(),
           evidence_present: z.boolean(),
@@ -209,6 +211,7 @@ export function mapReportPage(value: z.infer<typeof reportPageSchema>): PblRepor
   return {
     summary: {
       totalReports: value.summary.total_reports,
+      completedPersonalDiscussions: value.summary.completed_personal_discussions,
       statusCounts: statusCounts(value.summary.status_counts),
       recurringTargets: value.summary.recurring_targets.map((item) => ({
         targetType: item.target_type,
@@ -296,6 +299,7 @@ export function mapLearningReport(value: z.infer<typeof reportDetailSchema>): Pb
         targetCode: task.target_code,
         targetLabel: task.target_label,
         prompt: task.prompt,
+        reference: task.reference ?? undefined,
         score: task.score,
         feedback: task.feedback,
         evidencePresent: task.evidence_present,

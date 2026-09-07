@@ -72,7 +72,13 @@ export function demoReportDetail(
   _studentId: number,
 ): PblLearningReport {
   const status = statusOf(participation, plans)
-  const diagnostic = participation?.diagnostic?.diagnosticStatus === 'ready' ? participation.diagnostic : undefined
+  const diagnostic =
+    participation?.phaseStatus === 'completed' &&
+    participation.diagnostic?.diagnosticStatus === 'ready' &&
+    participation.diagnostic.phase === 'synthesis' &&
+    participation.diagnostic.phaseDecision === 'complete'
+      ? participation.diagnostic
+      : undefined
   const phaseIndex =
     participation?.phaseStatus === 'completed' ? 4 : phaseOrder.indexOf(participation?.currentPhase as never)
   const safePlans = plans.map((plan) => ({
@@ -94,8 +100,9 @@ export function demoReportDetail(
       cycleNumber: task.cycle_number,
       targetType: task.target_type,
       targetCode: task.target_code,
-      targetLabel: targetLabel(task.target_type, task.target_code),
+      targetLabel: task.public_definition.target_label || targetLabel(task.target_type, task.target_code),
       prompt: task.public_definition.prompt,
+      reference: task.public_definition.reference,
       score: task.result?.score ?? null,
       feedback: task.result?.feedback ?? '',
       evidencePresent: Boolean(task.result?.evidence.length),
@@ -210,23 +217,38 @@ export function demoReportPage(reports: PblLearningReport[], limit: number, offs
   const ordered = [...reports].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
   const statusCounts = Object.fromEntries(statusKeys.map((status) => [status, 0])) as Record<PblReportStatus, number>
   const recurring = new Map<string, { targetType: string; targetCode: string; label: string; occurrences: number }>()
+  let completedPersonalDiscussions = 0
   for (const report of ordered) {
     statusCounts[report.status]++
+    if (!report.diagnosis.createdAt) continue
+    completedPersonalDiscussions++
+    const targets = new Map<string, { targetType: string; targetCode: string; label: string }>()
     for (const item of report.diagnosis.knowledgeGaps) {
-      const value = recurring.get(item.pointCode) ?? {
+      targets.set(`knowledge_gap:${item.pointCode}`, {
         targetType: 'knowledge_gap',
         targetCode: item.pointCode,
         label: item.label,
-        occurrences: 0,
-      }
+      })
+    }
+    for (const item of report.diagnosis.reasoningIssues) {
+      targets.set(`reasoning_issue:${item.dimensionId}`, {
+        targetType: 'reasoning_issue',
+        targetCode: item.dimensionId,
+        label: item.label,
+      })
+    }
+    for (const target of targets.values()) {
+      const key = `${target.targetType}:${target.targetCode}`
+      const value = recurring.get(key) ?? { ...target, occurrences: 0 }
       value.occurrences++
-      recurring.set(item.pointCode, value)
+      recurring.set(key, value)
     }
   }
   const next = ordered.find((item) => ['learning_cycle_2', 'learning_cycle_1', 'discussing'].includes(item.status))
   return {
     summary: {
       totalReports: ordered.length,
+      completedPersonalDiscussions,
       statusCounts,
       recurringTargets: [...recurring.values()].sort((a, b) => b.occurrences - a.occurrences).slice(0, 6),
       nextAction: next

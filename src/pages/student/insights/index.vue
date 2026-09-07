@@ -66,7 +66,10 @@
           <view><text class="section-kicker">重复信号</text><text class="section-title">反复出现的学习重点</text></view>
         </view>
         <text class="section-note">只统计你本人已完成讨论形成的学习线索，不混合其他学生数据。</text>
-        <PblRecurringTargets :items="page.summary.recurringTargets" />
+        <PblRecurringTargets
+          :items="page.summary.recurringTargets"
+          :completed-discussions="page.summary.completedPersonalDiscussions"
+        />
       </view>
 
       <view class="evidence-sheet recent-sheet">
@@ -140,7 +143,7 @@ const emptyCounts: PblReportPage['summary']['statusCounts'] = {
   support_needed: 0,
 }
 const page = ref<PblReportPage>({
-  summary: { totalReports: 0, statusCounts: emptyCounts, recurringTargets: [] },
+  summary: { totalReports: 0, completedPersonalDiscussions: 0, statusCounts: emptyCounts, recurringTargets: [] },
   items: [],
   total: 0,
   limit: 20,

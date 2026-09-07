@@ -177,3 +177,11 @@ def test_both_styles_enter_the_same_teacher_and_learning_loop(client, monkeypatc
     assert len(plans.json()) == 1
     assert plans.json()[0]["source_context"]["session_id"] == session_id
     assert {task["cycle_number"] for task in plans.json()[0]["tasks"]} == {1, 2}
+    assert all(task["public_definition"].get("target_label") for task in plans.json()[0]["tasks"])
+
+    report_page = client.get("/student/pbl-learning-reports", headers=_headers(student))
+    assert report_page.status_code == 200, report_page.text
+    assert report_page.json()["summary"]["completed_personal_discussions"] == 1
+    report = client.get(f"/student/pbl-learning-reports/{session_id}", headers=_headers(student))
+    assert report.status_code == 200, report.text
+    assert report.json()["diagnosis"]["created_at"] is not None

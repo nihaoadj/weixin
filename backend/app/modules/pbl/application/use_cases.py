@@ -12,7 +12,7 @@ from app.modules.pbl.application.records import (
     PblSnapshotRecord,
     PblSuggestionRecord,
 )
-from app.modules.pbl.application.reporting import build_report, build_report_page
+from app.modules.pbl.application.reporting import DIMENSION_LABELS, build_report, build_report_page
 from app.modules.pbl.domain.catalog import PATHOLOGY_POINTS
 from app.shared.errors import AppError, PersistenceConflict
 from app.shared.uow import UnitOfWork
@@ -40,6 +40,19 @@ class PblApplication:
         self._provider = provider
         self._mode = mode
         self._learning = learning
+
+    @staticmethod
+    def _task_target_label(resource: dict) -> str:
+        target_type = str(resource.get("target_type", ""))
+        target_code = str(resource.get("target_code", ""))
+        if target_type == "knowledge_gap":
+            point = knowledge_point_view(target_code)
+            return str(point.get("title")) if point else target_code
+        if target_type == "reasoning_issue":
+            return DIMENSION_LABELS.get(target_code, target_code)
+        if target_type == "case_retry":
+            return "完整病例重练"
+        return "正式讨论" if target_type == "discussion" else target_code
 
     def create_session(
         self, teacher_id: int, class_id: int, topic_code: str, case_id: int, goals: tuple[str, ...]
@@ -400,6 +413,7 @@ class PblApplication:
                     for cycle in (1, 2)
                 ),
             )
+        resources = tuple({**resource, "target_label": self._task_target_label(resource)} for resource in resources)
         self._learning.create(
             targets,
             suggestion.id,

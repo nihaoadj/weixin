@@ -175,6 +175,7 @@ def test_student_report_is_progressive_private_and_combines_classroom_assignment
     page = client.get("/student/pbl-learning-reports", headers=student_headers)
     assert page.status_code == 200, page.text
     assert page.json()["summary"]["status_counts"]["learning_cycle_2"] == 1
+    assert page.json()["summary"]["completed_personal_discussions"] == 1
     assert page.json()["summary"]["recurring_targets"][0]["occurrences"] == 1
     detail = client.get(f"/student/pbl-learning-reports/{session.id}", headers=student_headers)
     assert detail.status_code == 200, detail.text
@@ -187,6 +188,92 @@ def test_student_report_is_progressive_private_and_combines_classroom_assignment
     assert "rubric-secret" not in serialized
     assert "private_rubric" not in serialized and '"answer"' not in serialized
     assert client.get(f"/student/pbl-learning-reports/{session.id}", headers=outsider_headers).status_code == 404
+
+
+def test_report_counts_each_v4_completed_personal_target_once_and_excludes_invalid_ready_snapshot(client, db) -> None:
+    student_headers, _, student_id, session, _, _ = _base(db, client)
+    participation = PblParticipation(
+        session_id=session.id,
+        student_id=student_id,
+        revision=6,
+        current_phase="completed",
+        phase_status="completed",
+        phase_completed_at=datetime.now(UTC),
+        interaction_style="direct",
+    )
+    db.add(participation)
+    db.flush()
+    db.add_all(
+        [
+            PblDiagnosticSnapshot(
+                participation_id=participation.id,
+                revision=4,
+                status="ready",
+                schema_version=4,
+                phase="synthesis",
+                phase_decision="complete",
+                phase_evidence_summary="整合机制和证据。",
+                assistant_reply="形成统一研讨学习线索。",
+                knowledge_gaps=[
+                    {
+                        "id": "v4-gap-1",
+                        "point_code": "pathology.inflammation.vascular",
+                        "summary": "血管反应需要巩固",
+                        "confidence": "high",
+                        "evidence_summary": "未区分渗出与充血。",
+                    },
+                    {
+                        "id": "v4-gap-duplicate",
+                        "point_code": "pathology.inflammation.vascular",
+                        "summary": "同一目标不重复计数",
+                        "confidence": "medium",
+                        "evidence_summary": "同一讨论中的补充说明。",
+                    },
+                ],
+                reasoning_issues=[
+                    {
+                        "id": "v4-reasoning",
+                        "dimension_id": "evidence_reasoning",
+                        "summary": "证据链仍不完整",
+                        "issue_type": "missing_evidence",
+                        "improvement": "补充反对证据。",
+                        "evidence_summary": "没有说明反证。",
+                    }
+                ],
+                provider_metadata={},
+            ),
+            PblDiagnosticSnapshot(
+                participation_id=participation.id,
+                revision=6,
+                status="ready",
+                schema_version=4,
+                phase="evidence",
+                phase_decision="advance",
+                phase_evidence_summary="不是合法完成快照。",
+                assistant_reply="继续讨论。",
+                knowledge_gaps=[],
+                reasoning_issues=[],
+                provider_metadata={},
+            ),
+        ]
+    )
+    db.commit()
+
+    page = client.get("/student/pbl-learning-reports", headers=student_headers)
+    assert page.status_code == 200, page.text
+    summary = page.json()["summary"]
+    assert summary["completed_personal_discussions"] == 1
+    assert {
+        (item["target_type"], item["target_code"], item["occurrences"])
+        for item in summary["recurring_targets"]
+    } == {
+        ("knowledge_gap", "pathology.inflammation.vascular", 1),
+        ("reasoning_issue", "evidence_reasoning", 1),
+    }
+    detail = client.get(f"/student/pbl-learning-reports/{session.id}", headers=student_headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["diagnosis"]["created_at"] is not None
+    assert len(detail.json()["diagnosis"]["knowledge_gaps"]) == 2
 
 
 def test_discussing_participation_is_exposed_as_a_progressive_report(client, db) -> None:

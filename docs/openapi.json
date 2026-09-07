@@ -18049,6 +18049,10 @@
             "type": "integer",
             "title": "Total Reports"
           },
+          "completed_personal_discussions": {
+            "type": "integer",
+            "title": "Completed Personal Discussions"
+          },
           "status_counts": {
             "additionalProperties": {
               "type": "integer"
@@ -18075,7 +18079,13 @@
           }
         },
         "type": "object",
-        "required": ["total_reports", "status_counts", "recurring_targets", "next_action"],
+        "required": [
+          "total_reports",
+          "completed_personal_discussions",
+          "status_counts",
+          "recurring_targets",
+          "next_action"
+        ],
         "title": "ReportPageSummary"
       },
       "ReportPhaseProgress": {
@@ -18631,6 +18641,17 @@
             "type": "string",
             "title": "Prompt"
           },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
           "score": {
             "anyOf": [
               {
@@ -18673,6 +18694,7 @@
           "target_code",
           "target_label",
           "prompt",
+          "reference",
           "score",
           "feedback",
           "evidence_present",

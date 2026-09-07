@@ -34,10 +34,14 @@ describe('PBL report visualizations', () => {
             occurrences: 3,
           },
         ],
+        completedDiscussions: 4,
       },
     })
-    expect(wrapper.find('[role="listitem"]').attributes('aria-label')).toBe('炎症的血管反应，在 3 次 PBL 中出现')
-    expect(wrapper.text()).toContain('3 次')
+    expect(wrapper.find('[role="listitem"]').attributes('aria-label')).toBe(
+      '炎症的血管反应，在 4 次完成讨论中出现 3 次',
+    )
+    expect(wrapper.text()).toContain('3 / 4 次完成讨论')
+    expect(wrapper.find('.track-fill').attributes('style')).toContain('75%')
   })
 
   it('states score, threshold and pass result for each target cycle', () => {

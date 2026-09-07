@@ -3753,6 +3753,8 @@ export interface components {
     ReportPageSummary: {
       /** Total Reports */
       total_reports: number
+      /** Completed Personal Discussions */
+      completed_personal_discussions: number
       /** Status Counts */
       status_counts: {
         [key: string]: number
@@ -4003,6 +4005,8 @@ export interface components {
       target_label: string
       /** Prompt */
       prompt: string
+      /** Reference */
+      reference: string | null
       /** Score */
       score: number | null
       /** Feedback */

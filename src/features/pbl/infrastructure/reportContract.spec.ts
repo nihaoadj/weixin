@@ -17,6 +17,7 @@ describe('PBL learning report contract', () => {
     const parsed = reportPageSchema.parse({
       summary: {
         total_reports: 1,
+        completed_personal_discussions: 1,
         status_counts: { improved: 1 },
         recurring_targets: [
           {
@@ -51,6 +52,7 @@ describe('PBL learning report contract', () => {
     expect(page.items[0].session.id).toBe('7')
     expect(page.summary.statusCounts.improved).toBe(1)
     expect(page.summary.statusCounts.discussing).toBe(0)
+    expect(page.summary.completedPersonalDiscussions).toBe(1)
   })
 
   it('maps an append-only two-cycle target trail without introducing a composite score', () => {

@@ -125,10 +125,18 @@ def _phase_progress(source: PblReportParticipationRecord | None) -> list[dict]:
 
 
 def _ready_snapshot(source: PblReportParticipationRecord | None) -> PblSnapshotRecord | None:
-    if source is None:
+    if source is None or source.participation.phase_status != "completed":
         return None
     return next(
-        (item for item in reversed(source.snapshots) if item.status == "ready" and item.schema_version == 3), None
+        (
+            item
+            for item in reversed(source.snapshots)
+            if item.status == "ready"
+            and item.schema_version in {3, 4}
+            and item.phase == "synthesis"
+            and item.phase_decision == "complete"
+        ),
+        None,
     )
 
 
@@ -204,6 +212,7 @@ def _plan_view(plan: dict, personal_snapshot_ids: set[int]) -> dict:
     tasks = []
     for task in plan.get("tasks", []):
         result = task.get("result")
+        public_definition = task.get("public_definition") or {}
         tasks.append(
             {
                 "id": int(task["id"]),
@@ -213,7 +222,8 @@ def _plan_view(plan: dict, personal_snapshot_ids: set[int]) -> dict:
                 "target_type": str(task.get("target_type", "")),
                 "target_code": str(task.get("target_code", "")),
                 "target_label": _target_label(str(task.get("target_type", "")), str(task.get("target_code", ""))),
-                "prompt": str((task.get("public_definition") or {}).get("prompt", "")),
+                "prompt": str(public_definition.get("prompt", "")),
+                "reference": str(public_definition.get("reference", "")).strip() or None,
                 "score": result.get("score") if result else None,
                 "feedback": str(result.get("feedback", "")) if result else "",
                 "evidence_present": bool(result and result.get("evidence")),
@@ -332,12 +342,18 @@ def build_report_page(reports: list[dict], limit: int, offset: int) -> dict:
     reports.sort(key=lambda item: _timestamp(item["updated_at"]), reverse=True)
     status_counts = {status: 0 for status in REPORT_STATUSES}
     target_counts: Counter[tuple[str, str, str]] = Counter()
+    completed_personal_discussions = 0
     for report in reports:
         status_counts[report["status"]] += 1
+        if report["diagnosis"]["created_at"] is None:
+            continue
+        completed_personal_discussions += 1
+        report_targets: set[tuple[str, str, str]] = set()
         for item in report["diagnosis"]["knowledge_gaps"]:
-            target_counts[("knowledge_gap", item["point_code"], item["label"])] += 1
+            report_targets.add(("knowledge_gap", item["point_code"], item["label"]))
         for item in report["diagnosis"]["reasoning_issues"]:
-            target_counts[("reasoning_issue", item["dimension_id"], item["label"])] += 1
+            report_targets.add(("reasoning_issue", item["dimension_id"], item["label"]))
+        target_counts.update(report_targets)
     recurring = [
         {"target_type": kind, "target_code": code, "label": label, "occurrences": count}
         for (kind, code, label), count in sorted(
@@ -353,6 +369,7 @@ def build_report_page(reports: list[dict], limit: int, offset: int) -> dict:
     return {
         "summary": {
             "total_reports": len(reports),
+            "completed_personal_discussions": completed_personal_discussions,
             "status_counts": status_counts,
             "recurring_targets": recurring,
             "next_action": (

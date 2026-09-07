@@ -9,28 +9,29 @@
       :key="`${item.targetType}:${item.targetCode}`"
       class="target"
       role="listitem"
-      :aria-label="`${item.label}，在 ${item.occurrences} 次 PBL 中出现`"
+      :aria-label="`${item.label}，在 ${completedDiscussions} 次完成讨论中出现 ${item.occurrences} 次`"
     >
       <view class="target-line"
         ><text>{{ item.label }}</text
-        ><text>{{ item.occurrences }} 次</text></view
+        ><text class="target-count">{{ item.occurrences }} / {{ completedDiscussions }} 次完成讨论</text></view
       >
       <view
         class="track"
         aria-hidden="true"
       >
-        <view :style="{ width: `${Math.max(12, (item.occurrences / maximum) * 100)}%` }" />
+        <view
+          class="track-fill"
+          :style="{ width: `${Math.min(100, (item.occurrences / completedDiscussions) * 100)}%` }"
+        />
       </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { PblReportPage } from '@/features/pbl/public'
 
-const props = defineProps<{ items: PblReportPage['summary']['recurringTargets'] }>()
-const maximum = computed(() => Math.max(1, ...props.items.map((item) => item.occurrences)))
+defineProps<{ items: PblReportPage['summary']['recurringTargets']; completedDiscussions: number }>()
 </script>
 
 <style scoped>
@@ -52,7 +53,7 @@ const maximum = computed(() => Math.max(1, ...props.items.map((item) => item.occ
   color: var(--med-text-secondary);
   font-size: 25rpx;
 }
-.target-line text:last-child {
+.target-count {
   flex: none;
   color: var(--med-clinical);
   font-family: var(--med-font-utility);
@@ -64,7 +65,7 @@ const maximum = computed(() => Math.max(1, ...props.items.map((item) => item.occ
   background: var(--med-divider);
   border-radius: 2rpx;
 }
-.track view {
+.track-fill {
   height: 100%;
   background: var(--med-clinical);
 }

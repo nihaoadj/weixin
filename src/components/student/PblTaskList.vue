@@ -64,7 +64,9 @@
         class="task"
         :class="{ 'task--next': nextTask(plan)?.id === task.id }"
         ><text class="subtitle">第 {{ task.cycle_number }} 轮 · {{ taskLabels[task.task_type] }}</text
-        ><text>{{ task.public_definition.prompt }}</text>
+        ><text>{{ task.public_definition.prompt }}</text
+        ><text class="task-meta">学习目标：{{ taskTargetLabel(task) }}</text
+        ><text class="muted">资料来源：{{ taskReference(task) }}</text>
         <template v-if="task.status === 'completed'"
           ><text class="done">已完成</text
           ><text v-if="task.result"
@@ -163,6 +165,9 @@ const taskLabels = {
   micro_drill: '病例推理微训练',
   focused_retry: '完整病例重练',
 }
+const taskTargetLabel = (task: PblTask) =>
+  task.public_definition.target_label || task.public_definition.point_code || task.target_code
+const taskReference = (task: PblTask) => task.public_definition.reference || '教师采用的 PBL 训练，未提供单独资料来源。'
 const unlocked = (plan: PblPlan, task: PblTask) =>
   task.cycle_number === plan.current_cycle &&
   plan.tasks

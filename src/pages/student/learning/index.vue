@@ -82,7 +82,7 @@
           @keydown="activateButtonOnKey"
           @click="openChat"
         >
-          先去医学问答
+          前往研讨
         </button>
       </view>
     </view>

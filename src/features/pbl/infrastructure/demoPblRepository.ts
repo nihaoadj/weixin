@@ -393,6 +393,8 @@ export class DemoPblRepository implements PblRepository {
         prompt: string
         options?: string[]
         point_code?: string
+        target_label?: string
+        reference?: string
         cycle_number: number
         target_type: string
         target_code: string
@@ -401,6 +403,8 @@ export class DemoPblRepository implements PblRepository {
         {
           task_type: 'discussion',
           prompt: item.prompt,
+          target_label: '正式讨论',
+          reference: 'Demo 合成教学资料；仅用于界面合同演示。',
           cycle_number: 1,
           target_type: 'discussion',
           target_code: 'discussion',
@@ -409,6 +413,8 @@ export class DemoPblRepository implements PblRepository {
         {
           task_type: 'discussion',
           prompt: '第二轮反思：重新说明证据链与不确定性。',
+          target_label: '正式讨论',
+          reference: 'Demo 合成教学资料；仅用于界面合同演示。',
           cycle_number: 2,
           target_type: 'discussion',
           target_code: 'discussion',
@@ -418,6 +424,8 @@ export class DemoPblRepository implements PblRepository {
           {
             task_type: 'knowledge_review' as const,
             point_code: gap.point_code,
+            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
+            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
             prompt: 'Demo 巩固：如何建立机制解释？',
             options: ['结合形态与机制核对证据', '只记结论'],
             cycle_number: 1,
@@ -428,6 +436,8 @@ export class DemoPblRepository implements PblRepository {
           {
             task_type: 'retest' as const,
             point_code: gap.point_code,
+            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
+            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
             prompt: 'Demo 再测：另一切片与原解释不符，应怎样处理？',
             options: ['比较新证据并修订假设', '忽略差异'],
             cycle_number: 1,
@@ -438,6 +448,8 @@ export class DemoPblRepository implements PblRepository {
           {
             task_type: 'knowledge_review' as const,
             point_code: gap.point_code,
+            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
+            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
             prompt: 'Demo 第二轮巩固：从相反证据重新建立机制解释。',
             options: ['比较证据后修订解释', '只重复原结论'],
             cycle_number: 2,
@@ -448,6 +460,8 @@ export class DemoPblRepository implements PblRepository {
           {
             task_type: 'retest' as const,
             point_code: gap.point_code,
+            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
+            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
             prompt: 'Demo 第二轮再测：新证据削弱原假设时应怎样处理？',
             options: ['降低原假设优先级并继续核对', '忽略新证据'],
             cycle_number: 2,
@@ -461,6 +475,8 @@ export class DemoPblRepository implements PblRepository {
               {
                 task_type: 'micro_drill' as const,
                 prompt: 'Demo 病例回顾：重新描述课堂病例的观察、假设与证据限制。正式完整重练由 API 训练流程执行。',
+                target_label: '证据推理',
+                reference: 'Demo 合成教学资料；仅用于界面合同演示。',
                 cycle_number: 1,
                 target_type: 'reasoning_issue',
                 target_code: 'evidence_reasoning',
@@ -469,6 +485,8 @@ export class DemoPblRepository implements PblRepository {
               {
                 task_type: 'micro_drill' as const,
                 prompt: 'Demo 第二轮病例回顾：先写反例，再修订观察、假设与证据限制。',
+                target_label: '证据推理',
+                reference: 'Demo 合成教学资料；仅用于界面合同演示。',
                 cycle_number: 2,
                 target_type: 'reasoning_issue',
                 target_code: 'evidence_reasoning',

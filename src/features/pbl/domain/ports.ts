@@ -87,7 +87,14 @@ export type PblTask = {
   task_type: 'discussion' | 'knowledge_review' | 'retest' | 'micro_drill' | 'focused_retry'
   status: string
   problem_id: number | null
-  public_definition: { prompt: string; options?: string[]; point_code?: string; card_code?: string; reference?: string }
+  public_definition: {
+    prompt: string
+    options?: string[]
+    point_code?: string
+    card_code?: string
+    target_label?: string
+    reference?: string
+  }
   result: {
     score: number | null
     feedback: string
@@ -190,6 +197,7 @@ export type PblReportListItem = {
 export type PblReportPage = {
   summary: {
     totalReports: number
+    completedPersonalDiscussions: number
     statusCounts: Record<PblReportStatus, number>
     recurringTargets: Array<{ targetType: string; targetCode: string; label: string; occurrences: number }>
     nextAction?: PblReportAction & { sessionId: string; caseTitle: string }
@@ -252,6 +260,7 @@ export type PblLearningReport = {
       targetCode: string
       targetLabel: string
       prompt: string
+      reference?: string
       score: number | null
       feedback: string
       evidencePresent: boolean

@@ -207,6 +207,7 @@ const plan = z.object({
         options: z.array(z.string()).optional(),
         point_code: z.string().optional(),
         card_code: z.string().optional(),
+        target_label: z.string().optional(),
         reference: z.string().optional(),
       }),
       result: z
