@@ -15,6 +15,29 @@ const login = (role: 'student' | 'teacher', openid: string) =>
     classIds: ['demo_class_1'],
   })
 describe('PBL Demo contract', () => {
+  it('uses one dialogue contract for direct and guided communication', async () => {
+    ensureDemoData()
+    const repository = new DemoPblRepository(new DemoContentRepository())
+    login('student', 'demo_student')
+    expect(await repository.classes()).toEqual([{ id: '1', name: '病理学演示班', code: 'demo-class' }])
+    const input = {
+      clientSessionId: 'direct-1',
+      classId: '1',
+      interactionStyle: 'direct' as const,
+      goalPointCodes: ['pathology.inflammation.vascular'],
+    }
+    const created = await repository.createDialogue(input)
+    expect((await repository.createDialogue(input)).session.id).toBe(created.session.id)
+    expect(created.session.sessionKind).toBe('student_initiated')
+    expect(created.participation?.interactionStyle).toBe('direct')
+    await expect(repository.startDialogue(created.session.id, 'guided')).rejects.toMatchObject({
+      code: 'STATE_CONFLICT',
+    })
+    const first = await repository.message(created.session.id, '为什么会局部红肿？', 'direct-message-1')
+    expect(first.diagnostic?.assistantReply).toContain('先说明')
+    expect(first.diagnostic?.knowledgeGaps).toEqual([])
+  })
+
   it('keeps message retries stable, adopts edited content and returns learning evidence to the teacher', async () => {
     ensureDemoData()
     const repository = new DemoPblRepository(new DemoContentRepository())

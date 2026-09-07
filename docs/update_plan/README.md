@@ -24,6 +24,7 @@
 | [T14 PBL 自动阶段与自动巩固闭环](14-pbl-automatic-mastery-loop/README.md)        | 参与级阶段、两轮任务与系统自动判定     |
 | [T15 学生 PBL 学情报告与改善轨迹](15-pbl-student-learning-report/README.md)      | 学生累计学情、单课证据与改善对照       |
 | [T16 前端信息架构与导航精简](16-frontend-information-architecture/README.md)     | 四项主导航、跳转层级与页面空间治理     |
+| [T17 统一学习研讨与 PBL 闭环](17-unified-learning-dialogue/README.md)            | 沟通策略统一、诊断与巩固单一闭环       |
 
 ## 共享工程治理记录
 

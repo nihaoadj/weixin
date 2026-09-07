@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import exists, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, aliased
 
 from app.modules.pbl.application.records import (
@@ -19,7 +20,7 @@ from app.modules.pbl.infrastructure.models import (
     PblQuestionSuggestion,
     PblSession,
 )
-from app.shared.errors import AppError
+from app.shared.errors import AppError, PersistenceConflict
 
 
 class SqlAlchemyPblRepository:
@@ -31,22 +32,25 @@ class SqlAlchemyPblRepository:
     @staticmethod
     def _session_record(value: PblSession) -> PblSessionRecord:
         return PblSessionRecord(
-            value.id,
-            value.class_id,
-            value.teacher_id,
-            value.topic_code,
-            value.provider,
-            value.invocation_mode,
-            value.status,
-            value.created_at,
-            value.closed_at,
-            value.case_id,
-            value.case_version,
-            value.case_digest,
-            value.case_context,
-            tuple(value.goal_point_codes),
-            value.phase,
-            value.version,
+            id=value.id,
+            class_id=value.class_id,
+            teacher_id=value.teacher_id,
+            topic_code=value.topic_code,
+            provider=value.provider,
+            invocation_mode=value.invocation_mode,
+            status=value.status,
+            created_at=value.created_at,
+            closed_at=value.closed_at,
+            case_id=value.case_id,
+            case_version=value.case_version,
+            case_digest=value.case_digest,
+            case_context=value.case_context,
+            goal_point_codes=tuple(value.goal_point_codes),
+            phase=value.phase,
+            version=value.version,
+            session_kind=value.session_kind,
+            created_by_student_id=value.created_by_student_id,
+            client_session_id=value.client_session_id,
         )
 
     def _part_record(self, value: PblParticipation) -> PblParticipationRecord:
@@ -54,12 +58,12 @@ class SqlAlchemyPblRepository:
             select(PblMessage).where(PblMessage.participation_id == value.id).order_by(PblMessage.sequence.asc())
         ).all()
         return PblParticipationRecord(
-            value.id,
-            value.session_id,
-            value.student_id,
-            value.coze_user_ref,
-            value.coze_conversation_ref,
-            tuple(
+            id=value.id,
+            session_id=value.session_id,
+            student_id=value.student_id,
+            coze_user_ref=value.coze_user_ref,
+            coze_conversation_ref=value.coze_conversation_ref,
+            messages=tuple(
                 {
                     "id": str(message.id),
                     "sequence": message.sequence,
@@ -71,11 +75,13 @@ class SqlAlchemyPblRepository:
                 }
                 for message in messages
             ),
-            value.revision,
-            value.current_phase,
-            value.phase_started_revision,
-            value.phase_status,
-            value.phase_completed_at,
+            revision=value.revision,
+            current_phase=value.current_phase,
+            phase_started_revision=value.phase_started_revision,
+            phase_status=value.phase_status,
+            phase_completed_at=value.phase_completed_at,
+            interaction_style=value.interaction_style,
+            style_selected_at=value.style_selected_at,
         )
 
     @staticmethod
@@ -124,6 +130,9 @@ class SqlAlchemyPblRepository:
         mode: str | None,
         context: dict,
         goals: tuple[str, ...],
+        session_kind: str = "classroom",
+        created_by_student_id: int | None = None,
+        client_session_id: str | None = None,
     ) -> PblSessionRecord:
         value = PblSession(
             class_id=class_id,
@@ -131,11 +140,17 @@ class SqlAlchemyPblRepository:
             topic_code=topic_code,
             provider=provider,
             invocation_mode=mode,
+            session_kind=session_kind,
+            created_by_student_id=created_by_student_id,
+            client_session_id=client_session_id,
             **context,
             goal_point_codes=list(goals),
         )
         self._session.add(value)
-        self._session.flush()
+        try:
+            self._session.flush()
+        except IntegrityError as error:
+            raise PersistenceConflict from error
         return self._session_record(value)
 
     def get_session(self, session_id: int) -> PblSessionRecord | None:
@@ -157,7 +172,12 @@ class SqlAlchemyPblRepository:
             select(PblSession)
             .where(
                 or_(
-                    (PblSession.class_id.in_(class_ids)) & (PblSession.status == "active"),
+                    (PblSession.class_id.in_(class_ids))
+                    & (PblSession.status == "active")
+                    & (
+                        (PblSession.session_kind == "classroom")
+                        | (PblSession.created_by_student_id == student_id)
+                    ),
                     exists().where(
                         PblParticipation.session_id == PblSession.id, PblParticipation.student_id == student_id
                     ),
@@ -170,12 +190,18 @@ class SqlAlchemyPblRepository:
     def list_sessions_for_teacher(self, teacher_id: int, class_id: int) -> tuple[PblSessionRecord, ...]:
         values = self._session.scalars(
             select(PblSession)
-            .where(PblSession.teacher_id == teacher_id, PblSession.class_id == class_id)
+            .where(
+                PblSession.teacher_id == teacher_id,
+                PblSession.class_id == class_id,
+                PblSession.session_kind == "classroom",
+            )
             .order_by(PblSession.id.desc())
         ).all()
         return tuple(self._session_record(value) for value in values)
 
-    def get_or_create_participation(self, session_id: int, student_id: int) -> PblParticipationRecord:
+    def get_or_create_participation(
+        self, session_id: int, student_id: int, interaction_style: str = "guided"
+    ) -> PblParticipationRecord:
         value = self._session.scalar(
             select(PblParticipation).where(
                 PblParticipation.session_id == session_id,
@@ -187,10 +213,22 @@ class SqlAlchemyPblRepository:
                 session_id=session_id,
                 student_id=student_id,
                 coze_user_ref=f"pbl-{session_id}-{student_id}",
+                interaction_style=interaction_style,
             )
             self._session.add(value)
             self._session.flush()
         return self._part_record(value)
+
+    def find_student_session_by_client_id(
+        self, student_id: int, client_session_id: str
+    ) -> PblSessionRecord | None:
+        value = self._session.scalar(
+            select(PblSession).where(
+                PblSession.created_by_student_id == student_id,
+                PblSession.client_session_id == client_session_id,
+            )
+        )
+        return self._session_record(value) if value else None
 
     def latest_snapshot(self, participation_id: int) -> PblSnapshotRecord | None:
         value = self._session.scalar(
@@ -217,17 +255,19 @@ class SqlAlchemyPblRepository:
                 .order_by(PblDiagnosticSnapshot.revision.asc())
             ).all()
             participation = PblParticipationRecord(
-                value.id,
-                value.session_id,
-                value.student_id,
-                value.coze_user_ref,
-                value.coze_conversation_ref,
-                (),
-                value.revision,
-                value.current_phase,
-                value.phase_started_revision,
-                value.phase_status,
-                value.phase_completed_at,
+                id=value.id,
+                session_id=value.session_id,
+                student_id=value.student_id,
+                coze_user_ref=value.coze_user_ref,
+                coze_conversation_ref=value.coze_conversation_ref,
+                messages=(),
+                revision=value.revision,
+                current_phase=value.current_phase,
+                phase_started_revision=value.phase_started_revision,
+                phase_status=value.phase_status,
+                phase_completed_at=value.phase_completed_at,
+                interaction_style=value.interaction_style,
+                style_selected_at=value.style_selected_at,
             )
             result.append(
                 PblReportParticipationRecord(
@@ -408,6 +448,8 @@ class SqlAlchemyPblRepository:
             class_id=session.class_id,
             session_id=session.id,
             topic_code=session.topic_code,
+            session_kind=session.session_kind,
+            interaction_style=part.interaction_style,
         )
 
     def diagnostics_for_teacher(self, teacher_id: int, limit: int, offset: int, filters: dict):
@@ -570,7 +612,7 @@ class SqlAlchemyPblRepository:
         snapshots = select(PblDiagnosticSnapshot.id).where(
             PblDiagnosticSnapshot.participation_id.in_(parts),
             PblDiagnosticSnapshot.status == "ready",
-            PblDiagnosticSnapshot.schema_version == 3,
+            PblDiagnosticSnapshot.schema_version.in_((3, 4)),
         )
         phase_rows = self._session.execute(
             select(PblParticipation.current_phase, func.count(PblParticipation.id))

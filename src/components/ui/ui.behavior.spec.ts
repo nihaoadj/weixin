@@ -69,19 +69,18 @@ describe('shared UI behavior', () => {
     const wrapper = mount(StudentNav, { props: { active: 'learning' } })
     expect(wrapper.findAll('.active')).toHaveLength(1)
     for (const item of wrapper.findAll('.student-nav__item')) await item.trigger('click')
-    expect(wrapper.findAll('.student-nav__item').map((item) => item.text())).toEqual(['课堂', '学习', '学情', '答疑'])
-    expect(goPrimary).toHaveBeenCalledTimes(4)
+    expect(wrapper.findAll('.student-nav__item').map((item) => item.text())).toEqual(['研讨', '学习', '学情'])
+    expect(goPrimary).toHaveBeenCalledTimes(3)
     expect(goPrimary.mock.calls.map(([route]) => route)).toEqual([
       '/student/pbl',
       '/student/learning',
       '/student/insights',
-      '/student/chat',
     ])
   })
 
   it('keeps the primary student navigation in a reusable fixed shell', () => {
     const wrapper = mount(StudentPrimaryNav, { props: { active: 'pbl' } })
     expect(wrapper.classes()).toContain('student-primary-nav')
-    expect(wrapper.find('[aria-current="page"]').text()).toBe('课堂')
+    expect(wrapper.find('[aria-current="page"]').text()).toBe('研讨')
   })
 })

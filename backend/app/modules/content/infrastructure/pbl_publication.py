@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.content.domain.digest import case_digest
+from app.modules.content.domain.templates import DIALOGUE_REASONING_BLUEPRINTS
 from app.modules.content.infrastructure.models import (
     KnowledgeCardContribution,
     Problem,
@@ -114,7 +115,7 @@ class SqlAlchemyQuestionPublication:
                     None,
                 )
                 if case
-                else None
+                else DIALOGUE_REASONING_BLUEPRINTS.get(dimension)
             )
             if not blueprint or not blueprint.get("reinforcement_prompt") or not blueprint.get(
                 "reinforcement_variant_code"

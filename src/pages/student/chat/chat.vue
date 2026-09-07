@@ -1,570 +1,232 @@
 <template>
-  <view class="safe-page chat-page">
+  <view class="safe-page legacy-page">
     <text
       class="sr-only"
       role="heading"
       aria-level="1"
-      >医学答疑</text
+      >历史答疑</text
     >
-    <PageContextBar
-      class="top-actions"
-      :label="selectedTopics.length ? '主题问答' : '自由问答'"
-      description="记录推理过程，保留学习依据"
-      aria-label="当前答疑会话"
-    >
-      <view class="topic-row">
-        <text class="topic-label">本次主题</text>
-        <view
-          v-if="selectedTopics.length"
-          class="topic-chips"
-        >
-          <button
-            v-for="topic in selectedTopics"
-            :key="topic.code"
-            class="topic-chip"
-            :aria-label="`移除学习主题 ${topic.title}`"
-            @click="removeTopic(topic.code)"
-          >
-            {{ topic.title }} ×
-          </button>
-        </view>
-        <picker
-          v-if="topicOptions.length"
-          class="topic-picker"
-          :range="topicOptions"
-          range-key="label"
-          @change="addTopic"
-        >
-          <button class="topic-add">选择主题</button>
-        </picker>
+    <MedState
+      v-if="loading"
+      variant="loading"
+      icon="retry"
+      title="正在加载历史答疑"
+      description="旧答疑仅供回看，不会进入新的阶段证据链。"
+    />
+    <MedState
+      v-else-if="error"
+      variant="error"
+      icon="retry"
+      title="历史答疑加载失败"
+      :description="error"
+      action-label="返回研讨"
+      @action="openDialogue"
+    />
+    <template v-else-if="conversation">
+      <view class="notice">
+        <text class="notice-title">旧答疑只读保留</text>
+        <text>这段对话不会自动转换为诊断或学习计划。你可以带着已确认的知识点和起始问题开始一次新研讨。</text>
       </view>
-      <template #actions>
-        <button
-          tabindex="0"
-          role="button"
-          class="history-link"
-          aria-label="查看历史学习记录"
-          @keydown="activateButtonOnKey"
-          @click="goToHistory"
-        >
-          历史
-        </button>
-        <button
-          tabindex="0"
-          role="button"
-          class="logout"
-          aria-label="退出学生账号"
-          @keydown="activateButtonOnKey"
-          @click="logout"
-        >
-          退出
-        </button>
-      </template>
-    </PageContextBar>
-
-    <scroll-view
-      class="chat-scroll"
-      scroll-y
-      :scroll-into-view="lastMessageId"
-    >
-      <ChatWelcome
-        v-if="messages.length === 0"
-        :questions="quickQuestions"
-        @ask="quickAsk"
-      />
-
-      <view
-        v-for="(message, index) in messages"
-        :id="`message-${index}`"
-        :key="message.id"
-        class="message-row"
-        :class="message.role"
+      <scroll-view
+        class="history-scroll"
+        scroll-y
       >
-        <view class="avatar">{{ message.role === 'user' ? '我' : 'AI' }}</view>
-        <view class="message-content">
-          <text class="bubble">{{ message.content }}</text>
-          <view
-            v-if="message.role === 'assistant'"
-            class="message-tools"
-          >
+        <view
+          v-for="message in conversation.messages"
+          :key="message.id"
+          class="message-row"
+          :class="{ own: message.role === 'user' }"
+        >
+          <view class="avatar">{{ message.role === 'user' ? '我' : 'AI' }}</view>
+          <view class="message-content">
+            <text class="bubble">{{ message.content }}</text>
             <button
-              tabindex="0"
-              role="button"
-              aria-label="复制助手回答"
-              @keydown="activateButtonOnKey"
-              @click="copyMessage(message.content)"
+              v-if="message.role === 'assistant'"
+              class="copy-action"
+              @click="copy(message.content)"
             >
-              <MedIcon
-                name="copy"
-                size="sm"
-              /><text>复制</text>
-            </button>
-            <button
-              tabindex="0"
-              role="button"
-              aria-label="围绕这条回答继续提问"
-              @keydown="activateButtonOnKey"
-              @click="continueFromAnswer(message.content)"
-            >
-              <text>继续问</text>
-            </button>
-            <button
-              tabindex="0"
-              role="button"
-              aria-label="将此回答加入复习"
-              @keydown="activateButtonOnKey"
-              @click="saveAnswerForReview(message)"
-            >
-              <text>加入复习</text>
+              复制
             </button>
           </view>
-          <text class="time">{{ message.timestamp }}</text>
         </view>
+      </scroll-view>
+      <view class="action-bar">
+        <button
+          class="primary-action"
+          @click="openDialogue"
+        >
+          以此主题开始新研讨
+        </button>
+        <button
+          class="secondary-action"
+          @click="goDetail(ROUTES.studentHistory)"
+        >
+          查看全部历史
+        </button>
       </view>
-      <view
-        v-if="isLoading"
-        class="message-row assistant"
-        role="status"
-        aria-live="polite"
-      >
-        <view class="avatar">AI</view>
-        <view class="bubble typing"><text>正在组织回答…</text></view>
-      </view>
-      <view class="scroll-spacer" />
-    </scroll-view>
-
-    <StudentNav active="chat" />
-    <ChatComposer
-      v-model="inputValue"
-      :loading="isLoading"
-      :can-generate-report="messages.length > 0"
-      :can-retry="Boolean(lastFailedPrompt)"
-      @send="sendMessage"
-      @report="endConversation"
-      @retry="retryLastMessage"
-    />
+    </template>
   </view>
 </template>
 
 <script setup lang="ts">
-import { activateButtonOnKey } from '@/components/ui/keyboard'
-import { computed, nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import MedIcon from '@/components/ui/MedIcon.vue'
-import PageContextBar from '@/components/ui/PageContextBar.vue'
-import StudentNav from '@/components/ui/StudentNav.vue'
-import ChatWelcome from '@/components/chat/ChatWelcome.vue'
-import ChatComposer from '@/components/chat/ChatComposer.vue'
-import { requireRole, logout } from '@/features/identity/public'
-import { goDetail, ROUTES } from '@/platform/navigation'
-import { requestMedicalAssistant } from '@/features/qa/public'
-import { findConversationAsync, upsertConversationAsync } from '@/features/qa/public'
-import { captureManualReviewItem, getKnowledgeCatalog } from '@/features/learning/public'
-import { findReportAsync, saveDraftReportAsync } from '@/features/reports/public'
-import type { ChatMessage } from '@/types/domain'
-import type { KnowledgePoint } from '@/types/knowledge'
-import { formatClock } from '@/utils/date'
-import { analyzeConversation } from '@/utils/report'
+import { ref } from 'vue'
+import MedState from '@/components/ui/MedState.vue'
+import { requireRole } from '@/features/identity/public'
+import { findConversationAsync } from '@/features/qa/public'
+import type { Conversation } from '@/types/domain'
+import { goDetail, goReplace, relaunchTo, ROUTES } from '@/platform/navigation'
 
-const quickQuestions = ['给我一个病理情境练习机制解释。', '坏死与凋亡有哪些区别？', '炎症如何引起局部红肿？']
-const messages = ref<ChatMessage[]>([])
-const inputValue = ref('')
-const conversationId = ref('')
-const lastMessageId = ref('')
-const isLoading = ref(false)
-const lastFailedPrompt = ref('')
-const knowledgePoints = ref<KnowledgePoint[]>([])
-const topicCodes = ref<string[]>([])
-const selectedTopics = computed(() => knowledgePoints.value.filter((item) => topicCodes.value.includes(item.code)))
-const topicOptions = computed(() =>
-  knowledgePoints.value
-    .filter((item) => !topicCodes.value.includes(item.code))
-    .map((item) => ({ label: `${item.systemLabel} · ${item.title}`, code: item.code })),
-)
+const loading = ref(true),
+  error = ref(''),
+  conversation = ref<Conversation>()
+const requestedTopic = ref(''),
+  requestedStarter = ref('')
 
-onLoad((options) => {
+onLoad(async (options) => {
   if (!requireRole('student')) return
-  const requestedId = typeof options?.conversationId === 'string' ? options.conversationId : ''
-  const requestedTopic = typeof options?.topicCode === 'string' ? options.topicCode : ''
-  const starter = typeof options?.starter === 'string' ? options.starter : ''
-  inputValue.value = starter
-  void loadConversation(requestedId, requestedTopic)
+  const conversationId = typeof options?.conversationId === 'string' ? options.conversationId : ''
+  requestedTopic.value = typeof options?.topicCode === 'string' ? options.topicCode : ''
+  requestedStarter.value = typeof options?.starter === 'string' ? options.starter : ''
+  if (!conversationId) {
+    relaunchTo(ROUTES.studentPbl, { topicCode: requestedTopic.value, starter: requestedStarter.value })
+    return
+  }
+  try {
+    conversation.value = await findConversationAsync(conversationId)
+    if (!conversation.value) error.value = '没有找到这条历史答疑。'
+  } catch {
+    error.value = '无法读取历史答疑，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
 })
 
-async function loadConversation(requestedId: string, requestedTopic = '') {
-  try {
-    knowledgePoints.value = await getKnowledgeCatalog()
-  } catch {
-    knowledgePoints.value = []
-  }
-  const conversation = requestedId ? await findConversationAsync(requestedId) : undefined
-  conversationId.value = conversation?.conversationId || `conv_${Date.now()}`
-  messages.value = conversation?.messages || []
-  topicCodes.value = (conversation?.topicCodes || []).filter((code) =>
-    knowledgePoints.value.some((item) => item.code === code),
-  )
-  if (
-    requestedTopic &&
-    topicCodes.value.length < 3 &&
-    knowledgePoints.value.some((item) => item.code === requestedTopic)
-  ) {
-    topicCodes.value = [...topicCodes.value, requestedTopic]
-  }
-  await scrollToBottom()
+function openDialogue() {
+  const lastQuestion = [...(conversation.value?.messages ?? [])].reverse().find((item) => item.role === 'user')?.content
+  const topicCode = conversation.value?.topicCodes?.[0] || requestedTopic.value
+  goReplace(ROUTES.studentPbl, { topicCode, starter: lastQuestion || requestedStarter.value })
 }
-
-function addTopic(event: { detail: { value: string | number } }) {
-  const topic = topicOptions.value[Number(event.detail.value)]
-  if (!topic || topicCodes.value.length >= 3) return
-  topicCodes.value = [...topicCodes.value, topic.code]
-  void persistConversation()
-}
-
-function removeTopic(code: string) {
-  topicCodes.value = topicCodes.value.filter((item) => item !== code)
-  void persistConversation()
-}
-
-function quickAsk(question: string) {
-  inputValue.value = question
-  void sendMessage()
-}
-
-function goToHistory() {
-  goDetail(ROUTES.studentHistory)
-}
-
-function createMessage(role: ChatMessage['role'], content: string): ChatMessage {
-  return { id: `msg_${Date.now()}_${messages.value.length}`, role, content, timestamp: formatClock() }
-}
-
-async function persistConversation(): Promise<boolean> {
-  try {
-    const existing = await findConversationAsync(conversationId.value)
-    const now = new Date().toISOString()
-    await upsertConversationAsync({
-      conversationId: conversationId.value,
-      messages: messages.value,
-      topicCodes: topicCodes.value,
-      createdAt: existing?.createdAt || now,
-      updatedAt: now,
-    })
-    return true
-  } catch (error) {
-    console.error('保存对话失败', error)
-    uni.showToast({ title: error instanceof Error ? error.message : '保存对话失败', icon: 'none' })
-    return false
-  }
-}
-
-async function scrollToBottom() {
-  await nextTick()
-  lastMessageId.value = messages.value.length ? `message-${messages.value.length - 1}` : ''
-}
-
-async function sendMessage() {
-  const prompt = inputValue.value.trim()
-  if (!prompt || isLoading.value) return
-  messages.value.push(createMessage('user', prompt))
-  inputValue.value = ''
-  isLoading.value = true
-  await persistConversation()
-  await scrollToBottom()
-
-  try {
-    const content = await requestMedicalAssistant({
-      prompt,
-      history: messages.value,
-      mode: '自由问答',
-      topicCodes: topicCodes.value,
-    })
-    messages.value.push(createMessage('assistant', content))
-    lastFailedPrompt.value = ''
-  } catch (error) {
-    console.error('医学问答服务失败', error)
-    lastFailedPrompt.value = prompt
-    messages.value.push(
-      createMessage('assistant', '抱歉，问答服务暂时不可用。请稍后重试，紧急健康问题请立即联系专业医疗人员。'),
-    )
-  } finally {
-    isLoading.value = false
-    await persistConversation()
-    await scrollToBottom()
-  }
-}
-
-function retryLastMessage() {
-  if (!lastFailedPrompt.value || isLoading.value) return
-  inputValue.value = lastFailedPrompt.value
-  void sendMessage()
-}
-
-function copyMessage(content: string) {
+function copy(content: string) {
   uni.setClipboardData({ data: content, success: () => uni.showToast({ title: '已复制', icon: 'success' }) })
-}
-
-function continueFromAnswer(content: string) {
-  const topic = selectedTopics.value[0]?.title
-  inputValue.value = topic
-    ? `请围绕“${topic}”继续解释：${content.slice(0, 80)}`
-    : `请进一步解释：${content.slice(0, 80)}`
-}
-
-async function saveAnswerForReview(message: ChatMessage) {
-  const pointCode = topicCodes.value[0]
-  if (!pointCode) {
-    uni.showToast({ title: '请先在顶部选择本次学习主题', icon: 'none' })
-    return
-  }
-  try {
-    await captureManualReviewItem({
-      pointCode,
-      sourceType: 'assistant_message',
-      sourceId: message.id,
-      note: message.content.slice(0, 300),
-    })
-    uni.showToast({ title: '已加入复习', icon: 'success' })
-  } catch (error) {
-    uni.showToast({ title: error instanceof Error ? error.message : '加入复习失败', icon: 'none' })
-  }
-}
-
-async function endConversation() {
-  if (!messages.value.length || isLoading.value) return
-  const existingReport = await findReportAsync(conversationId.value)
-  if (existingReport && existingReport.status !== '草稿') {
-    uni.showModal({
-      title: '报告已提交',
-      content: '已提交或已批阅的报告不能被覆盖。你可以查看原报告，或返回后开启新对话。',
-      confirmText: '查看报告',
-      success: ({ confirm }) => {
-        if (confirm) goDetail(ROUTES.studentReport, { conversationId: conversationId.value })
-      },
-    })
-    return
-  }
-  uni.showLoading({ title: '正在生成报告…' })
-  try {
-    await persistConversation()
-    await saveDraftReportAsync({
-      conversationId: conversationId.value,
-      messages: messages.value,
-      analysis: analyzeConversation(messages.value),
-      createdAt: new Date().toISOString(),
-    })
-    if (!topicCodes.value.length) {
-      goDetail(ROUTES.studentReport, { conversationId: conversationId.value })
-      return
-    }
-    uni.showModal({
-      title: '报告已生成',
-      content: '现在完成本次主题的客观小测，错误会进入你的复习队列。也可以稍后从学习页进入。',
-      confirmText: '开始小测',
-      cancelText: '查看报告',
-      success: ({ confirm }) => {
-        if (confirm) {
-          goDetail(ROUTES.studentKnowledgeLoop, { topicCodes: topicCodes.value.join(',') })
-          return
-        }
-        goDetail(ROUTES.studentReport, { conversationId: conversationId.value })
-      },
-    })
-  } catch (error) {
-    console.error('生成报告失败', error)
-    uni.showToast({ title: error instanceof Error ? error.message : '生成报告失败', icon: 'none' })
-  } finally {
-    uni.hideLoading()
-  }
 }
 </script>
 
 <style scoped>
-.chat-page {
+.legacy-page {
   display: flex;
   height: calc(100vh - var(--window-top, 0px));
-  /* #ifdef H5 */
-  height: calc(100dvh - var(--window-top, 0px));
-  /* #endif */
   min-height: 0;
-  overflow: hidden;
   flex-direction: column;
   background: var(--med-page);
 }
-.topic-row,
-.topic-chips {
+.notice {
   display: flex;
-  min-width: 0;
-  align-items: center;
+  margin: 20rpx 24rpx 0;
+  padding: 22rpx;
+  flex-direction: column;
   gap: 8rpx;
-}
-.topic-row {
-  flex-wrap: wrap;
-}
-.topic-label {
-  color: var(--med-muted);
-  font-size: 20rpx;
-}
-.topic-chip,
-.topic-add {
-  min-height: 42rpx;
-  margin: 0;
-  padding: 0 12rpx;
-  color: var(--med-clinical);
-  background: var(--med-wash);
-  border-radius: 99rpx;
-  font-size: 20rpx;
-  line-height: 42rpx;
-}
-.topic-add {
   color: var(--med-text-secondary);
-  background: transparent;
+  background: var(--med-wash);
   border: 1rpx solid var(--med-border);
-}
-.history-link,
-.logout {
-  min-width: 44px;
-  min-height: 44px;
-  margin: 0;
-  padding: 0 12rpx;
-  color: var(--med-clinical);
-  background: transparent;
+  border-radius: var(--med-radius-md);
   font-size: 24rpx;
+  line-height: 1.6;
 }
-.logout {
-  color: var(--med-muted);
+.notice-title {
+  color: var(--med-clinical);
+  font-size: 27rpx;
+  font-weight: 750;
 }
-.chat-scroll {
+.history-scroll {
   height: 0;
-  min-height: 0;
-  padding: 28rpx;
+  padding: 20rpx 24rpx;
   box-sizing: border-box;
   flex: 1;
-}
-.chat-page > .student-nav {
-  flex: none;
-  margin: 0 20rpx;
-  border: 1rpx solid var(--med-border);
-  border-bottom: 0;
-  border-radius: var(--med-radius-md) var(--med-radius-md) 0 0;
 }
 .message-row {
   display: flex;
   max-width: 800px;
-  margin: 24rpx auto;
+  margin: 22rpx auto;
   align-items: flex-start;
 }
-.message-row.user {
+.message-row.own {
   flex-direction: row-reverse;
 }
 .avatar {
   display: flex;
-  width: 62rpx;
-  height: 62rpx;
-  flex: 0 0 62rpx;
+  width: 58rpx;
+  height: 58rpx;
+  flex: 0 0 58rpx;
   align-items: center;
   justify-content: center;
   color: #fff;
   background: var(--med-clinical);
   border-radius: var(--med-radius-sm);
-  font-size: 23rpx;
+  font-size: 21rpx;
   font-weight: 700;
 }
-.user .avatar {
+.own .avatar {
   background: var(--med-ink);
 }
 .message-content {
   display: flex;
-  min-width: 0;
-  max-width: 76%;
-  margin: 0 16rpx;
+  max-width: 78%;
+  margin: 0 14rpx;
   flex-direction: column;
+  align-items: flex-start;
+  gap: 7rpx;
 }
-.user .message-content {
+.own .message-content {
   align-items: flex-end;
 }
 .bubble {
-  display: block;
-  padding: 22rpx 24rpx;
+  padding: 20rpx 22rpx;
   color: var(--med-text);
   background: var(--med-surface);
   border: 1rpx solid var(--med-border);
-  border-radius: 6rpx var(--med-radius-md) var(--med-radius-md) var(--med-radius-md);
-  font-size: 28rpx;
+  border-radius: var(--med-radius-md);
+  font-size: 27rpx;
   line-height: 1.65;
-  overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.user .bubble {
+.own .bubble {
   color: #fff;
   background: var(--med-ink);
   border-color: var(--med-ink);
-  border-radius: var(--med-radius-md) 6rpx var(--med-radius-md) var(--med-radius-md);
 }
-.time {
-  margin-top: 8rpx;
-  color: var(--med-muted);
-  font-size: 22rpx;
-}
-.message-tools {
-  display: flex;
-}
-.message-tools button {
-  display: flex;
-  min-height: 44px;
+.copy-action {
+  width: auto;
+  min-height: 52rpx;
   margin: 0;
-  padding: 0 12rpx;
-  align-items: center;
-  gap: 6rpx;
-  color: var(--med-muted);
+  padding: 0 14rpx;
+  color: var(--med-clinical);
   background: transparent;
-  font-size: 22rpx;
+  font-size: 21rpx;
 }
-.typing {
-  margin-left: 16rpx;
-  color: var(--med-muted);
+.action-bar {
+  display: flex;
+  padding: 18rpx 24rpx calc(22rpx + env(safe-area-inset-bottom));
+  gap: 14rpx;
+  background: var(--med-surface);
+  border-top: 1rpx solid var(--med-border);
 }
-.scroll-spacer {
-  height: 24rpx;
+.primary-action,
+.secondary-action {
+  min-height: 82rpx;
+  margin: 0;
+  padding: 0 22rpx;
+  border-radius: var(--med-radius-sm);
+  font-size: 25rpx;
 }
-@media screen and (max-width: 360px) {
-  .bubble {
-    font-size: 14px;
-  }
+.primary-action {
+  flex: 1;
+  color: #fff;
+  background: var(--med-clinical);
 }
-@media screen and (min-width: 600px) {
-  .history-link,
-  .logout {
-    font-size: 14px;
-  }
-  .topic-label,
-  .topic-chip,
-  .topic-add {
-    font-size: 12px;
-  }
-  .history-link,
-  .logout {
-    min-width: 56px;
-    padding: 0 12px;
-  }
-  .chat-scroll {
-    padding: 28px 32px;
-  }
-  .chat-page > .student-nav {
-    margin: 0 24px;
-  }
-  .avatar {
-    width: 40px;
-    height: 40px;
-    flex-basis: 40px;
-    font-size: 14px;
-  }
-  .bubble {
-    padding: 14px 16px;
-    font-size: 16px;
-  }
-  .time,
-  .message-tools button {
-    font-size: 13px;
-  }
+.secondary-action {
+  width: auto;
+  color: var(--med-clinical);
+  background: var(--med-wash);
 }
 </style>

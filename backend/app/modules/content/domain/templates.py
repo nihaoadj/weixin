@@ -20,6 +20,31 @@ DIMENSIONS = (
     ("management_safety", "解释边界与安全", 15, "management"),
 )
 
+# Versioned, deterministic equivalents for student-initiated dialogue, which has
+# no case-specific blueprint. They remain internal until a teacher adopts and
+# publishes the originating PBL suggestion.
+DIALOGUE_REASONING_BLUEPRINTS = {
+    dimension: {
+        "id": f"pathology.dialogue.{dimension}.v1",
+        "dimension_id": dimension,
+        "stage_id": stage,
+        "fallback_prompt": f"围绕本次研讨主题完成以下任务：{STAGES[stage]}",
+        "reinforcement_prompt": f"第二轮等价变式：先写出相反解释，再完成以下任务：{STAGES[stage]}",
+        "reinforcement_variant_code": f"pathology.dialogue.{dimension}.v2",
+        "answer_schema": "short_text",
+        "criteria": [
+            {
+                "id": f"{dimension}_evidence",
+                "keywords": ["观察", "证据", "机制"],
+                "feedback": "请明确区分观察、推断和仍缺少的证据。",
+                "critical": False,
+                "weight": 100,
+            }
+        ],
+    }
+    for dimension, _, _, stage in DIMENSIONS
+}
+
 
 def topic_for_draft(topic: str):
     return next(

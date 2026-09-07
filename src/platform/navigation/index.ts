@@ -43,7 +43,7 @@ export const ROUTES = {
 } as const
 
 export type StudentPrimaryRoute =
-  typeof ROUTES.studentChat | typeof ROUTES.studentLearning | typeof ROUTES.studentInsights | typeof ROUTES.studentPbl
+  typeof ROUTES.studentLearning | typeof ROUTES.studentInsights | typeof ROUTES.studentPbl
 
 type NavigationParams = Record<string, string | number | null | undefined>
 type BackPressSource = 'backbutton' | 'navigateBack'

@@ -14,7 +14,7 @@ from app.modules.pbl.application.records import (
 )
 from app.modules.pbl.application.reporting import build_report, build_report_page
 from app.modules.pbl.domain.catalog import PATHOLOGY_POINTS
-from app.shared.errors import AppError
+from app.shared.errors import AppError, PersistenceConflict
 from app.shared.uow import UnitOfWork
 
 
@@ -74,6 +74,111 @@ class PblApplication:
             self._classroom_scope.active_class_ids_for_student(student_id), student_id
         )
 
+    def classes_for_student(self, student_id: int):
+        return self._classroom_scope.active_classes_for_student(student_id)
+
+    @staticmethod
+    def _interaction_style(value: str) -> str:
+        if value not in {"guided", "direct"}:
+            raise AppError("VALIDATION_ERROR", "沟通方式无效", 422)
+        return value
+
+    def create_student_dialogue(
+        self,
+        student_id: int,
+        client_session_id: str,
+        class_id: int,
+        interaction_style: str,
+        goals: tuple[str, ...],
+    ) -> tuple[PblSessionRecord, PblParticipationRecord]:
+        client_id = client_session_id.strip()
+        style = self._interaction_style(interaction_style)
+        if not client_id or len(client_id) > 100:
+            raise AppError("VALIDATION_ERROR", "会话标识无效", 422)
+        classroom = next(
+            (item for item in self._classroom_scope.active_classes_for_student(student_id) if item.id == class_id),
+            None,
+        )
+        if classroom is None:
+            raise AppError("RESOURCE_NOT_FOUND", "班级不存在", 404)
+        unique_goals = tuple(dict.fromkeys(goals))
+        views = tuple(knowledge_point_view(code) for code in unique_goals)
+        if len(unique_goals) != len(goals) or not 1 <= len(unique_goals) <= 3 or any(view is None for view in views):
+            raise AppError("VALIDATION_ERROR", "请选择 1～3 个不同的病理知识点", 422)
+        topics = {str(view["system_code"]) for view in views if view is not None}
+        if len(topics) != 1 or next(iter(topics)) not in PATHOLOGY_POINTS:
+            raise AppError("VALIDATION_ERROR", "知识点必须属于同一病理主题", 422)
+        topic_code = next(iter(topics))
+        existing = self._repository.find_student_session_by_client_id(student_id, client_id)
+        if existing is not None:
+            participation = self._repository.find_participation(existing.id, student_id)
+            if (
+                existing.class_id != class_id
+                or existing.goal_point_codes != unique_goals
+                or participation is None
+                or participation.interaction_style != style
+            ):
+                raise AppError("STATE_CONFLICT", "会话标识已用于其他设置", 409)
+            return existing, participation
+        try:
+            session = self._repository.create_session(
+                class_id,
+                classroom.teacher_id,
+                topic_code,
+                self._provider,
+                self._mode,
+                {
+                    "case_id": None,
+                    "case_version": None,
+                    "case_digest": None,
+                    "case_context": {"title": f"{PATHOLOGY_POINTS[topic_code]}主动研讨"},
+                },
+                unique_goals,
+                session_kind="student_initiated",
+                created_by_student_id=student_id,
+                client_session_id=client_id,
+            )
+        except PersistenceConflict as error:
+            self._uow.rollback()
+            concurrent = self._repository.find_student_session_by_client_id(student_id, client_id)
+            concurrent_participation = (
+                self._repository.find_participation(concurrent.id, student_id) if concurrent is not None else None
+            )
+            if (
+                concurrent is None
+                or concurrent.class_id != class_id
+                or concurrent.goal_point_codes != unique_goals
+                or concurrent_participation is None
+                or concurrent_participation.interaction_style != style
+            ):
+                raise AppError("STATE_CONFLICT", "会话创建发生冲突", 409) from error
+            return concurrent, concurrent_participation
+        participation = self._repository.get_or_create_participation(session.id, student_id, style)
+        self._uow.commit()
+        return session, participation
+
+    def start_dialogue(
+        self, student_id: int, session_id: int, interaction_style: str
+    ) -> tuple[PblSessionRecord, PblParticipationRecord, PblSnapshotRecord | None]:
+        style = self._interaction_style(interaction_style)
+        session = self._require_student_session(student_id, session_id)
+        existing = self._repository.find_participation(session_id, student_id)
+        if existing is not None:
+            if existing.interaction_style != style:
+                raise AppError("STATE_CONFLICT", "本次研讨的沟通方式已经确定", 409)
+            return session, existing, self._repository.latest_snapshot(existing.id)
+        participation = self._repository.get_or_create_participation(session_id, student_id, style)
+        self._uow.commit()
+        return session, participation, self._repository.latest_snapshot(participation.id)
+
+    def dialogue(
+        self, student_id: int, session_id: int
+    ) -> tuple[PblSessionRecord, PblParticipationRecord | None, PblSnapshotRecord | None]:
+        session = self._require_visible_student_session(student_id, session_id)
+        participation = self._repository.find_participation(session_id, student_id)
+        snapshot = self._repository.latest_snapshot(participation.id) if participation else None
+        return session, participation, snapshot
+
     def sessions_for_teacher(self, teacher_id: int, class_id: int) -> tuple[PblSessionRecord, ...]:
         if self._classroom_scope.owned_active(teacher_id, class_id) is None:
             raise AppError("RESOURCE_NOT_FOUND", "班级不存在", 404)
@@ -95,14 +200,28 @@ class PblApplication:
         return participation, self._repository.latest_snapshot(participation.id)
 
     def message(
-        self, student_id: int, session_id: int, client_message_id: str, content: str
+        self,
+        student_id: int,
+        session_id: int,
+        client_message_id: str,
+        content: str,
+        *,
+        allow_implicit_guided_start: bool = False,
     ) -> tuple[PblParticipationRecord, PblSnapshotRecord]:
         normalized = content.strip()
         if not normalized or len(normalized) > 2000:
             raise AppError("VALIDATION_ERROR", "消息长度无效", 422)
 
         # A completed duplicate remains readable after closure; new writes require an active classroom.
-        participation, _ = self.participation(student_id, session_id)
+        participation = self._repository.find_participation(session_id, student_id)
+        if participation is None:
+            if not allow_implicit_guided_start:
+                raise AppError("STATE_CONFLICT", "请先选择本次研讨的沟通方式", 409)
+            self._require_student_session(student_id, session_id)
+            participation = self._repository.get_or_create_participation(
+                session_id, student_id, interaction_style="guided"
+            )
+            self._uow.commit()
         duplicate = self._repository.message_result(participation.id, client_message_id)
         if duplicate:
             original = next(
@@ -139,6 +258,7 @@ class PblApplication:
                 current_phase=updated.current_phase,
                 phase_started_revision=updated.phase_started_revision,
                 current_revision=updated.revision,
+                interaction_style=updated.interaction_style,
             )
         )
         snapshot = self._repository.save_result(updated.id, updated.revision, result)
@@ -206,7 +326,7 @@ class PblApplication:
         if suggestion.status not in {"proposed", "edited"} or suggestion.version != version:
             raise AppError("STATE_CONFLICT", "建议版本或状态已更新", 409)
         diagnostic = self.diagnostic(teacher_id, suggestion.snapshot_id)
-        if diagnostic.snapshot.schema_version != 3:
+        if diagnostic.snapshot.schema_version not in {3, 4}:
             raise AppError("STATE_CONFLICT", "旧版诊断仅供查阅，请重新进行诊断", 409)
         session = self._repository.session_for_suggestion(suggestion.id)
         classroom = self._classroom_scope.owned_active(teacher_id, session.class_id) if session else None
@@ -384,8 +504,19 @@ class PblApplication:
             value is None
             or value.status != "active"
             or not self._classroom_scope.active_member(student_id, value.class_id)
+            or (value.session_kind == "student_initiated" and value.created_by_student_id != student_id)
         ):
             raise AppError("RESOURCE_NOT_FOUND", "课堂不存在", 404)
+        return value
+
+    def _require_visible_student_session(self, student_id: int, session_id: int) -> PblSessionRecord:
+        value = self._repository.get_session(session_id)
+        if (
+            value is None
+            or not self._classroom_scope.active_member(student_id, value.class_id)
+            or (value.session_kind == "student_initiated" and value.created_by_student_id != student_id)
+        ):
+            raise AppError("RESOURCE_NOT_FOUND", "研讨不存在", 404)
         return value
 
     def _require_suggestion(self, teacher_id: int, suggestion_id: int) -> PblSuggestionRecord:

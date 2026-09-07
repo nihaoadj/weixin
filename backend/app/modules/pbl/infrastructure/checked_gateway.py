@@ -15,11 +15,13 @@ class CheckedGateway:
                 "unavailable",
                 failure_reason=result.failure_reason,
                 provider_metadata={"validation_issues": (result.provider_metadata or {}).get("validation_issues", [])},
+                interaction_style=request.interaction_style,
             )
         try:
             value = ProviderPayload.model_validate(
                 {
                     "schema_version": result.schema_version,
+                    "interaction_style": result.interaction_style,
                     "assistant_reply": result.assistant_reply,
                     "diagnostic_status": result.diagnostic_status,
                     "follow_up_question": result.follow_up_question,
@@ -32,6 +34,8 @@ class CheckedGateway:
                 }
             )
             assessment = value.phase_assessment
+            if value.interaction_style != request.interaction_style:
+                raise ValueError("interaction style mismatch")
             if assessment.phase != request.current_phase:
                 raise ValueError("phase mismatch")
             if assessment.decision == "complete" and request.current_phase != "synthesis":
@@ -59,4 +63,5 @@ class CheckedGateway:
                 "unavailable",
                 failure_reason="invalid_diagnostic_evidence",
                 phase_assessment=None,
+                interaction_style=request.interaction_style,
             )

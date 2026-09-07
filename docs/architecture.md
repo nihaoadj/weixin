@@ -148,3 +148,9 @@ backend/
 学生一级导航固定为课堂、学习、学情、答疑，对应 `StudentPrimaryRoute` 的四个根页面；病例训练、知识地图和练习题继续使用既有 `studentCases` 路径，但由 `view=cases|knowledge|questions` 在学习模块的二级资源页中切换。一级切换使用 `reLaunch`，一级进入详情使用 `navigateTo`，连续训练步骤使用 `redirectTo`；二级页通过明确的逻辑父页面处理直接打开和返回兜底。
 
 教师工作区仍使用 `overview|reports|problems|pbl` 内部 key 和 `?tab=` 深链接，并以 `v-show` 保留切换状态；展示标签收敛为待办、学情、内容、PBL。H5/微信原生导航栏是一级页面唯一可见标题，正文使用不可见页面标题和紧凑上下文条提供无障碍名称，不重复渲染同义 Hero。此变化只影响前端路由语义、页面组合和样式，不改变 feature API、API/Demo 装配、后端接口或数据合同。
+
+# T17：统一学习研讨
+
+`pbl` 继续是学生研讨会话的唯一业务拥有者。教师课堂和学生主动研讨共用 participation 级四阶段状态机、结构化诊断、教师采用发布、两轮巩固和学情报告；`guided`/`direct` 只是 participation 上固定的沟通策略，不形成第二套学习模式。前端只经 `features/pbl/public.ts` 使用统一会话能力，API/Demo 仍由 `bootstrap/wiring.ts` 唯一选择。
+
+学生一级导航收敛为研讨、学习、学情。旧 `studentChat` 路径继续存在，但只读取旧 conversation；无 conversation ID 时转到研讨，续开只携带经目录确认的知识点和可编辑起始问题，旧消息不进入 PBL 证据链。

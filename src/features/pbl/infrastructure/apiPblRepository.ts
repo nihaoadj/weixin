@@ -8,6 +8,7 @@ import type {
   PblSession as SessionType,
   PblTargets,
   PblFilters,
+  InteractionStyle,
 } from '../domain/ports'
 import { mapLearningReport, mapReportPage, reportDetailSchema, reportPageSchema } from './reportContract'
 const session = z.object({
@@ -31,6 +32,9 @@ const session = z.object({
   phase_status: z.enum(['active', 'completed']).nullable().optional(),
   phase_counts: z.record(z.string(), z.number()).nullable().optional(),
   version: z.number(),
+  session_kind: z.enum(['classroom', 'student_initiated']).default('classroom'),
+  interaction_style: z.enum(['guided', 'direct']).nullable().optional(),
+  style_selected_at: z.string().nullable().optional(),
 })
 const suggestion = z.object({
   id: z.number(),
@@ -73,6 +77,8 @@ const diagnostic = z.object({
   phase_decision: z.enum(['continue', 'advance', 'complete', 'unavailable']).nullable().optional(),
   phase_evidence_summary: z.string(),
   phase_missing_elements: z.array(z.string()),
+  session_kind: z.enum(['classroom', 'student_initiated']).optional(),
+  interaction_style: z.enum(['guided', 'direct']).optional(),
 })
 const toSession = (v: z.infer<typeof session>): PblSession => ({
   id: String(v.id),
@@ -90,6 +96,9 @@ const toSession = (v: z.infer<typeof session>): PblSession => ({
   phaseStatus: v.phase_status ?? undefined,
   phaseCounts: v.phase_counts ?? undefined,
   version: v.version,
+  sessionKind: v.session_kind,
+  interactionStyle: v.interaction_style ?? undefined,
+  styleSelectedAt: v.style_selected_at ?? undefined,
 })
 const toSuggestion = (v: z.infer<typeof suggestion>): PblSuggestion => ({
   id: String(v.id),
@@ -122,6 +131,8 @@ const toDiagnostic = (v: z.infer<typeof diagnostic>): PblDiagnostic => ({
   phaseDecision: v.phase_decision ?? undefined,
   phaseEvidenceSummary: v.phase_evidence_summary,
   phaseMissingElements: v.phase_missing_elements,
+  sessionKind: v.session_kind,
+  interactionStyle: v.interaction_style,
 })
 const messageSchema = z.object({
   id: z.string(),
@@ -131,6 +142,27 @@ const messageSchema = z.object({
   processing_status: z.string(),
   client_message_id: z.string().nullable().optional(),
 })
+const participationSchema = z.object({
+  messages: z.array(messageSchema),
+  diagnostic: diagnostic.nullable(),
+  current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
+  phase_started_revision: z.number(),
+  phase_status: z.enum(['active', 'completed']),
+  phase_completed_at: z.string().nullable(),
+  interaction_style: z.enum(['guided', 'direct']),
+  style_selected_at: z.string().nullable(),
+})
+const toParticipation = (value: z.infer<typeof participationSchema>) => ({
+  messages: value.messages,
+  diagnostic: value.diagnostic ? toDiagnostic(value.diagnostic) : undefined,
+  currentPhase: value.current_phase,
+  phaseStartedRevision: value.phase_started_revision,
+  phaseStatus: value.phase_status,
+  phaseCompletedAt: value.phase_completed_at ?? undefined,
+  interactionStyle: value.interaction_style,
+  styleSelectedAt: value.style_selected_at ?? undefined,
+})
+const dialogueDetailSchema = z.object({ session, participation: participationSchema.nullable() })
 const plan = z.object({
   id: z.number(),
   student_id: z.number(),
@@ -209,6 +241,62 @@ const summary = z.object({
   automation_exhausted: z.number(),
 })
 export class ApiPblRepository implements PblRepository {
+  async classes() {
+    const values = await apiRequest({
+      path: '/student/classes',
+      schema: z.array(z.object({ id: z.number(), name: z.string(), code: z.string() })),
+    })
+    return values.map((item) => ({ id: String(item.id), name: item.name, code: item.code }))
+  }
+  async dialogues(limit = 20, offset = 0) {
+    const value = await apiRequest({
+      path: '/student/learning-dialogues',
+      query: { limit, offset },
+      schema: z.object({ items: z.array(session), total: z.number(), limit: z.number(), offset: z.number() }),
+    })
+    return { ...value, items: value.items.map(toSession) }
+  }
+  async dialogue(id: string) {
+    const value = await apiRequest({ path: `/student/learning-dialogues/${id}`, schema: dialogueDetailSchema })
+    return {
+      session: toSession(value.session),
+      participation: value.participation ? toParticipation(value.participation) : undefined,
+    }
+  }
+  async createDialogue(input: {
+    clientSessionId: string
+    classId: string
+    interactionStyle: InteractionStyle
+    goalPointCodes: string[]
+  }) {
+    const value = await apiRequest({
+      path: '/student/learning-dialogues',
+      method: 'POST',
+      body: {
+        client_session_id: input.clientSessionId,
+        class_id: Number(input.classId),
+        interaction_style: input.interactionStyle,
+        goal_point_codes: input.goalPointCodes,
+      },
+      schema: dialogueDetailSchema,
+    })
+    return {
+      session: toSession(value.session),
+      participation: value.participation ? toParticipation(value.participation) : undefined,
+    }
+  }
+  async startDialogue(id: string, interactionStyle: InteractionStyle) {
+    const value = await apiRequest({
+      path: `/student/learning-dialogues/${id}/start`,
+      method: 'POST',
+      body: { interaction_style: interactionStyle },
+      schema: dialogueDetailSchema,
+    })
+    return {
+      session: toSession(value.session),
+      participation: value.participation ? toParticipation(value.participation) : undefined,
+    }
+  }
   async active() {
     return (await apiRequest({ path: '/student/pbl-sessions', schema: z.array(session) })).map(toSession)
   }
@@ -233,27 +321,13 @@ export class ApiPblRepository implements PblRepository {
   async participation(id: string) {
     const value = await apiRequest({
       path: `/student/pbl-sessions/${id}/participation`,
-      schema: z.object({
-        messages: z.array(messageSchema),
-        diagnostic: diagnostic.nullable(),
-        current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
-        phase_started_revision: z.number(),
-        phase_status: z.enum(['active', 'completed']),
-        phase_completed_at: z.string().nullable(),
-      }),
+      schema: participationSchema,
     })
-    return {
-      messages: value.messages,
-      diagnostic: value.diagnostic ? toDiagnostic(value.diagnostic) : undefined,
-      currentPhase: value.current_phase,
-      phaseStartedRevision: value.phase_started_revision,
-      phaseStatus: value.phase_status,
-      phaseCompletedAt: value.phase_completed_at ?? undefined,
-    }
+    return toParticipation(value)
   }
   async message(id: string, content: string, clientMessageId: string) {
     const value = await apiRequest({
-      path: `/student/pbl-sessions/${id}/messages`,
+      path: `/student/learning-dialogues/${id}/messages`,
       timeoutMs: 35000,
       method: 'POST',
       body: { content, client_message_id: clientMessageId },
@@ -263,6 +337,8 @@ export class ApiPblRepository implements PblRepository {
         current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
         phase_status: z.enum(['active', 'completed']),
         phase_completed_at: z.string().nullable(),
+        interaction_style: z.enum(['guided', 'direct']),
+        style_selected_at: z.string().nullable(),
       }),
     })
     return {
@@ -272,6 +348,8 @@ export class ApiPblRepository implements PblRepository {
       phaseStartedRevision: value.diagnostic.revision,
       phaseStatus: value.phase_status,
       phaseCompletedAt: value.phase_completed_at ?? undefined,
+      interactionStyle: value.interaction_style,
+      styleSelectedAt: value.style_selected_at ?? undefined,
     }
   }
   async diagnostics(filters: PblFilters = {}) {

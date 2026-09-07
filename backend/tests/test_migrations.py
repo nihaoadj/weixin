@@ -63,8 +63,8 @@ def test_0005_upgrades_legacy_members_and_downgrade_preserves_data() -> None:
             engine.dispose()
 
 
-def test_actual_head_0019_upgrades_empty_and_0008_databases() -> None:
-    """Exercise the current worktree head, including the T14 and T15 additions."""
+def test_actual_head_0020_upgrades_empty_and_0008_databases() -> None:
+    """Exercise the current worktree head, including the T14 through T17 additions."""
     cwd = Path(__file__).parents[1]
     with TemporaryDirectory(prefix="medical-qa-migration-head-") as directory:
         db_path = Path(directory) / "head.db"
@@ -85,6 +85,15 @@ def test_actual_head_0019_upgrades_empty_and_0008_databases() -> None:
             }
             assert {"current_phase", "phase_started_revision", "phase_status", "phase_completed_at"} <= {
                 column["name"] for column in inspector.get_columns("pbl_participations")
+            }
+            assert {"session_kind", "created_by_student_id", "client_session_id"} <= {
+                column["name"] for column in inspector.get_columns("pbl_sessions")
+            }
+            assert {"interaction_style", "style_selected_at"} <= {
+                column["name"] for column in inspector.get_columns("pbl_participations")
+            }
+            assert "uq_pbl_session_student_client" in {
+                constraint["name"] for constraint in inspector.get_unique_constraints("pbl_sessions")
             }
             assert {
                 "current_cycle",
@@ -127,6 +136,126 @@ def test_actual_head_0019_upgrades_empty_and_0008_databases() -> None:
                 assert (
                     connection.execute(text("SELECT COUNT(*) FROM users WHERE external_id = 'head-user'")).scalar_one()
                     == 1
+                )
+        finally:
+            engine.dispose()
+
+
+def test_0020_backfills_history_and_enforces_student_creation_idempotency() -> None:
+    cwd = Path(__file__).parents[1]
+    with TemporaryDirectory(prefix="medical-qa-t17-from-0019-") as directory:
+        db_path = Path(directory) / "from-0019.db"
+        database_url = f"sqlite:///{db_path.as_posix()}"
+        run_alembic(cwd, database_url, "upgrade", "20260904_0019")
+        engine = create_engine(database_url)
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO users (id, external_id, role, nickname, avatar_url, class_ids, permissions) "
+                        "VALUES (1, 't17-teacher', 'teacher', 'teacher', '', '[]', '[]'), "
+                        "(2, 't17-student', 'student', 'student', '', '[]', '[]')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO classes (id, name, code, teacher_id, status) "
+                        "VALUES (1, 'T17', 't17', 1, 'active')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_sessions (id, class_id, teacher_id, topic_code, provider, status) "
+                        "VALUES (1, 1, 1, 'pathology.inflammation', 'coze', 'active')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_participations (id, session_id, student_id, revision) VALUES (1, 1, 2, 0)"
+                    )
+                )
+            run_alembic(cwd, database_url, "upgrade", "head")
+            with engine.begin() as connection:
+                assert connection.execute(
+                    text("SELECT session_kind FROM pbl_sessions WHERE id = 1")
+                ).scalar_one() == "classroom"
+                assert connection.execute(
+                    text("SELECT interaction_style FROM pbl_participations WHERE id = 1")
+                ).scalar_one() == "guided"
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_sessions "
+                        "(id, class_id, teacher_id, session_kind, created_by_student_id, client_session_id, "
+                        "topic_code, provider, status) VALUES "
+                        "(2, 1, 1, 'student_initiated', 2, 'same-client-id', "
+                        "'pathology.inflammation', 'coze', 'active')"
+                    )
+                )
+            with engine.begin() as connection:
+                try:
+                    connection.execute(
+                        text(
+                            "INSERT INTO pbl_sessions "
+                            "(id, class_id, teacher_id, session_kind, created_by_student_id, client_session_id, "
+                            "topic_code, provider, status) VALUES "
+                            "(3, 1, 1, 'student_initiated', 2, 'same-client-id', "
+                            "'pathology.inflammation', 'coze', 'active')"
+                        )
+                    )
+                    raise AssertionError("student client session id must be unique per student")
+                except Exception as error:
+                    assert "UNIQUE constraint failed" in str(error)
+        finally:
+            engine.dispose()
+
+
+def test_0020_downgrade_refuses_unified_dialogue_business_data() -> None:
+    cwd = Path(__file__).parents[1]
+    with TemporaryDirectory(prefix="medical-qa-t17-downgrade-") as directory:
+        db_path = Path(directory) / "t17.db"
+        database_url = f"sqlite:///{db_path.as_posix()}"
+        run_alembic(cwd, database_url, "upgrade", "head")
+        engine = create_engine(database_url)
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO users (id, external_id, role, nickname, avatar_url, class_ids, permissions) "
+                        "VALUES (1, 't17-owner', 'teacher', 'owner', '', '[]', '[]'), "
+                        "(2, 't17-creator', 'student', 'creator', '', '[]', '[]')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO classes (id, name, code, teacher_id, status) "
+                        "VALUES (1, 'T17', 't17', 1, 'active')"
+                    )
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_sessions "
+                        "(id, class_id, teacher_id, session_kind, created_by_student_id, client_session_id, "
+                        "topic_code, provider, status) VALUES "
+                        "(1, 1, 1, 'student_initiated', 2, 'client-1', "
+                        "'pathology.inflammation', 'coze', 'active')"
+                    )
+                )
+            environment = os.environ.copy()
+            environment["DATABASE_URL"] = database_url
+            attempted = subprocess.run(
+                [sys.executable, "-m", "alembic", "downgrade", "20260904_0019"],
+                cwd=cwd,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert attempted.returncode != 0
+            assert "pre-T17 backup" in attempted.stdout + attempted.stderr
+            with engine.connect() as connection:
+                assert (
+                    connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+                    == "20260907_0020"
                 )
         finally:
             engine.dispose()

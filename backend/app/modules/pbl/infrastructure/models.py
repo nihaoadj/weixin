@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.database import Base
@@ -8,10 +8,25 @@ from app.platform.database import Base
 
 class PblSession(Base):
     __tablename__ = "pbl_sessions"
-    __table_args__ = (Index("ix_pbl_sessions_class_status", "class_id", "status"),)
+    __table_args__ = (
+        Index("ix_pbl_sessions_class_status", "class_id", "status"),
+        UniqueConstraint("created_by_student_id", "client_session_id", name="uq_pbl_session_student_client"),
+        CheckConstraint("session_kind IN ('classroom', 'student_initiated')", name="ck_pbl_session_kind"),
+        CheckConstraint(
+            "(session_kind = 'classroom' AND created_by_student_id IS NULL AND client_session_id IS NULL) OR "
+            "(session_kind = 'student_initiated' AND created_by_student_id IS NOT NULL "
+            "AND client_session_id IS NOT NULL)",
+            name="ck_pbl_session_student_origin",
+        ),
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"), index=True)
     teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    session_kind: Mapped[str] = mapped_column(String(30), default="classroom", server_default="classroom")
+    created_by_student_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", name="fk_pbl_session_created_student"), nullable=True, index=True
+    )
+    client_session_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     topic_code: Mapped[str] = mapped_column(String(120))
     case_id: Mapped[int | None] = mapped_column(ForeignKey("problems.id", name="fk_pbl_session_case"), nullable=True)
     case_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -29,12 +44,19 @@ class PblSession(Base):
 
 class PblParticipation(Base):
     __tablename__ = "pbl_participations"
-    __table_args__ = (UniqueConstraint("session_id", "student_id", name="uq_pbl_participation_student"),)
+    __table_args__ = (
+        UniqueConstraint("session_id", "student_id", name="uq_pbl_participation_student"),
+        CheckConstraint(
+            "interaction_style IN ('guided', 'direct')", name="ck_pbl_participation_interaction_style"
+        ),
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("pbl_sessions.id", ondelete="CASCADE"), index=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     coze_user_ref: Mapped[str | None] = mapped_column(String(100), nullable=True)
     coze_conversation_ref: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    interaction_style: Mapped[str] = mapped_column(String(20), default="guided", server_default="guided")
+    style_selected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     revision: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     current_phase: Mapped[str] = mapped_column(
         String(40), default="problem_framing", server_default="problem_framing", nullable=False

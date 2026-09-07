@@ -160,10 +160,10 @@
         class="diagnostic"
         ><text class="section-title">{{ item.studentName }} · {{ item.className }}</text
         ><text class="muted"
-          >{{ topicName(item.topicCode || '') }} · 课堂 {{ item.sessionId }} · {{ formatTime(item.createdAt) }}</text
+          >{{ topicName(item.topicCode || '') }} · {{ item.sessionKind === 'student_initiated' ? '学生主动' : '教师课堂' }} · {{ item.interactionStyle === 'direct' ? '先直接解释' : '引导思考' }} · 会话 {{ item.sessionId }} · {{ formatTime(item.createdAt) }}</text
         >
         <text
-          v-if="item.schemaVersion !== 3"
+          v-if="![3, 4].includes(item.schemaVersion || 0)"
           class="notice"
           >历史诊断只读，不纳入新版掌握统计。</text
         >
@@ -237,6 +237,7 @@
                 @change="wholeClass[suggestion.id] = switchValue($event)"
               />全班</label
             ><label
+              v-if="item.sessionKind !== 'student_initiated'"
               ><switch
                 :checked="caseRetry[suggestion.id] || false"
                 :disabled="!editable(suggestion, item)"
@@ -430,7 +431,7 @@ const verificationLabel = (s: string) =>
   })[s] ?? s
 const formatTime = (value?: string) => (value ? new Date(value).toLocaleString() : '')
 const editable = (s: PblSuggestion, d: PblDiagnostic) =>
-  d.schemaVersion === 3 && ['proposed', 'edited'].includes(s.status)
+  [3, 4].includes(d.schemaVersion || 0) && ['proposed', 'edited'].includes(s.status)
 async function run(action: () => Promise<void>) {
   if (busy.value) return
   busy.value = true

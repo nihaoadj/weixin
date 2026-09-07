@@ -32,7 +32,7 @@ module wiring + platform UoW
 | learning  | `app/modules/learning/api/personalized.py` 全部学习计划、任务、通知、profile                                                                           | 计划选取/生成、任务解锁、微训练评分、通知幂等；消费 `training.public.TrainingCasePort` | `SqlAlchemyLearningRepository`、practice generator、case-attempt adapter；`learning/public.py`、`learning/wiring.py` |
 | classroom | `app/modules/classroom/api/classes.py` 全部 `/classes`                                                                                                 | 教师所有权、班级状态、成员增删                                                         | `SqlAlchemyClassroomRepository`；`classroom/public.py`、`classroom/wiring.py`                                        |
 | analytics | `app/modules/analytics/api/analytics.py` 全部 `/analytics`                                                                                             | 日期、班级/作者范围、当前/基线 attempt 选择和统计 read model                           | `SqlAlchemyAnalyticsReader` 只读跨表查询；`analytics/public.py`、`analytics/wiring.py`                               |
-| pbl       | `app/modules/pbl/api/routes.py`：课堂、参与消息、诊断队列、建议发布、两轮结果、学生学情报告和汇总                                                      | 参与级阶段状态机、schema v3 证据、建议审核发布编排、结果与学情只读                     | `SqlAlchemyPblRepository`、Coze/开发 gateway；`pbl/public.py`、`pbl/wiring.py`                                       |
+| pbl       | `app/modules/pbl/api/routes.py`：学生统一研讨、课堂、参与消息、诊断队列、建议发布、两轮结果、学生学情报告和汇总                                        | 统一会话、固定沟通方式、schema v4 阶段证据、建议审核发布编排、结果与学情只读           | `SqlAlchemyPblRepository`、Coze/开发 gateway；`pbl/public.py`、`pbl/wiring.py`                                       |
 
 `/problems` 是 HTTP 聚合入口：题目本体和审核走 content，题目线程走 qa；两个应用合同在路由层按 operation 分开，互不穿透 infrastructure。
 

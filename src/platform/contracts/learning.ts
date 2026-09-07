@@ -149,7 +149,14 @@ export const apiLearningTaskStartSchema = z.discriminatedUnion('mode', [
 
 const notificationSchema = z.object({
   id: z.number().int(),
-  type: z.enum(['learning_plan_ready', 'learning_plan_due', 'learning_plan_completed']),
+  type: z.enum([
+    'learning_plan_ready',
+    'learning_plan_due',
+    'learning_plan_completed',
+    'pbl_mastery_improved',
+    'pbl_reinforcement_activated',
+    'pbl_automation_exhausted',
+  ]),
   entity_type: z.literal('learning_plan'),
   entity_id: z.number().int(),
   title: z.string(),

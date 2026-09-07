@@ -19,6 +19,7 @@ class InferenceRequest:
     current_phase: str = "problem_framing"
     phase_started_revision: int = 0
     current_revision: int = 0
+    interaction_style: Literal["guided", "direct"] = "guided"
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +34,8 @@ class InferenceResult:
     fallback_used: bool = False
     failure_reason: str | None = None
     conversation_ref: str | None = None
-    schema_version: int = 3
+    schema_version: int = 4
+    interaction_style: Literal["guided", "direct"] = "guided"
     safety_notice: str = "仅供病理学教学，不能替代临床诊疗。"
     safety_status: str = "educational"
     phase_assessment: dict[str, object] | None = None
@@ -57,6 +59,9 @@ class PblSessionRecord:
     goal_point_codes: tuple[str, ...] = ()
     phase: str = "problem_framing"
     version: int = 1
+    session_kind: Literal["classroom", "student_initiated"] = "classroom"
+    created_by_student_id: int | None = None
+    client_session_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +77,8 @@ class PblParticipationRecord:
     phase_started_revision: int = 0
     phase_status: str = "active"
     phase_completed_at: datetime | None = None
+    interaction_style: Literal["guided", "direct"] = "guided"
+    style_selected_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +126,8 @@ class PblDiagnosticRecord:
     student_name: str = ""
     class_name: str = ""
     topic_code: str = ""
+    session_kind: Literal["classroom", "student_initiated"] = "classroom"
+    interaction_style: Literal["guided", "direct"] = "guided"
 
 
 @dataclass(frozen=True, slots=True)

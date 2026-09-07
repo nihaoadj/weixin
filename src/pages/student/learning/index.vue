@@ -347,7 +347,7 @@ function openResource(view: (typeof resources)[number]['view']) {
   goDetail(ROUTES.studentCases, { view })
 }
 function openChat() {
-  goPrimary(ROUTES.studentChat)
+  goPrimary(ROUTES.studentPbl)
 }
 function openTask(task: LearningTask) {
   if (task.status === 'completed') return

@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -7,13 +8,15 @@ from pydantic import ValidationError
 from app.core.config import Settings
 from app.modules.pbl import wiring
 from app.modules.pbl.application.records import InferenceRequest
+from app.modules.pbl.infrastructure.checked_gateway import CheckedGateway
 from app.modules.pbl.infrastructure.providers import CozeBotGateway, CozeWorkflowGateway, OpenAICompatibleGateway
 from app.modules.pbl.infrastructure.providers.coze_parser import parse_provider_json
 from app.modules.pbl.infrastructure.providers.request_builder import provider_messages
 
 READY = json.dumps(
     {
-        "schema_version": 3,
+        "schema_version": 4,
+        "interaction_style": "guided",
         "safety_notice": "仅供教学",
         "safety_status": "educational",
         "assistant_reply": "请比较急慢性炎症证据。",
@@ -172,6 +175,26 @@ def test_provider_messages_are_deidentified_and_history_is_bounded() -> None:
     assert messages[1]["role"] == "user"
     assert all("identity" not in item for item in messages)
     assert all("anonymous-user" not in item["content"] for item in messages)
+
+
+def test_schema_v4_carries_and_checks_direct_interaction_style() -> None:
+    request = replace(
+        _request(),
+        interaction_style="direct",
+        message_id="current",
+        current_revision=1,
+    )
+    messages = provider_messages(request)
+    assert '"interaction_style": "direct"' in messages[0]["content"]
+    assert "先准确解释学生当前问题" in messages[0]["content"]
+
+    class _MismatchedGateway:
+        def infer(self, value):
+            return replace(wiring.LocalMockGateway().infer(value), interaction_style="guided")
+
+    result = CheckedGateway(_MismatchedGateway()).infer(request)
+    assert result.diagnostic_status == "unavailable"
+    assert result.failure_reason == "invalid_diagnostic_evidence"
 
 
 def test_provider_configuration_matrix_has_no_cross_provider_fallback(monkeypatch) -> None:

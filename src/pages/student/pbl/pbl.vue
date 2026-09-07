@@ -1,16 +1,28 @@
 <template>
-  <view class="safe-page pbl">
+  <view class="safe-page dialogue-page">
     <text
       class="sr-only"
       role="heading"
       aria-level="1"
-      >PBL 课堂</text
+      >研讨</text
     >
+    <view
+      class="account-bar"
+      aria-label="研讨辅助操作"
+    >
+      <button @click="goDetail(ROUTES.studentHistory)">历史答疑</button>
+      <button
+        aria-label="退出学生账号"
+        @click="logout"
+      >
+        退出
+      </button>
+    </view>
     <MedState
-      v-if="error"
+      v-if="error && !sessions.length"
       variant="error"
       icon="retry"
-      title="课堂加载失败"
+      title="研讨加载失败"
       :description="error"
       action-label="重新加载"
       @action="load"
@@ -19,135 +31,313 @@
       v-else-if="loading"
       variant="loading"
       icon="retry"
-      title="正在加载课堂"
-      description="正在同步课堂阶段、讨论记录和学习线索。"
+      title="正在加载研讨"
+      description="正在同步会话、阶段证据和学习线索。"
     />
-    <view
-      v-else-if="!sessions.length"
-      class="panel"
-      ><text>还没有加入 PBL 课堂</text><text class="muted">教师创建课堂后，会在这里显示。</text></view
-    >
+
+    <template v-else-if="creating">
+      <scroll-view
+        class="launch-scroll"
+        scroll-y
+      >
+        <view class="launch-card">
+          <view class="launch-heading">
+            <view><text class="eyebrow">NEW DIALOGUE</text><text class="launch-title">开始一次病理研讨</text></view>
+            <button
+              v-if="sessions.length"
+              class="text-action"
+              @click="cancelCreate"
+            >
+              返回会话
+            </button>
+          </view>
+          <view class="field-group">
+            <text class="field-label">所属班级</text>
+            <picker
+              v-if="classes.length"
+              :range="classOptions"
+              range-key="label"
+              :value="classIndex"
+              aria-label="选择所属班级"
+              @change="selectClass"
+            >
+              <view class="field-picker">{{ classOptions[classIndex]?.label }} ▾</view>
+            </picker>
+            <text
+              v-else
+              class="field-error"
+              >你目前没有有效班级，暂时不能创建研讨。请联系教师加入班级。</text
+            >
+          </view>
+          <view class="field-group">
+            <text class="field-label">病理主题</text>
+            <picker
+              :range="topicOptions"
+              range-key="label"
+              :value="topicIndex"
+              aria-label="选择病理主题"
+              @change="selectTopic"
+            >
+              <view class="field-picker">{{ topicOptions[topicIndex]?.label || '请选择主题' }} ▾</view>
+            </picker>
+          </view>
+          <view class="field-group">
+            <view class="field-heading"
+              ><text class="field-label">本次知识点</text><text class="field-hint">选择 1–3 个</text></view
+            >
+            <view class="point-grid">
+              <button
+                v-for="point in topicPoints"
+                :key="point.code"
+                class="choice-chip"
+                :class="{ selected: selectedPointCodes.includes(point.code) }"
+                :aria-pressed="selectedPointCodes.includes(point.code)"
+                @click="togglePoint(point.code)"
+              >
+                {{ point.title }}
+              </button>
+            </view>
+          </view>
+          <view class="field-group">
+            <text class="field-label">沟通方式</text>
+            <view class="style-grid">
+              <button
+                v-for="option in styleOptions"
+                :key="option.value"
+                class="style-card"
+                :class="{ selected: createStyle === option.value }"
+                :aria-pressed="createStyle === option.value"
+                @click="createStyle = option.value"
+              >
+                <text class="style-title">{{ option.label }}</text
+                ><text class="style-desc">{{ option.description }}</text>
+              </button>
+            </view>
+          </view>
+          <view
+            v-if="starter"
+            class="starter-note"
+          >
+            <text class="field-label">从旧答疑带来的起始问题</text><text>{{ starter }}</text>
+            <text class="field-hint">旧回答不会复制为阶段证据，你可以在会话中修改后发送。</text>
+          </view>
+          <text
+            v-if="createError"
+            class="field-error"
+            role="alert"
+            >{{ createError }}</text
+          >
+          <button
+            class="primary-action"
+            :disabled="!canCreate || submitting"
+            @click="createDialogue"
+          >
+            {{ submitting ? '正在创建…' : '进入统一学习流程' }}
+          </button>
+        </view>
+      </scroll-view>
+    </template>
+
     <template v-else-if="session">
-      <picker
-        :range="sessionOptions"
-        :value="sessionIndex"
-        aria-label="选择 PBL 课堂"
-        :disabled="sending"
-        @change="selectSession"
-        ><view class="selector">{{ sessionOptions[sessionIndex] }} ▾</view></picker
+      <view
+        class="dialogue-toolbar"
+        aria-label="研讨上下文"
       >
-      <view
-        class="panel classroom-context"
-        aria-label="当前课堂上下文"
-        ><text class="section-title">{{ session.caseContext?.title || topicTitle(session.topicCode) }}</text
-        ><text v-if="session.caseContext?.opening">{{ session.caseContext.opening.patient_intro }}</text> ><view
-          class="classroom-meta"
-        >
-          <text class="phase-chip">我的阶段：{{ phaseLabels[session.studentPhase || session.phase] }}</text>
-          <text
-            class="status-chip"
-            :class="{ closed: session.status !== 'active' }"
-            >{{ session.status === 'active' ? '课堂进行中' : '已结束，可回看' }}</text
-          >
-        </view>
-        <text
-          v-if="!session.caseId"
-          class="muted"
-          >历史课堂保留原有讨论上下文。</text
-        >
-        <view
-          v-if="session.goalPointCodes.length"
-          class="goal-list"
-        >
-          <text
-            v-for="code in session.goalPointCodes"
-            :key="code"
-            class="goal-chip"
-            >{{ pointTitle(code) }}</text
-          >
-        </view>
-        >
-      </view>
-      <view
-        class="conversation"
-        aria-live="polite"
-        aria-label="课堂讨论记录"
-      >
-        <view
-          v-if="!messages.length"
-          class="muted"
-          >写下你不理解的问题，并说明目前的想法。助手会继续追问你的判断依据。</view
-        >
-        <view
-          v-for="item in messages"
-          :key="item.id"
-          class="message"
-          :class="{ own: item.role === 'student' }"
-          ><text class="message-label">{{ item.role === 'student' ? '我的讨论' : '教学助手' }}</text
-          ><text>{{ item.content }}</text></view
-        >
-      </view>
-      <view
-        v-if="diagnostic"
-        class="panel diagnosis"
-        ><text class="section-title">{{
-          diagnostic.diagnosticStatus === 'ready' ? '已形成学习线索' : '继续梳理思路'
-        }}</text>
-        <text
-          v-if="diagnostic.phaseEvidenceSummary"
-          class="muted"
-          >阶段依据：{{ diagnostic.phaseEvidenceSummary }}</text
-        >
-        <text
-          v-if="diagnostic.phaseMissingElements?.length"
-          class="muted"
-          >还需补充：{{ diagnostic.phaseMissingElements.join('；') }}</text
-        >
-        <text v-if="diagnostic.followUpQuestion">追问：{{ diagnostic.followUpQuestion }}</text>
-        <text v-if="diagnostic.diagnosticStatus === 'unavailable'">本次没有形成有效诊断，请重试或请教师帮助。</text>
-        <view
-          v-for="gap in diagnostic.knowledgeGaps"
-          :key="gap.id"
-          ><text>{{ pointTitle(gap.point_code) }}：{{ gap.summary }}</text
-          ><text class="muted">依据：{{ gap.evidence_summary }}</text></view
-        >
-        <view
-          v-for="issue in diagnostic.reasoningIssues"
-          :key="issue.id"
-          ><text>{{ issue.summary }}</text
-          ><text class="muted">下一步：{{ issue.improvement }}</text></view
-        >
-        <text class="muted">{{ diagnostic.safetyNotice }}</text>
-        <button
-          v-if="diagnostic.diagnosticStatus === 'ready'"
-          class="secondary-action"
-          @click="goPrimary(ROUTES.studentLearning)"
-        >
-          查看后续学习
-        </button>
-      </view>
-      <view
-        v-if="session.status === 'active' && session.phaseStatus !== 'completed'"
-        class="panel composer"
-      >
-        <textarea
-          v-model="draft"
+        <picker
+          class="session-picker"
+          :range="sessionOptions"
+          :value="sessionIndex"
+          aria-label="选择研讨会话"
           :disabled="sending"
-          aria-label="输入你的病理学问题"
-          :maxlength="2000"
-          placeholder="我的疑问是……我目前的判断依据是……"
-        /><button
-          class="primary"
-          :disabled="sending || !draft.trim()"
-          @click="send"
+          @change="selectSession"
         >
-          {{ sending ? '正在分析，请稍候…' : retry ? '重试提交讨论' : '提交讨论' }}</button
-        ><text class="muted">只填写合成教学内容，请勿提供身份或患者信息。</text></view
+          <view class="session-selector">{{ sessionOptions[sessionIndex] }} ▾</view>
+        </picker>
+        <button
+          class="new-action"
+          :disabled="sending"
+          @click="openCreate"
+        >
+          ＋ 新研讨
+        </button>
+        <view class="toolbar-meta">
+          <text class="meta-chip">{{ sessionKindLabel }}</text
+          ><text
+            v-if="session.interactionStyle"
+            class="meta-chip accent"
+            >{{ styleLabel }}</text
+          ><text class="meta-chip">{{ phaseLabels[currentPhase] }}</text>
+        </view>
+      </view>
+      <scroll-view
+        class="chat-scroll"
+        scroll-y
+        :scroll-into-view="scrollTarget"
+        aria-live="polite"
+        aria-label="研讨消息与阶段证据"
       >
+        <view class="case-brief">
+          <text class="eyebrow">{{ session.sessionKind === 'classroom' ? 'CLASSROOM CASE' : 'STUDENT DIALOGUE' }}</text>
+          <text class="case-title">{{ session.caseContext?.title || topicTitle(session.topicCode) }}</text>
+          <text
+            v-if="session.caseContext?.opening"
+            class="muted"
+            >{{ session.caseContext.opening.patient_intro }}</text
+          >
+          <text class="muted">学习目标：{{ session.goalPointCodes.map(pointTitle).join('、') }}</text>
+        </view>
+        <view
+          v-if="!participation"
+          class="start-card"
+        >
+          <text class="section-title">选择这次研讨的沟通方式</text>
+          <text class="muted"
+            >方式只影响 AI 如何与你沟通，之后都进入同一四阶段证据、教师审核和巩固流程；选定后不可更改。</text
+          >
+          <view class="style-grid">
+            <button
+              v-for="option in styleOptions"
+              :key="option.value"
+              class="style-card"
+              :class="{ selected: startStyle === option.value }"
+              :aria-pressed="startStyle === option.value"
+              @click="startStyle = option.value"
+            >
+              <text class="style-title">{{ option.label }}</text
+              ><text class="style-desc">{{ option.description }}</text>
+            </button>
+          </view>
+          <text
+            v-if="sendError"
+            class="field-error"
+            >{{ sendError }}</text
+          >
+          <button
+            class="primary-action compact"
+            :disabled="submitting"
+            @click="startClassroom"
+          >
+            {{ submitting ? '正在开始…' : '确认并开始' }}
+          </button>
+        </view>
+        <view
+          v-else-if="!messages.length"
+          class="welcome"
+        >
+          <text class="section-title">从你的疑问开始</text><text class="muted">{{ welcomeDescription }}</text>
+          <button
+            class="example-card"
+            aria-label="使用参考写法填入输入框"
+            @click="useTemplate"
+          >
+            <text>{{
+              session.interactionStyle === 'direct' ? '我想先了解：……' : '我的疑问是：…… 我目前的判断依据是：……'
+            }}</text
+            ><text aria-hidden="true">›</text>
+          </button>
+          <view
+            class="phase-steps"
+            aria-label="统一学习流程"
+          >
+            <view
+              v-for="(step, index) in phaseSteps"
+              :key="step.key"
+              class="phase-step"
+              :class="{ active: step.key === currentPhase }"
+              ><text class="phase-index">{{ index + 1 }}</text
+              ><text>{{ step.label }}</text></view
+            >
+          </view>
+        </view>
+        <view
+          v-for="(item, index) in messages"
+          :id="`message-${index}`"
+          :key="item.id"
+          class="message-row"
+          :class="{ own: item.role === 'student' }"
+        >
+          <view class="avatar">{{ item.role === 'student' ? '我' : 'AI' }}</view>
+          <view class="message-content">
+            <text class="bubble">{{ item.content }}</text>
+            <view
+              v-if="item.role === 'assistant'"
+              class="message-tools"
+              ><button @click="copyMessage(item.content)">复制</button
+              ><button @click="continueFrom(item.content)">继续问</button></view
+            >
+          </view>
+        </view>
+        <view
+          v-if="diagnostic"
+          id="dialogue-diagnostic"
+          class="diagnostic-card"
+        >
+          <text class="section-title">{{
+            diagnostic.diagnosticStatus === 'ready' ? '已形成学习线索' : '继续完成阶段证据'
+          }}</text>
+          <text
+            v-if="diagnostic.phaseEvidenceSummary"
+            class="muted"
+            >阶段依据：{{ diagnostic.phaseEvidenceSummary }}</text
+          >
+          <text
+            v-if="diagnostic.phaseMissingElements?.length"
+            class="muted"
+            >还需补充：{{ diagnostic.phaseMissingElements.join('；') }}</text
+          >
+          <text v-if="diagnostic.followUpQuestion">理解检验：{{ diagnostic.followUpQuestion }}</text>
+          <text v-if="diagnostic.diagnosticStatus === 'unavailable'">本次没有形成可核对诊断，请重试或请教师帮助。</text>
+          <view
+            v-for="gap in diagnostic.knowledgeGaps"
+            :key="gap.id"
+            class="diagnostic-item"
+            ><text>{{ pointTitle(gap.point_code) }}：{{ gap.summary }}</text
+            ><text class="muted">依据：{{ gap.evidence_summary }}</text></view
+          >
+          <view
+            v-for="issue in diagnostic.reasoningIssues"
+            :key="issue.id"
+            class="diagnostic-item"
+            ><text>{{ issue.summary }}</text
+            ><text class="muted">下一步：{{ issue.improvement }}</text></view
+          >
+          <text class="muted">{{ diagnostic.safetyNotice }}</text>
+          <button
+            v-if="diagnostic.diagnosticStatus === 'ready'"
+            class="secondary-action"
+            @click="goPrimary(ROUTES.studentLearning)"
+          >
+            查看后续学习
+          </button>
+        </view>
+        <view
+          v-if="sending"
+          class="message-row"
+          role="status"
+          ><view class="avatar">AI</view><view class="bubble typing"><text>正在分析阶段证据…</text></view></view
+        >
+        <view
+          :id="`stream-end-${messages.length}-${sending ? 1 : 0}`"
+          class="scroll-spacer"
+        />
+      </scroll-view>
+      <ChatComposer
+        v-if="participation && session.status === 'active' && session.phaseStatus !== 'completed'"
+        v-model="draft"
+        :loading="sending"
+        multiline
+        :tone="retry ? 'retry' : 'primary'"
+        :send-label="retry ? '重试' : '发送'"
+        :send-aria-label="retry ? '重试提交研讨' : '提交研讨'"
+        input-label="输入你的病理学问题或理解"
+        :placeholder="session.interactionStyle === 'direct' ? '我想先了解……' : '我的疑问是……我目前的判断依据是……'"
+        :error="sendError"
+        @send="send"
+      />
       <view
         v-else-if="session.phaseStatus === 'completed'"
-        class="notice"
-        ><text>四阶段讨论已完成，输入已关闭。教师采用发布建议题后，系统会按两轮规则自动判定学习结果。</text
+        class="locked-bar"
+        ><text>四阶段研讨已完成，输入已关闭。教师采用并发布后，将进入同一两轮巩固流程。</text
         ><button
           class="secondary-action"
           @click="goPrimary(ROUTES.studentLearning)"
@@ -155,42 +345,89 @@
           查看后续学习
         </button></view
       >
-      <view
-        v-else
-        class="notice"
-        >课堂已结束，讨论记录可回看，课后任务仍可继续完成。</view
-      >
     </template>
+    <view
+      v-else
+      class="empty-state"
+    >
+      <text class="section-title">还没有研讨会话</text
+      ><text class="muted">你可以从一个病理问题开始，或等待教师创建课堂病例。</text>
+      <button
+        class="primary-action compact"
+        :disabled="!classes.length"
+        @click="openCreate"
+      >
+        开始新研讨</button
+      ><text
+        v-if="!classes.length"
+        class="field-error"
+        >加入有效班级后才能创建研讨。</text
+      >
+    </view>
     <StudentPrimaryNav active="pbl" />
   </view>
 </template>
+
 <script setup lang="ts">
-import { onShow } from '@dcloudio/uni-app'
-import { computed, ref } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import { computed, nextTick, ref } from 'vue'
+import ChatComposer from '@/components/chat/ChatComposer.vue'
 import MedState from '@/components/ui/MedState.vue'
 import StudentPrimaryNav from '@/components/ui/StudentPrimaryNav.vue'
 import {
-  getActivePblSessions,
-  getPblParticipation,
-  sendPblMessage,
+  createLearningDialogue,
   createPblMessageId,
+  getLearningDialogue,
+  getLearningDialogues,
+  getStudentClasses,
+  sendPblMessage,
+  startLearningDialogue,
+  type InteractionStyle,
   type PblDiagnostic,
-  type PblSession,
   type PblMessage,
+  type PblParticipation,
+  type PblSession,
+  type StudentClassSummary,
 } from '@/features/pbl/public'
 import { getKnowledgeCatalog, type KnowledgePoint } from '@/features/learning/public'
-import { goPrimary, ROUTES } from '@/platform/navigation'
+import { logout } from '@/features/identity/public'
+import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
+
 const loading = ref(true),
   sending = ref(false),
-  error = ref(''),
-  sessions = ref<PblSession[]>([]),
-  sessionIndex = ref(0),
-  messages = ref<PblMessage[]>([]),
-  diagnostic = ref<PblDiagnostic>(),
-  draft = ref(''),
+  submitting = ref(false),
+  creating = ref(false)
+const error = ref(''),
+  createError = ref(''),
+  sendError = ref('')
+const sessions = ref<PblSession[]>([]),
+  classes = ref<StudentClassSummary[]>([]),
   points = ref<KnowledgePoint[]>([])
+const sessionIndex = ref(0),
+  classIndex = ref(0),
+  topicIndex = ref(0)
+const selectedPointCodes = ref<string[]>([]),
+  createStyle = ref<InteractionStyle>('guided'),
+  startStyle = ref<InteractionStyle>('guided')
+const participation = ref<PblParticipation>(),
+  messages = ref<PblMessage[]>([]),
+  diagnostic = ref<PblDiagnostic>()
+const draft = ref(''),
+  starter = ref(''),
+  requestedPointCode = ref(''),
+  createRequestId = ref(''),
+  scrollTarget = ref('')
 const retry = ref<{ id: string; content: string; sessionId: string }>()
-const session = computed(() => sessions.value[sessionIndex.value])
+const styleOptions: Array<{ value: InteractionStyle; label: string; description: string }> = [
+  { value: 'guided', label: '引导我思考', description: 'AI 用追问和提示帮助你逐步形成判断。' },
+  { value: 'direct', label: '先直接解释', description: 'AI 先回答，再用理解检验推进同一学习流程。' },
+]
+const phaseSteps = [
+  { key: 'problem_framing', label: '明确问题' },
+  { key: 'hypothesis', label: '提出假设' },
+  { key: 'evidence', label: '讨论证据' },
+  { key: 'synthesis', label: '总结解释' },
+] as const
 const phaseLabels = {
   problem_framing: '明确问题',
   hypothesis: '提出假设',
@@ -198,191 +435,632 @@ const phaseLabels = {
   synthesis: '总结解释',
   completed: '已完成',
 }
-const topicTitle = (code: string) => points.value.find((p) => p.systemCode === code)?.systemLabel ?? code
-const pointTitle = (code: string) => points.value.find((p) => p.code === code)?.title ?? code
-const sessionOptions = computed(() =>
-  sessions.value.map((s) => `${topicTitle(s.topicCode)} · ${s.status === 'active' ? '进行中' : '已结束'}`),
+const session = computed(() => sessions.value[sessionIndex.value])
+const currentPhase = computed(() => session.value?.studentPhase || session.value?.phase || 'problem_framing')
+const classOptions = computed(() => classes.value.map((item) => ({ label: `${item.name} · ${item.code}` })))
+const groupedTopics = computed(() => {
+  const seen = new Set<string>()
+  return points.value
+    .filter((item) => !seen.has(item.systemCode) && Boolean(seen.add(item.systemCode)))
+    .map((item) => ({ code: item.systemCode, label: item.systemLabel }))
+})
+const topicOptions = computed(() => groupedTopics.value)
+const selectedTopic = computed(() => topicOptions.value[topicIndex.value]?.code || '')
+const topicPoints = computed(() => points.value.filter((item) => item.systemCode === selectedTopic.value))
+const canCreate = computed(
+  () => classes.value.length > 0 && selectedPointCodes.value.length >= 1 && selectedPointCodes.value.length <= 3,
 )
-async function participation() {
-  if (!session.value) return
-  const result = await getPblParticipation(session.value.id)
-  messages.value = result.messages
-  diagnostic.value = result.diagnostic
-  session.value.studentPhase = result.currentPhase
-  session.value.phaseStatus = result.phaseStatus
-}
+const sessionOptions = computed(() =>
+  sessions.value.map(
+    (item) =>
+      `${item.caseContext?.title || topicTitle(item.topicCode)} · ${item.status === 'active' ? '进行中' : '已结束'}`,
+  ),
+)
+const sessionKindLabel = computed(() => (session.value?.sessionKind === 'student_initiated' ? '主动研讨' : '课堂研讨'))
+const styleLabel = computed(() => (session.value?.interactionStyle === 'direct' ? '先直接解释' : '引导我思考'))
+const welcomeDescription = computed(() =>
+  session.value?.interactionStyle === 'direct'
+    ? '写下你的问题。助手会先解释，再请你完成与当前阶段对应的理解检验。'
+    : '写下你的疑问和当前想法。助手会通过追问帮助你逐步补齐判断依据。',
+)
+const topicTitle = (code: string) => points.value.find((item) => item.systemCode === code)?.systemLabel ?? code
+const pointTitle = (code: string) => points.value.find((item) => item.code === code)?.title ?? code
+
+onLoad((options) => {
+  starter.value = typeof options?.starter === 'string' ? options.starter : ''
+  requestedPointCode.value = typeof options?.topicCode === 'string' ? options.topicCode : ''
+  if (starter.value || requestedPointCode.value) creating.value = true
+})
+onShow(load)
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    ;[sessions.value, points.value] = await Promise.all([getActivePblSessions(), getKnowledgeCatalog()])
+    const [page, classValues, catalog] = await Promise.all([
+      getLearningDialogues(),
+      getStudentClasses(),
+      getKnowledgeCatalog(),
+    ])
+    sessions.value = page.items
+    classes.value = classValues
+    points.value = catalog
     if (sessionIndex.value >= sessions.value.length) sessionIndex.value = 0
-    await participation()
+    applyRequestedPoint()
+    if (!sessions.value.length && classes.value.length) creating.value = true
+    if (!creating.value && session.value) await loadDialogue(session.value.id)
   } catch {
-    error.value = '课堂加载失败，请检查网络后重新加载。'
+    error.value = '研讨加载失败，请检查网络后重新加载。'
   } finally {
     loading.value = false
   }
 }
-async function selectSession(event: { detail: { value: string } }) {
+function applyRequestedPoint() {
+  const point = points.value.find((item) => item.code === requestedPointCode.value)
+  if (!point) return
+  const index = topicOptions.value.findIndex((item) => item.code === point.systemCode)
+  if (index >= 0) topicIndex.value = index
+  selectedPointCodes.value = [point.code]
+}
+async function loadDialogue(id: string) {
+  const value = await getLearningDialogue(id),
+    index = sessions.value.findIndex((item) => item.id === id)
+  if (index >= 0) sessions.value[index] = value.session
+  participation.value = value.participation
+  messages.value = value.participation?.messages ?? []
+  diagnostic.value = value.participation?.diagnostic
+  draft.value = starter.value && !messages.value.length ? starter.value : draft.value
+  await refreshScroll()
+}
+function openCreate() {
+  creating.value = true
+  createError.value = ''
+  createRequestId.value = ''
+}
+function cancelCreate() {
+  creating.value = false
+  createError.value = ''
+  if (session.value) void loadDialogue(session.value.id)
+}
+function selectClass(event: { detail: { value: string | number } }) {
+  classIndex.value = Number(event.detail.value)
+}
+function selectTopic(event: { detail: { value: string | number } }) {
+  topicIndex.value = Number(event.detail.value)
+  selectedPointCodes.value = []
+}
+function togglePoint(code: string) {
+  if (selectedPointCodes.value.includes(code))
+    selectedPointCodes.value = selectedPointCodes.value.filter((item) => item !== code)
+  else if (selectedPointCodes.value.length < 3) selectedPointCodes.value = [...selectedPointCodes.value, code]
+}
+async function createDialogue() {
+  const selectedClass = classes.value[classIndex.value]
+  if (!selectedClass || !canCreate.value || submitting.value) return
+  submitting.value = true
+  createError.value = ''
+  if (!createRequestId.value) createRequestId.value = createPblMessageId()
+  try {
+    const value = await createLearningDialogue({
+      clientSessionId: createRequestId.value,
+      classId: selectedClass.id,
+      interactionStyle: createStyle.value,
+      goalPointCodes: selectedPointCodes.value,
+    })
+    sessions.value = [value.session, ...sessions.value.filter((item) => item.id !== value.session.id)]
+    sessionIndex.value = 0
+    participation.value = value.participation
+    messages.value = value.participation?.messages ?? []
+    diagnostic.value = value.participation?.diagnostic
+    draft.value = starter.value
+    creating.value = false
+    createRequestId.value = ''
+    await refreshScroll()
+  } catch {
+    createError.value = '创建未确认，设置已保留。重试会沿用同一会话标识。'
+  } finally {
+    submitting.value = false
+  }
+}
+async function startClassroom() {
+  if (!session.value || submitting.value) return
+  submitting.value = true
+  sendError.value = ''
+  try {
+    const value = await startLearningDialogue(session.value.id, startStyle.value)
+    sessions.value[sessionIndex.value] = value.session
+    participation.value = value.participation
+    messages.value = value.participation?.messages ?? []
+    diagnostic.value = value.participation?.diagnostic
+  } catch {
+    sendError.value = '沟通方式未能确认，请重试。'
+  } finally {
+    submitting.value = false
+  }
+}
+async function selectSession(event: { detail: { value: string | number } }) {
   sessionIndex.value = Number(event.detail.value)
+  participation.value = undefined
   messages.value = []
   diagnostic.value = undefined
   draft.value = ''
   retry.value = undefined
+  sendError.value = ''
+  if (!session.value) return
   try {
-    await participation()
+    await loadDialogue(session.value.id)
   } catch {
-    error.value = '讨论记录加载失败，请重试。'
+    sendError.value = '研讨记录加载失败，请重试。'
   }
 }
+function useTemplate() {
+  draft.value = session.value?.interactionStyle === 'direct' ? '我想先了解：' : '我的疑问是：\n我目前的判断依据是：'
+}
+function copyMessage(content: string) {
+  uni.setClipboardData({ data: content, success: () => uni.showToast({ title: '已复制', icon: 'success' }) })
+}
+function continueFrom(content: string) {
+  draft.value = `关于“${content.slice(0, 36)}${content.length > 36 ? '…' : ''}”，我还想问：`
+}
+async function refreshScroll() {
+  await nextTick()
+  scrollTarget.value = `stream-end-${messages.value.length}-${sending.value ? 1 : 0}`
+}
 async function send() {
-  if (!session.value || sending.value || !draft.value.trim()) return
+  if (!session.value || !participation.value || sending.value || !draft.value.trim()) return
   sending.value = true
-  error.value = ''
+  sendError.value = ''
   const content = draft.value.trim()
   if (retry.value?.content !== content || retry.value.sessionId !== session.value.id)
     retry.value = { id: createPblMessageId(), content, sessionId: session.value.id }
+  await refreshScroll()
   try {
     const result = await sendPblMessage(session.value.id, content, retry.value.id)
+    participation.value = result
     messages.value = result.messages
     diagnostic.value = result.diagnostic
     session.value.studentPhase = result.currentPhase
     session.value.phaseStatus = result.phaseStatus
+    session.value.interactionStyle = result.interactionStyle
     draft.value = ''
     retry.value = undefined
   } catch {
-    error.value = '提交未确认，内容已保留。点击重试将使用同一消息标识。'
+    sendError.value = '提交未确认，内容已保留。点击重试会使用同一消息标识。'
   } finally {
     sending.value = false
+    await refreshScroll()
   }
 }
-onShow(load)
 </script>
+
 <style scoped>
-.pbl {
-  max-width: 1080px;
-  margin: auto;
-  padding: 24rpx 24rpx 180rpx;
+.dialogue-page {
   display: flex;
+  height: calc(100vh - var(--window-top, 0px));
+  min-height: 0;
+  overflow: hidden;
   flex-direction: column;
-  gap: 24rpx;
+  background: var(--med-page);
 }
-.panel {
+.account-bar {
   display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-.section-title {
-  font-size: 32rpx;
-  font-weight: 700;
-}
-.secondary-action {
-  width: fit-content;
-  min-height: 80rpx;
-  margin: 4rpx 0 0;
-  padding: 0 24rpx;
-  color: var(--med-clinical);
-  background: var(--med-wash);
-  font-size: 25rpx;
-}
-.muted {
-  font-size: 26rpx;
-  color: var(--med-muted);
-  line-height: 1.6;
-}
-.panel,
-.selector,
-.notice {
-  padding: 24rpx;
+  min-height: 58rpx;
+  padding: 6rpx 22rpx;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
   background: var(--med-surface);
+  border-bottom: 1rpx solid var(--med-border);
+}
+.account-bar button {
+  width: auto;
+  min-height: 48rpx;
+  margin: 0;
+  padding: 0 12rpx;
+  color: var(--med-muted);
+  background: transparent;
+  font-size: 21rpx;
+}
+.launch-scroll {
+  height: 0;
+  padding: 28rpx 24rpx 180rpx;
+  box-sizing: border-box;
+  flex: 1;
+}
+.launch-card,
+.start-card,
+.case-brief,
+.welcome,
+.diagnostic-card {
+  display: flex;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  flex-direction: column;
+}
+.launch-card,
+.start-card,
+.diagnostic-card {
+  padding: 28rpx;
+  gap: 24rpx;
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
   border-radius: var(--med-radius-md);
 }
-.classroom-context {
-  gap: 18rpx;
-  border-top: 6rpx solid var(--med-clinical);
+.launch-heading,
+.field-heading,
+.toolbar-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
 }
-.classroom-meta,
-.goal-list {
+.launch-heading > view:first-child,
+.field-group,
+.starter-note {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+.eyebrow {
+  color: var(--med-clinical);
+  font-size: 21rpx;
+  font-weight: 750;
+  letter-spacing: 3rpx;
+}
+.launch-title,
+.case-title {
+  margin-top: 8rpx;
+  color: var(--med-ink);
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.section-title {
+  color: var(--med-ink);
+  font-size: 29rpx;
+  font-weight: 750;
+}
+.field-label {
+  color: var(--med-text);
+  font-size: 26rpx;
+  font-weight: 700;
+}
+.field-hint,
+.muted {
+  color: var(--med-muted);
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+.field-error {
+  color: var(--med-danger, #b42318);
+  font-size: 24rpx;
+  line-height: 1.55;
+}
+.field-picker {
+  min-height: 80rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+  color: var(--med-text);
+  background: var(--med-page);
+  border: 1rpx solid var(--med-border);
+  border-radius: var(--med-radius-sm);
+  font-size: 26rpx;
+}
+.point-grid,
+.style-grid,
+.phase-steps {
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
 }
-.phase-chip,
-.status-chip,
-.goal-chip {
-  padding: 8rpx 14rpx;
+.choice-chip {
+  width: auto;
+  min-height: 70rpx;
+  margin: 0;
+  padding: 12rpx 20rpx;
+  color: var(--med-text-secondary);
+  background: var(--med-page);
+  border: 1rpx solid var(--med-border);
+  border-radius: 99rpx;
+  font-size: 24rpx;
+}
+.choice-chip.selected,
+.style-card.selected {
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  border-color: var(--med-clinical);
+}
+.style-card {
+  display: flex;
+  min-width: 260rpx;
+  margin: 0;
+  padding: 22rpx;
+  align-items: flex-start;
+  flex: 1;
+  flex-direction: column;
+  gap: 8rpx;
+  color: var(--med-text);
+  background: var(--med-page);
+  border: 1rpx solid var(--med-border);
+  border-radius: var(--med-radius-md);
+  text-align: left;
+}
+.style-title {
+  font-size: 27rpx;
+  font-weight: 750;
+}
+.style-desc {
+  color: var(--med-muted);
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+.starter-note {
+  padding: 20rpx;
+  background: var(--med-wash);
+  border-radius: var(--med-radius-sm);
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+.primary-action {
+  width: 100%;
+  min-height: 88rpx;
+  margin: 0;
+  color: #fff;
+  background: var(--med-clinical);
+  border-radius: var(--med-radius-sm);
+  font-size: 27rpx;
+  font-weight: 700;
+}
+.primary-action[disabled] {
+  opacity: 0.45;
+}
+.primary-action.compact {
+  width: fit-content;
+  padding: 0 30rpx;
+}
+.text-action,
+.new-action {
+  width: auto;
+  margin: 0;
+  color: var(--med-clinical);
+  background: transparent;
+  font-size: 24rpx;
+}
+.dialogue-toolbar {
+  display: flex;
+  padding: 12rpx 24rpx;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12rpx;
+  background: var(--med-surface);
+  border-bottom: 1rpx solid var(--med-border);
+}
+.session-picker {
+  min-width: 0;
+  flex: 1;
+}
+.session-selector {
+  padding: 12rpx 18rpx;
+  overflow: hidden;
   color: var(--med-clinical);
   background: var(--med-wash);
   border-radius: 99rpx;
-  font-size: 23rpx;
-  line-height: 1.4;
+  font-size: 24rpx;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.status-chip {
-  color: var(--med-primary);
-  background: var(--med-primary-soft, #e7f3ee);
-}
-.status-chip.closed {
-  color: var(--med-muted);
-  background: var(--med-bg, #f6f8f6);
-}
-.goal-chip {
-  color: var(--med-text-secondary);
-  background: var(--med-bg, #f6f8f6);
-}
-.conversation {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-}
-.message {
-  max-width: 90%;
-  padding: 24rpx;
-  background: var(--med-surface);
-  border-radius: 20rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.message.own {
-  align-self: flex-end;
-  background: var(--med-primary-soft, #e7f3ee);
-}
-.message-label {
-  font-size: 23rpx;
-  color: var(--med-muted);
-}
-textarea {
+.toolbar-meta {
   width: 100%;
-  min-height: 150rpx;
+  justify-content: flex-start;
+}
+.meta-chip {
+  padding: 6rpx 14rpx;
+  color: var(--med-muted);
+  background: var(--med-page);
+  border-radius: 99rpx;
+  font-size: 21rpx;
+}
+.meta-chip.accent {
+  color: var(--med-clinical);
+  background: var(--med-wash);
+}
+.chat-scroll {
+  height: 0;
+  min-height: 0;
+  padding: 26rpx 24rpx;
   box-sizing: border-box;
+  flex: 1;
 }
-.primary {
-  background: var(--med-primary);
-  color: white;
+.case-brief {
+  margin-bottom: 22rpx;
+  gap: 10rpx;
 }
-button {
-  min-height: 44px;
-  font-size: 28rpx;
+.start-card,
+.welcome {
+  margin-bottom: 24rpx;
 }
-.notice {
+.welcome {
+  gap: 14rpx;
+}
+.example-card {
   display: flex;
+  width: 100%;
+  min-height: 82rpx;
+  margin: 4rpx 0 0;
+  padding: 20rpx;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--med-text);
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-radius: var(--med-radius-md);
+  font-size: 24rpx;
+  text-align: left;
+}
+.phase-step {
+  display: flex;
+  padding: 9rpx 14rpx;
+  align-items: center;
+  gap: 8rpx;
+  color: var(--med-muted);
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-radius: 99rpx;
+  font-size: 22rpx;
+}
+.phase-step.active {
+  color: #fff;
+  background: var(--med-clinical);
+  border-color: var(--med-clinical);
+}
+.phase-index {
+  display: flex;
+  width: 28rpx;
+  height: 28rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--med-clinical);
+  background: #fff;
+  border-radius: 50%;
+  font-size: 18rpx;
+}
+.message-row {
+  display: flex;
+  max-width: 800px;
+  margin: 22rpx auto;
+  align-items: flex-start;
+}
+.message-row.own {
+  flex-direction: row-reverse;
+}
+.avatar {
+  display: flex;
+  width: 60rpx;
+  height: 60rpx;
+  flex: 0 0 60rpx;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--med-clinical);
+  border-radius: var(--med-radius-sm);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+.own .avatar {
+  background: var(--med-ink);
+}
+.message-content {
+  display: flex;
+  min-width: 0;
+  max-width: 78%;
+  margin: 0 14rpx;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.own .message-content {
+  align-items: flex-end;
+}
+.bubble {
+  display: block;
+  padding: 20rpx 22rpx;
+  color: var(--med-text);
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-radius: 6rpx var(--med-radius-md) var(--med-radius-md);
+  font-size: 27rpx;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.own .bubble {
+  color: #fff;
+  background: var(--med-ink);
+  border-color: var(--med-ink);
+  border-radius: var(--med-radius-md) 6rpx var(--med-radius-md) var(--med-radius-md);
+}
+.message-tools {
+  display: flex;
+  gap: 10rpx;
+}
+.message-tools button {
+  width: auto;
+  min-height: 54rpx;
+  margin: 0;
+  padding: 4rpx 14rpx;
+  color: var(--med-clinical);
+  background: transparent;
+  font-size: 21rpx;
+}
+.diagnostic-card {
+  margin-top: 24rpx;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+.diagnostic-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5rpx;
+}
+.secondary-action {
+  width: fit-content;
+  min-height: 76rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  font-size: 24rpx;
+}
+.typing {
+  color: var(--med-muted);
+}
+.scroll-spacer {
+  height: 28rpx;
+}
+.locked-bar {
+  display: flex;
+  padding: 18rpx 24rpx calc(140rpx + env(safe-area-inset-bottom));
   flex-direction: column;
   gap: 14rpx;
-  border: 1px solid var(--med-border, #ddd);
+  color: var(--med-text-secondary);
+  background: var(--med-surface);
+  border-top: 1rpx solid var(--med-border);
+  font-size: 24rpx;
+  line-height: 1.6;
 }
-@media (min-width: 768px) {
-  .pbl {
-    padding: 32px;
+.empty-state {
+  display: flex;
+  flex: 1;
+  padding: 0 40rpx 180rpx;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 18rpx;
+  text-align: center;
+}
+@media screen and (min-width: 600px) {
+  .launch-scroll,
+  .chat-scroll {
+    padding: 28px 32px 120px;
   }
-  .message {
-    max-width: 75%;
+  .launch-card,
+  .start-card,
+  .diagnostic-card {
+    padding: 24px;
   }
-  .secondary-action {
-    min-height: 44px;
-    padding: 0 16px;
+  .launch-title,
+  .case-title {
+    font-size: 24px;
+  }
+  .bubble {
+    padding: 14px 16px;
+    font-size: 16px;
+  }
+  .avatar {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
     font-size: 14px;
   }
 }

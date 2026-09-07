@@ -60,7 +60,8 @@ class PhaseAssessment(StrictModel):
 
 
 class ProviderPayload(StrictModel):
-    schema_version: Literal[3]
+    schema_version: Literal[4]
+    interaction_style: Literal["guided", "direct"]
     assistant_reply: str = Field(min_length=1, max_length=4000)
     diagnostic_status: Literal["probing", "ready", "insufficient_evidence", "unavailable"]
     follow_up_question: str | None = Field(default=None, max_length=1000)

@@ -54,10 +54,11 @@ describe('student page navigation contracts', () => {
     expect(plan).toContain('planId,')
   })
 
-  it('uses named routes for student report entries instead of literal paths', async () => {
+  it('keeps old chat as read-only history and routes continuation into the unified dialogue', async () => {
     const [chat, history] = await Promise.all([pageSource('./chat/chat.vue'), pageSource('./history/history.vue')])
 
-    expect(chat).toContain('ROUTES.studentReport')
+    expect(chat).toContain('ROUTES.studentPbl')
+    expect(chat).not.toContain('ROUTES.studentReport')
     expect(history).toContain('ROUTES.studentReport')
     expect(chat).not.toContain("'/pages/report/report'")
     expect(history).not.toContain("'/pages/report/report'")

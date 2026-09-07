@@ -106,8 +106,8 @@ describe('navigation semantics', () => {
   })
 
   it('does not redirect when the selected primary page is already active', () => {
-    vi.mocked(getCurrentPages).mockReturnValue([{ route: 'pages/student/chat/chat' }] as never)
-    goPrimary(ROUTES.studentChat)
+    vi.mocked(getCurrentPages).mockReturnValue([{ route: 'pages/student/pbl/pbl' }] as never)
+    goPrimary(ROUTES.studentPbl)
     expect(uni.redirectTo).not.toHaveBeenCalled()
     expect(uni.reLaunch).not.toHaveBeenCalled()
   })

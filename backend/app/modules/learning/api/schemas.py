@@ -87,7 +87,14 @@ class LearningTaskSubmit(BaseModel):
 class NotificationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    type: Literal["learning_plan_ready", "learning_plan_due", "learning_plan_completed"]
+    type: Literal[
+        "learning_plan_ready",
+        "learning_plan_due",
+        "learning_plan_completed",
+        "pbl_mastery_improved",
+        "pbl_reinforcement_activated",
+        "pbl_automation_exhausted",
+    ]
     entity_type: Literal["learning_plan"]
     entity_id: int
     title: str

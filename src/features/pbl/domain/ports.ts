@@ -1,4 +1,7 @@
 export type PblPhase = 'problem_framing' | 'hypothesis' | 'evidence' | 'synthesis' | 'completed'
+export type InteractionStyle = 'guided' | 'direct'
+export type PblSessionKind = 'classroom' | 'student_initiated'
+export type StudentClassSummary = { id: string; name: string; code: string }
 export type PblSession = {
   id: string
   classId: string
@@ -15,6 +18,9 @@ export type PblSession = {
   phaseStatus?: 'active' | 'completed'
   phaseCounts?: Partial<Record<PblPhase, number>>
   version: number
+  sessionKind: PblSessionKind
+  interactionStyle?: InteractionStyle
+  styleSelectedAt?: string
 }
 export type PblFinding = { id: string; summary: string; evidence_message_ids: string[]; evidence_summary: string }
 export type KnowledgeGap = PblFinding & { point_code: string; confidence: 'low' | 'medium' | 'high' }
@@ -41,6 +47,8 @@ export type PblDiagnostic = {
   phaseDecision?: 'continue' | 'advance' | 'complete' | 'unavailable'
   phaseEvidenceSummary?: string
   phaseMissingElements?: string[]
+  sessionKind?: PblSessionKind
+  interactionStyle?: InteractionStyle
 }
 export type PblSuggestion = {
   id: string
@@ -66,7 +74,11 @@ export type PblParticipation = {
   phaseStartedRevision: number
   phaseStatus: 'active' | 'completed'
   phaseCompletedAt?: string
+  interactionStyle: InteractionStyle
+  styleSelectedAt?: string
 }
+export type LearningDialogue = { session: PblSession; participation?: PblParticipation }
+export type LearningDialoguePage = { items: PblSession[]; total: number; limit: number; offset: number }
 export type PblFilters = { classId?: string; sessionId?: string; studentId?: string; status?: string; offset?: number }
 export type PblTargets = { studentIds?: number[]; wholeClass?: boolean; includeCaseRetry?: boolean }
 export type PblTask = {
@@ -276,6 +288,16 @@ export type PblSummary = {
   automation_exhausted: number
 }
 export interface PblRepository {
+  classes(): Promise<StudentClassSummary[]>
+  dialogues(limit?: number, offset?: number): Promise<LearningDialoguePage>
+  dialogue(id: string): Promise<LearningDialogue>
+  createDialogue(input: {
+    clientSessionId: string
+    classId: string
+    interactionStyle: InteractionStyle
+    goalPointCodes: string[]
+  }): Promise<LearningDialogue>
+  startDialogue(id: string, interactionStyle: InteractionStyle): Promise<LearningDialogue>
   active(): Promise<PblSession[]>
   sessions(classId: string): Promise<PblSession[]>
   createSession(classId: string, topicCode: string, caseId: string, goals: string[]): Promise<PblSession>

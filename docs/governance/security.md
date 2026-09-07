@@ -55,3 +55,9 @@
 # T15：学生学情报告数据边界
 
 学生报告以登录学生 ID 为唯一主体；列表不接受 student 参数，详情对无本人 participation 且无本人计划的 session 统一返回 404。全班发布若源于其他学生，只显示“课堂共同训练”，不读取或返回来源学生诊断。报告不复制完整消息或答案，也不返回正确选项、private rubric、提示词、隐藏病例事实、教师 ID 和 provider failure。评价历史只保存目标编码、阈值、本人分数、证据布尔值、结果与策略版本；应用日志只允许记录内部 student/session/plan ID 和结果编码。
+
+# T17：统一研讨范围与 AI 边界
+
+学生主动研讨必须绑定当前有效班级，session 只对创建学生和该班 owner 教师可见，同班其他学生不得通过列表或详情读取。客户端生成的会话/消息幂等键不替代服务端身份和范围校验。沟通方式写入 participation 后不可修改；direct 与 guided 均不得绕过教师采用发布。
+
+新研讨统一使用 PBL Coze gateway；客户端不直连 Coze，生产不调用旧 QA 或 OpenAI-compatible gateway。发往 provider 的内容保持去标识化和最多 20 条窗口，日志不记录完整提问、回答、prompt、token、外部身份或隐藏病例字段。旧 QA 历史仅只读展示，其消息不得成为 schema v4 阶段证据。

@@ -8,6 +8,7 @@ import type {
   PblTargets,
   PblFilters,
   PblTask,
+  InteractionStyle,
 } from '../domain/ports'
 import { demoReportDetail, demoReportPage } from './demoPblReports'
 import { getSessionContext } from '@/platform/session/context'
@@ -20,7 +21,7 @@ const actor = () => {
   return user
 }
 const analysis: PblDiagnostic = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   diagnosticStatus: 'probing',
   assistantReply: '演示追问：请说明你如何把血管变化与红肿联系起来。',
   followUpQuestion: '你认为通透性变化会造成什么表现？',
@@ -47,6 +48,7 @@ export class DemoPblRepository implements PblRepository {
       phase: 'problem_framing',
       version: 1,
       createdAt: new Date().toISOString(),
+      sessionKind: 'classroom',
     },
   ]
   private histories = new Map<string, PblParticipation>()
@@ -59,6 +61,7 @@ export class DemoPblRepository implements PblRepository {
   ])
   private submissions = new Map<number, { id: string; answer: string }>()
   private counter = 1
+  private sessionOwners = new Map<string, string>()
   private studentId() {
     const key = actor().openid
     if (!this.owners.has(key)) this.owners.set(key, this.owners.size + 1)
@@ -66,6 +69,99 @@ export class DemoPblRepository implements PblRepository {
   }
   private teacher() {
     if (actor().role !== 'teacher') throw new AppError('仅教师可操作', { code: 'FORBIDDEN' })
+  }
+  async classes() {
+    actor()
+    return [{ id: '1', name: '病理学演示班', code: 'demo-class' }]
+  }
+  async dialogues(limit = 20, offset = 0) {
+    const current = actor().openid
+    const items = this.classrooms
+      .filter((item) => item.sessionKind === 'classroom' || this.sessionOwners.get(item.id) === current)
+      .map((item) => {
+        const participation = this.histories.get(`${current}:${item.id}`)
+        return {
+          ...item,
+          studentPhase: participation?.currentPhase,
+          phaseStatus: participation?.phaseStatus,
+          interactionStyle: participation?.interactionStyle,
+          styleSelectedAt: participation?.styleSelectedAt,
+        }
+      })
+    return { items: copy(items.slice(offset, offset + limit)), total: items.length, limit, offset }
+  }
+  async dialogue(id: string) {
+    const current = actor().openid
+    const session = this.classrooms.find(
+      (item) => item.id === id && (item.sessionKind === 'classroom' || this.sessionOwners.get(item.id) === current),
+    )
+    if (!session) throw new AppError('研讨不存在', { code: 'RESOURCE_NOT_FOUND' })
+    const participation = this.histories.get(`${current}:${id}`)
+    return { session: copy(session), participation: participation ? copy(participation) : undefined }
+  }
+  async createDialogue(input: {
+    clientSessionId: string
+    classId: string
+    interactionStyle: InteractionStyle
+    goalPointCodes: string[]
+  }) {
+    const current = actor().openid
+    const existing = this.classrooms.find(
+      (item) => this.sessionOwners.get(item.id) === current && item.id === `demo-dialogue-${input.clientSessionId}`,
+    )
+    if (existing) {
+      const value = await this.dialogue(existing.id)
+      if (
+        existing.classId !== input.classId ||
+        existing.goalPointCodes.join('|') !== input.goalPointCodes.join('|') ||
+        value.participation?.interactionStyle !== input.interactionStyle
+      )
+        throw new AppError('会话标识已用于其他设置', { code: 'STATE_CONFLICT' })
+      return value
+    }
+    const points = [...new Set(input.goalPointCodes)]
+    const topics = new Set(points.map((code) => code.split('.').slice(0, 2).join('.')))
+    if (input.classId !== '1' || points.length < 1 || points.length > 3 || topics.size !== 1)
+      throw new AppError('请选择同一主题下 1～3 个知识点', { code: 'VALIDATION_ERROR' })
+    const session: PblSession = {
+      id: `demo-dialogue-${input.clientSessionId}`,
+      classId: input.classId,
+      topicCode: [...topics][0],
+      status: 'active',
+      goalPointCodes: points,
+      phase: 'problem_framing',
+      version: 1,
+      sessionKind: 'student_initiated',
+      interactionStyle: input.interactionStyle,
+      styleSelectedAt: new Date().toISOString(),
+      caseContext: { title: '学生主动研讨' },
+      createdAt: new Date().toISOString(),
+    }
+    const participation = this.emptyParticipation(input.interactionStyle)
+    this.classrooms.unshift(session)
+    this.sessionOwners.set(session.id, current)
+    this.histories.set(`${current}:${session.id}`, participation)
+    return { session: copy(session), participation: copy(participation) }
+  }
+  async startDialogue(id: string, interactionStyle: InteractionStyle) {
+    const value = await this.dialogue(id)
+    if (value.participation && value.participation.interactionStyle !== interactionStyle)
+      throw new AppError('本次研讨的沟通方式已经确定', { code: 'STATE_CONFLICT' })
+    if (!value.participation) {
+      value.participation = this.emptyParticipation(interactionStyle)
+      this.histories.set(`${actor().openid}:${id}`, copy(value.participation))
+    }
+    return copy(value)
+  }
+  private emptyParticipation(interactionStyle: InteractionStyle): PblParticipation {
+    return {
+      messages: [],
+      currentPhase: 'problem_framing',
+      phaseStartedRevision: 0,
+      phaseStatus: 'active',
+      interactionStyle,
+      styleSelectedAt: new Date().toISOString(),
+    }
   }
   async active() {
     actor()
@@ -108,6 +204,7 @@ export class DemoPblRepository implements PblRepository {
       version: 1,
       status: 'active',
       createdAt: new Date().toISOString(),
+      sessionKind: 'classroom',
     }
     this.classrooms.push(value)
     return copy(value)
@@ -120,13 +217,12 @@ export class DemoPblRepository implements PblRepository {
     return copy(value)
   }
   async participation(id: string) {
-    const empty: PblParticipation = {
-      messages: [],
-      currentPhase: 'problem_framing',
-      phaseStartedRevision: 0,
-      phaseStatus: 'active',
-    }
-    return copy(this.histories.get(`${actor().openid}:${id}`) ?? empty)
+    const key = `${actor().openid}:${id}`
+    const existing = this.histories.get(key)
+    if (existing) return copy(existing)
+    const empty = this.emptyParticipation('guided')
+    this.histories.set(key, copy(empty))
+    return copy(empty)
   }
   async message(id: string, content: string, clientMessageId: string) {
     const key = `${actor().openid}:${id}`,
@@ -148,6 +244,8 @@ export class DemoPblRepository implements PblRepository {
       client_message_id: clientMessageId,
       processing_status: 'completed',
     })
+    const directPrefix =
+      value.interactionStyle === 'direct' ? '先说明：炎症表现需结合血流和通透性变化理解。理解检验：' : ''
     const diagnostic: PblDiagnostic =
       phase !== 'synthesis'
         ? copy(analysis)
@@ -164,6 +262,8 @@ export class DemoPblRepository implements PblRepository {
             className: '病理学演示班',
             sessionId: id,
             topicCode: session.topicCode,
+            sessionKind: session.sessionKind,
+            interactionStyle: value.interactionStyle,
             phase: 'synthesis',
             phaseDecision: 'complete',
             phaseEvidenceSummary: 'Demo 合成回答整合了机制、证据与剩余疑问。',
@@ -189,6 +289,7 @@ export class DemoPblRepository implements PblRepository {
               },
             ],
           }
+    if (directPrefix) diagnostic.assistantReply = `${directPrefix}${diagnostic.assistantReply}`
     if (phase !== 'synthesis') {
       const phases = ['problem_framing', 'hypothesis', 'evidence', 'synthesis'] as const
       diagnostic.phase = phase

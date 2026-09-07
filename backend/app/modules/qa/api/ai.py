@@ -12,7 +12,7 @@ from app.shared.actor import Actor
 router = APIRouter(prefix="/v1", tags=["ai"])
 
 
-@router.post("/medical-chat", response_model=MedicalChatResponse)
+@router.post("/medical-chat", response_model=MedicalChatResponse, deprecated=True)
 def medical_chat(
     payload: MedicalChatRequest,
     user: User = Depends(get_current_user),

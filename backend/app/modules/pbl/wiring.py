@@ -14,7 +14,12 @@ from app.modules.pbl.infrastructure.repositories import SqlAlchemyPblRepository
 
 class DisabledGateway:
     def infer(self, request: InferenceRequest) -> InferenceResult:
-        return InferenceResult("PBL 教学助手当前未启用。", "unavailable", failure_reason="disabled")
+        return InferenceResult(
+            "PBL 教学助手当前未启用。",
+            "unavailable",
+            failure_reason="disabled",
+            interaction_style=request.interaction_style,
+        )
 
 
 class LocalMockGateway:
@@ -27,8 +32,11 @@ class LocalMockGateway:
             "evidence": "哪些病例证据支持或反驳该假设？这些证据有什么限制？",
         }
         if request.current_phase != "synthesis":
+            reply = phase_prompts[request.current_phase]
+            if request.interaction_style == "direct":
+                reply = f"先说明：{request.question}需要结合当前病理主题与阶段证据判断。理解检验：{reply}"
             return InferenceResult(
-                phase_prompts[request.current_phase],
+                reply,
                 "probing",
                 follow_up_question=phase_prompts[request.current_phase],
                 provider_metadata={"provider": "local_mock", "mode": "test"},
@@ -39,6 +47,7 @@ class LocalMockGateway:
                     "evidence_summary": "合成测试回答满足当前阶段目标。",
                     "missing_elements": [],
                 },
+                interaction_style=request.interaction_style,
             )
         return InferenceResult(
             "你已经开始联系血管反应与炎症表现，但还需要区分不同机制。",
@@ -82,6 +91,7 @@ class LocalMockGateway:
                 "evidence_summary": "合成测试回答完成机制、证据与疑问整合。",
                 "missing_elements": [],
             },
+            interaction_style=request.interaction_style,
         )
 
 

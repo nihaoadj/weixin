@@ -64,7 +64,10 @@ export interface paths {
     }
     get?: never
     put?: never
-    /** Medical Chat */
+    /**
+     * Medical Chat
+     * @deprecated
+     */
     post: operations['medical_chat_v1_medical_chat_post']
     delete?: never
     options?: never
@@ -1323,6 +1326,92 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/student/classes': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Student Classes */
+    get: operations['student_classes_student_classes_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/learning-dialogues': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Learning Dialogues */
+    get: operations['learning_dialogues_student_learning_dialogues_get']
+    put?: never
+    /** Create Learning Dialogue */
+    post: operations['create_learning_dialogue_student_learning_dialogues_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/learning-dialogues/{session_id}/start': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Start Learning Dialogue */
+    post: operations['start_learning_dialogue_student_learning_dialogues__session_id__start_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/learning-dialogues/{session_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Learning Dialogue */
+    get: operations['learning_dialogue_student_learning_dialogues__session_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/learning-dialogues/{session_id}/messages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Learning Dialogue Message */
+    post: operations['learning_dialogue_message_student_learning_dialogues__session_id__messages_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/student/pbl-sessions': {
     parameters: {
       query?: never
@@ -1330,7 +1419,10 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** Active */
+    /**
+     * Active
+     * @deprecated
+     */
     get: operations['active_student_pbl_sessions_get']
     put?: never
     post?: never
@@ -1347,7 +1439,10 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** Participation */
+    /**
+     * Participation
+     * @deprecated
+     */
     get: operations['participation_student_pbl_sessions__session_id__participation_get']
     put?: never
     post?: never
@@ -1366,7 +1461,10 @@ export interface paths {
     }
     get?: never
     put?: never
-    /** Message */
+    /**
+     * Message
+     * @deprecated
+     */
     post: operations['message_student_pbl_sessions__session_id__messages_post']
     delete?: never
     options?: never
@@ -2162,6 +2260,44 @@ export interface components {
       /** Offset */
       offset: number
     }
+    /** DialogueCreate */
+    DialogueCreate: {
+      /** Client Session Id */
+      client_session_id: string
+      /** Class Id */
+      class_id: number
+      /**
+       * Interaction Style
+       * @enum {string}
+       */
+      interaction_style: 'guided' | 'direct'
+      /** Goal Point Codes */
+      goal_point_codes: string[]
+    }
+    /** DialogueDetailResponse */
+    DialogueDetailResponse: {
+      session: components['schemas']['SessionResponse']
+      participation: components['schemas']['ParticipationResponse'] | null
+    }
+    /** DialoguePageResponse */
+    DialoguePageResponse: {
+      /** Items */
+      items: components['schemas']['SessionResponse'][]
+      /** Total */
+      total: number
+      /** Limit */
+      limit: number
+      /** Offset */
+      offset: number
+    }
+    /** DialogueStart */
+    DialogueStart: {
+      /**
+       * Interaction Style
+       * @enum {string}
+       */
+      interaction_style: 'guided' | 'direct'
+    }
     /** DifferentialAnswer */
     DifferentialAnswer: {
       /**
@@ -2797,6 +2933,13 @@ export interface components {
       phase_status: string
       /** Phase Completed At */
       phase_completed_at: string | null
+      /**
+       * Interaction Style
+       * @enum {string}
+       */
+      interaction_style: 'guided' | 'direct'
+      /** Style Selected At */
+      style_selected_at: string | null
     }
     /** NotificationListRead */
     NotificationListRead: {
@@ -2818,7 +2961,13 @@ export interface components {
        * Type
        * @enum {string}
        */
-      type: 'learning_plan_ready' | 'learning_plan_due' | 'learning_plan_completed'
+      type:
+        | 'learning_plan_ready'
+        | 'learning_plan_due'
+        | 'learning_plan_completed'
+        | 'pbl_mastery_improved'
+        | 'pbl_reinforcement_activated'
+        | 'pbl_automation_exhausted'
       /**
        * Entity Type
        * @constant
@@ -2856,6 +3005,13 @@ export interface components {
       phase_status: string
       /** Phase Completed At */
       phase_completed_at: string | null
+      /**
+       * Interaction Style
+       * @enum {string}
+       */
+      interaction_style: 'guided' | 'direct'
+      /** Style Selected At */
+      style_selected_at: string | null
     }
     /** PatientMessageCreate */
     PatientMessageCreate: {
@@ -3989,6 +4145,16 @@ export interface components {
       phase_counts?: {
         [key: string]: number
       } | null
+      /**
+       * Session Kind
+       * @default classroom
+       * @enum {string}
+       */
+      session_kind: 'classroom' | 'student_initiated'
+      /** Interaction Style */
+      interaction_style?: ('guided' | 'direct') | null
+      /** Style Selected At */
+      style_selected_at?: string | null
     }
     /** StageSubmissionCreate */
     StageSubmissionCreate: {
@@ -4020,6 +4186,15 @@ export interface components {
        * Format: date-time
        */
       created_at: string
+    }
+    /** StudentClassResponse */
+    StudentClassResponse: {
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+      /** Code */
+      code: string
     }
     /** StudentDiagnosticResponse */
     StudentDiagnosticResponse: {
@@ -4230,6 +4405,16 @@ export interface components {
       failure_reason: string | null
       /** Recommended Questions */
       recommended_questions: components['schemas']['SuggestionResponse'][]
+      /**
+       * Session Kind
+       * @enum {string}
+       */
+      session_kind: 'classroom' | 'student_initiated'
+      /**
+       * Interaction Style
+       * @enum {string}
+       */
+      interaction_style: 'guided' | 'direct'
     }
     /** TestItem */
     TestItem: {
@@ -12495,6 +12680,579 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SessionResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  student_classes_student_classes_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StudentClassResponse'][]
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  learning_dialogues_student_learning_dialogues_get: {
+    parameters: {
+      query?: {
+        limit?: number
+        offset?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DialoguePageResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_learning_dialogue_student_learning_dialogues_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DialogueCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DialogueDetailResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  start_learning_dialogue_student_learning_dialogues__session_id__start_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        session_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DialogueStart']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DialogueDetailResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  learning_dialogue_student_learning_dialogues__session_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        session_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DialogueDetailResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  learning_dialogue_message_student_learning_dialogues__session_id__messages_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        session_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Message']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['MessageSubmissionResponse']
         }
       }
       /** @description Bad Request */

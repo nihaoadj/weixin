@@ -39,7 +39,7 @@ test('teacher manages a class and completes the guided-case review flow', async 
 
   await page.goto('/')
   await page.locator('.role-button.teacher').click()
-  await expect(page.getByText('课堂与诊断', { exact: true })).toBeVisible()
+  await expect(page.getByText('教师工作台', { exact: true })).toBeVisible()
 
   await page.locator('.teacher-nav__item').filter({ hasText: '待办' }).click()
   await page.getByText('班级管理', { exact: true }).click()
@@ -72,7 +72,7 @@ test('teacher manages a class and completes the guided-case review flow', async 
   await page.goBack()
   await page.getByText('退出', { exact: true }).click()
   await loginAsReviewer(page)
-  await expect(page.getByText('课堂与诊断', { exact: true })).toBeVisible()
+  await expect(page.getByText('教师工作台', { exact: true })).toBeVisible()
   await page.locator('.teacher-nav__item').filter({ hasText: '待办' }).click()
   await page
     .locator('.quick-links')

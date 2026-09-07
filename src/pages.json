@@ -14,11 +14,11 @@
     },
     {
       "path": "pages/student/chat/chat",
-      "style": { "navigationBarTitleText": "医学答疑" }
+      "style": { "navigationBarTitleText": "历史答疑" }
     },
     {
       "path": "pages/student/pbl/pbl",
-      "style": { "navigationBarTitleText": "PBL 课堂" }
+      "style": { "navigationBarTitleText": "研讨" }
     },
     {
       "path": "pages/student/history/history",

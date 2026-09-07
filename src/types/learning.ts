@@ -56,7 +56,13 @@ export interface LearningTaskAttempt {
 
 export interface LearningNotification {
   id: number
-  type: 'learning_plan_ready' | 'learning_plan_due' | 'learning_plan_completed'
+  type:
+    | 'learning_plan_ready'
+    | 'learning_plan_due'
+    | 'learning_plan_completed'
+    | 'pbl_mastery_improved'
+    | 'pbl_reinforcement_activated'
+    | 'pbl_automation_exhausted'
   entityType: 'learning_plan'
   entityId: number
   title: string

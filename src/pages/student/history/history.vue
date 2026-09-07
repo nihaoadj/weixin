@@ -5,7 +5,7 @@
         class="back-link"
         @click="openChat"
       >
-        返回答疑</button
+        返回研讨</button
       ><text class="eyebrow-label">LEARNING TIMELINE</text><text class="heading-title">学习记录</text></view
     >
     <view class="topic-filter card">
@@ -33,7 +33,7 @@
       variant="loading"
       icon="retry"
       title="正在加载学习记录"
-      description="正在整理你的问答和报告。"
+      description="正在整理旧答疑和报告。"
     />
     <MedState
       v-else-if="loadError"
@@ -48,8 +48,8 @@
       v-else-if="!isLoading && items.length === 0"
       icon="history"
       title="暂无历史记录"
-      description="完成一次医学问答后，学习轨迹会安全地保存在这里。"
-      action-label="开始医学问答"
+      description="旧答疑会只读保留；新的问题请从统一研讨开始。"
+      action-label="开始研讨"
       secondary-action-label="重新加载"
       @action="openChat"
       @secondary-action="refresh"
@@ -197,7 +197,7 @@ function openConversation(conversationId: string) {
 }
 
 function openChat() {
-  goPrimary(ROUTES.studentChat)
+  goPrimary(ROUTES.studentPbl)
 }
 
 function openReport(conversationId: string) {

@@ -409,7 +409,7 @@ function askAbout(pointCode: string | undefined, prompt: string) {
     uni.showToast({ title: '请先选择学习主题', icon: 'none' })
     return
   }
-  goDetail(ROUTES.studentChat, { topicCode: pointCode, starter: prompt })
+  goDetail(ROUTES.studentPbl, { topicCode: pointCode, starter: prompt })
 }
 </script>
 

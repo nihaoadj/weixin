@@ -1,7 +1,18 @@
 import { getApplicationServices } from '@/bootstrap/wiring'
-import type { PblRepository, PblFilters, PblSession, PblSuggestion, PblTargets } from './domain/ports'
+import type { InteractionStyle, PblRepository, PblFilters, PblSession, PblSuggestion, PblTargets } from './domain/ports'
 export type * from './domain/ports'
 const pbl = (): PblRepository => getApplicationServices().pbl
+export const getStudentClasses = () => pbl().classes()
+export const getLearningDialogues = (limit = 20, offset = 0) => pbl().dialogues(limit, offset)
+export const getLearningDialogue = (id: string) => pbl().dialogue(id)
+export const createLearningDialogue = (input: {
+  clientSessionId: string
+  classId: string
+  interactionStyle: InteractionStyle
+  goalPointCodes: string[]
+}) => pbl().createDialogue(input)
+export const startLearningDialogue = (id: string, interactionStyle: InteractionStyle) =>
+  pbl().startDialogue(id, interactionStyle)
 export const getActivePblSessions = () => pbl().active()
 export const getTeacherPblSessions = (classId: string) => pbl().sessions(classId)
 export const createPblSession = (classId: string, topicCode: string, caseId: string, goals: string[]) =>

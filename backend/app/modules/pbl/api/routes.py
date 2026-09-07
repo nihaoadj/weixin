@@ -45,6 +45,17 @@ class Message(BaseModel):
     content: str = Field(min_length=1, max_length=2000)
 
 
+class DialogueCreate(BaseModel):
+    client_session_id: str = Field(min_length=1, max_length=100)
+    class_id: int = Field(gt=0)
+    interaction_style: Literal["guided", "direct"]
+    goal_point_codes: list[str] = Field(min_length=1, max_length=3)
+
+
+class DialogueStart(BaseModel):
+    interaction_style: Literal["guided", "direct"]
+
+
 class Edit(BaseModel):
     version: int = Field(ge=1)
     title: str = ""
@@ -68,6 +79,9 @@ class SessionResponse(BaseModel):
     student_phase: str | None = None
     phase_status: str | None = None
     phase_counts: dict[str, int] | None = None
+    session_kind: Literal["classroom", "student_initiated"] = "classroom"
+    interaction_style: Literal["guided", "direct"] | None = None
+    style_selected_at: datetime | None = None
 
 
 class MessageResponse(BaseModel):
@@ -107,6 +121,8 @@ class TeacherDiagnosticResponse(StudentDiagnosticResponse):
     topic_code: str
     failure_reason: str | None
     recommended_questions: list["SuggestionResponse"]
+    session_kind: Literal["classroom", "student_initiated"]
+    interaction_style: Literal["guided", "direct"]
 
 
 class SuggestionResponse(BaseModel):
@@ -128,6 +144,26 @@ class ParticipationResponse(BaseModel):
     phase_started_revision: int
     phase_status: str
     phase_completed_at: datetime | None
+    interaction_style: Literal["guided", "direct"]
+    style_selected_at: datetime | None
+
+
+class StudentClassResponse(BaseModel):
+    id: int
+    name: str
+    code: str
+
+
+class DialogueDetailResponse(BaseModel):
+    session: SessionResponse
+    participation: ParticipationResponse | None
+
+
+class DialoguePageResponse(BaseModel):
+    items: list[SessionResponse]
+    total: int
+    limit: int
+    offset: int
 
 
 class MessageSubmissionResponse(BaseModel):
@@ -136,6 +172,8 @@ class MessageSubmissionResponse(BaseModel):
     current_phase: str
     phase_status: str
     phase_completed_at: datetime | None
+    interaction_style: Literal["guided", "direct"]
+    style_selected_at: datetime | None
 
 
 class DiagnosticPageResponse(BaseModel):
@@ -165,10 +203,13 @@ def _session(value: PblSessionRecord, participation=None, phase_counts=None) -> 
             {
                 "student_phase": participation.current_phase,
                 "phase_status": participation.phase_status,
+                "interaction_style": participation.interaction_style,
+                "style_selected_at": participation.style_selected_at,
             }
         )
     if phase_counts is not None:
         result["phase_counts"] = phase_counts
+    result["session_kind"] = value.session_kind
     return result
 
 
@@ -179,14 +220,14 @@ def _snapshot(value: PblSnapshotRecord, *, teacher: bool = False) -> dict[str, o
         "diagnostic_status": value.status,
         "assistant_reply": value.assistant_reply,
         "follow_up_question": value.follow_up_question,
-        "knowledge_gaps": value.knowledge_gaps if value.schema_version == 3 else [],
-        "reasoning_issues": value.reasoning_issues if value.schema_version == 3 else [],
+        "knowledge_gaps": value.knowledge_gaps if value.schema_version in {3, 4} else [],
+        "reasoning_issues": value.reasoning_issues if value.schema_version in {3, 4} else [],
         "schema_version": value.schema_version,
         "safety_notice": value.safety_notice,
         "safety_status": value.safety_status,
         "created_at": value.created_at,
         "legacy_findings": {"knowledge_gaps": value.knowledge_gaps, "reasoning_issues": value.reasoning_issues}
-        if value.schema_version != 3
+        if value.schema_version not in {3, 4}
         else None,
         "phase": value.phase,
         "phase_decision": value.phase_decision,
@@ -196,6 +237,21 @@ def _snapshot(value: PblSnapshotRecord, *, teacher: bool = False) -> dict[str, o
     if teacher:
         response["failure_reason"] = value.failure_reason
     return response
+
+
+def _participation(value, snapshot: PblSnapshotRecord | None) -> dict[str, object]:
+    return {
+        "session_id": value.session_id,
+        "messages": value.messages,
+        "revision": value.revision,
+        "diagnostic": _snapshot(snapshot) if snapshot else None,
+        "current_phase": value.current_phase,
+        "phase_started_revision": value.phase_started_revision,
+        "phase_status": value.phase_status,
+        "phase_completed_at": value.phase_completed_at,
+        "interaction_style": value.interaction_style,
+        "style_selected_at": value.style_selected_at,
+    }
 
 
 def _suggestion(value: PblSuggestionRecord) -> dict[str, object]:
@@ -233,7 +289,103 @@ def close(class_id: int, session_id: int, teacher: User = Depends(require_teache
     return _session(pbl_application(db).close_session(teacher.id, class_id, session_id))
 
 
-@router.get("/student/pbl-sessions", response_model=list[SessionResponse])
+@router.get("/student/classes", response_model=list[StudentClassResponse])
+def student_classes(student: User = Depends(require_student), db: Session = Depends(get_db)):
+    return [
+        {"id": item.id, "name": item.name, "code": item.code}
+        for item in pbl_application(db).classes_for_student(student.id)
+    ]
+
+
+@router.get("/student/learning-dialogues", response_model=DialoguePageResponse)
+def learning_dialogues(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    app = pbl_application(db)
+    values = app.active_for_student(student.id)
+    items = []
+    for value in values[offset : offset + limit]:
+        _, participation_value, _ = app.dialogue(student.id, value.id)
+        items.append(_session(value, participation=participation_value))
+    return {"items": items, "total": len(values), "limit": limit, "offset": offset}
+
+
+@router.post(
+    "/student/learning-dialogues", response_model=DialogueDetailResponse, status_code=status.HTTP_201_CREATED
+)
+def create_learning_dialogue(
+    payload: DialogueCreate,
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    app = pbl_application(db)
+    session_value, participation_value = app.create_student_dialogue(
+        student.id,
+        payload.client_session_id,
+        payload.class_id,
+        payload.interaction_style,
+        tuple(payload.goal_point_codes),
+    )
+    return {
+        "session": _session(session_value, participation=participation_value),
+        "participation": _participation(participation_value, None),
+    }
+
+
+@router.post("/student/learning-dialogues/{session_id}/start", response_model=DialogueDetailResponse)
+def start_learning_dialogue(
+    session_id: int,
+    payload: DialogueStart,
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    session_value, participation_value, snapshot = pbl_application(db).start_dialogue(
+        student.id, session_id, payload.interaction_style
+    )
+    return {
+        "session": _session(session_value, participation=participation_value),
+        "participation": _participation(participation_value, snapshot),
+    }
+
+
+@router.get("/student/learning-dialogues/{session_id}", response_model=DialogueDetailResponse)
+def learning_dialogue(
+    session_id: int,
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    session_value, participation_value, snapshot = pbl_application(db).dialogue(student.id, session_id)
+    return {
+        "session": _session(session_value, participation=participation_value),
+        "participation": _participation(participation_value, snapshot) if participation_value else None,
+    }
+
+
+@router.post("/student/learning-dialogues/{session_id}/messages", response_model=MessageSubmissionResponse)
+def learning_dialogue_message(
+    session_id: int,
+    payload: Message,
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    value, snapshot = pbl_application(db).message(
+        student.id, session_id, payload.client_message_id, payload.content
+    )
+    return {
+        "messages": value.messages,
+        "diagnostic": _snapshot(snapshot),
+        "current_phase": value.current_phase,
+        "phase_status": value.phase_status,
+        "phase_completed_at": value.phase_completed_at,
+        "interaction_style": value.interaction_style,
+        "style_selected_at": value.style_selected_at,
+    }
+
+
+@router.get("/student/pbl-sessions", response_model=list[SessionResponse], deprecated=True)
 def active(student: User = Depends(require_student), db: Session = Depends(get_db)):
     app = pbl_application(db)
     result = []
@@ -243,30 +395,33 @@ def active(student: User = Depends(require_student), db: Session = Depends(get_d
     return result
 
 
-@router.get("/student/pbl-sessions/{session_id}/participation", response_model=ParticipationResponse)
+@router.get(
+    "/student/pbl-sessions/{session_id}/participation", response_model=ParticipationResponse, deprecated=True
+)
 def participation(session_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)):
     value, snapshot = pbl_application(db).participation(student.id, session_id)
-    return {
-        "session_id": session_id,
-        "messages": value.messages,
-        "revision": value.revision,
-        "diagnostic": _snapshot(snapshot) if snapshot else None,
-        "current_phase": value.current_phase,
-        "phase_started_revision": value.phase_started_revision,
-        "phase_status": value.phase_status,
-        "phase_completed_at": value.phase_completed_at,
-    }
+    return _participation(value, snapshot)
 
 
-@router.post("/student/pbl-sessions/{session_id}/messages", response_model=MessageSubmissionResponse)
+@router.post(
+    "/student/pbl-sessions/{session_id}/messages", response_model=MessageSubmissionResponse, deprecated=True
+)
 def message(session_id: int, payload: Message, student: User = Depends(require_student), db: Session = Depends(get_db)):
-    value, snapshot = pbl_application(db).message(student.id, session_id, payload.client_message_id, payload.content)
+    value, snapshot = pbl_application(db).message(
+        student.id,
+        session_id,
+        payload.client_message_id,
+        payload.content,
+        allow_implicit_guided_start=True,
+    )
     return {
         "messages": value.messages,
         "diagnostic": _snapshot(snapshot),
         "current_phase": value.current_phase,
         "phase_status": value.phase_status,
         "phase_completed_at": value.phase_completed_at,
+        "interaction_style": value.interaction_style,
+        "style_selected_at": value.style_selected_at,
     }
 
 
@@ -280,6 +435,8 @@ def _diagnostic(value: PblDiagnosticRecord) -> dict[str, object]:
         "class_name": value.class_name,
         "session_id": value.session_id,
         "topic_code": value.topic_code,
+        "session_kind": value.session_kind,
+        "interaction_style": value.interaction_style,
     }
 
 

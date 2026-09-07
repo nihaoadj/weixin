@@ -33,6 +33,17 @@ class SqlAlchemyClassroomScope:
             ).all()
         )
 
+    def active_classes_for_student(self, student_id: int) -> tuple[ClassroomScope, ...]:
+        return tuple(
+            self._record(item)
+            for item in self._session.scalars(
+                select(ClassRoom)
+                .join(ClassMember, ClassMember.class_id == ClassRoom.id)
+                .where(ClassMember.student_id == student_id, ClassRoom.status == "active")
+                .order_by(ClassRoom.id)
+            ).all()
+        )
+
     def active_member(self, student_id: int, class_id: int) -> bool:
         return (
             self._session.scalar(

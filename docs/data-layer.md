@@ -91,3 +91,9 @@ PBL 诊断快照使用 schema v3，知识薄弱点只能引用 `pathology-genera
 `GET /student/pbl-learning-reports` 和 `GET /student/pbl-learning-reports/{session_id}` 按当前学生聚合 PBL 报告。即使本人没有 participation，只要本人收到该课堂的学习计划，也会得到标记为“课堂共同训练”的报告；其他学生的诊断不会进入响应。总览按 session 输出状态统计、下一行动、本人反复出现的目标和最近课堂，详情输出四阶段证据、个人薄弱点、任务、两轮目标对照和判定时间线。
 
 前端 `reportContract.ts` 对 API DTO 做 Zod 校验和显式 mapper，Demo repository 返回相同领域合同。报告只包含任务公开题面、本人得分/反馈和证据是否存在，不包含完整消息、原始答案、正确选项、private rubric、模型提示、隐藏病例事实、教师 ID 或 provider failure；API 请求失败仍不得切换 Demo。
+
+# T17：统一研讨合同
+
+学生统一入口使用 `GET /student/classes` 和 `/student/learning-dialogues` 的列表、创建、start、详情及消息接口。创建请求以学生范围内的 `client_session_id` 幂等，服务端校验有效班级与同一主题下 1～3 个稳定知识点；教师课堂通过 start 首次写入 `interaction_style`，相同方式幂等、不同方式冲突。消息仍以 `client_message_id` 幂等，并保持完成锁定。
+
+新 AI 推理只产生 schema v4，请求与响应均携带 `interaction_style`。CheckedGateway 拒绝方式不匹配、非当前阶段学生消息证据和越级完成；direct 的首问只能得到解释与理解检验，不能单凭提问进入 ready。schema v3 历史诊断仍可查看和采用。旧 QA 接口继续兼容但标记 deprecated，旧 conversation/report 数据不自动写入 PBL session、snapshot 或 learning plan。

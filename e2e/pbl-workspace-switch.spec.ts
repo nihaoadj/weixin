@@ -5,6 +5,7 @@ test('teacher switches workspace tabs without replacing the PBL page', async ({ 
 
   await page.goto('/')
   await page.locator('.role-button.teacher').click()
+  await page.locator('.teacher-nav__item').filter({ hasText: 'PBL' }).click()
   await expect(page.getByText('准备课堂', { exact: true })).toBeVisible()
 
   let documentNavigations = 0
