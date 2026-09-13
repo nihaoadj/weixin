@@ -23,6 +23,7 @@ export const ROUTES = {
   studentLearningDrill: '/pages/student/learning/drill',
   studentLearningReview: '/pages/student/learning/review',
   studentKnowledgeLoop: '/pages/student/learning/knowledge-loop',
+  studentKnowledgeNode: '/pages/student/learning/knowledge-node',
   studentInsightDetail: '/pages/student/insights/detail',
   studentReport: '/pages/report/report',
   // 教师端

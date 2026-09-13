@@ -171,10 +171,10 @@
     </template>
     <view
       v-if="!loading"
-      class="card section resource-entry"
+      class="flat-section"
     >
-      <view class="section-head">
-        <text class="section-title">自主训练</text><text class="evidence-label">按需要选择</text>
+      <view class="flat-head">
+        <text class="flat-title">自主训练</text><text class="evidence-label">按需要选择</text>
       </view>
       <view
         class="resource-grid"
@@ -201,10 +201,13 @@
         </button>
       </view>
     </view>
-    <template v-if="!loading && !error && !isFirstUse">
-      <view class="card evidence-section">
-        <view class="section-head"
-          ><text class="section-title">能力画像</text><text class="evidence-label">评估证据</text></view
+    <template v-if="!loading && !error">
+      <view
+        v-if="!isFirstUse"
+        class="flat-section"
+      >
+        <view class="flat-head"
+          ><text class="flat-title">能力画像</text><text class="evidence-label">评估证据</text></view
         >
         <text class="muted">正式病例成绩与练习掌握度分开记录。</text>
         <view class="dimension-grid">
@@ -226,9 +229,9 @@
           </view>
         </view>
       </view>
-      <view class="card section">
-        <view class="section-head"
-          ><text class="section-title">站内提醒</text
+      <view class="flat-section">
+        <view class="flat-head"
+          ><text class="flat-title">站内提醒</text
           ><text
             v-if="profile.unreadCount"
             class="alert"
@@ -239,6 +242,10 @@
           v-for="item in notifications"
           :key="item.id"
           class="notification"
+          role="button"
+          tabindex="0"
+          @keydown="activateButtonOnKey"
+          @click="openNotification(item)"
           ><text>{{ item.title }}</text
           ><text class="muted">{{ item.body }}</text></view
         >
@@ -271,7 +278,7 @@ import { onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import StudentPrimaryNav from '@/components/ui/StudentPrimaryNav.vue'
 import { requireRole } from '@/features/identity/public'
-import { goDetail, goPrimary, ROUTES } from '@/platform/navigation'
+import { goDetail, goPrimary, relaunchTo, ROUTES } from '@/platform/navigation'
 import { getLearningNotifications, getLearningProfile, markLearningNotificationsRead } from '@/features/learning/public'
 import type { LearningNotification, LearningPlan, LearningProfile, LearningTask } from '@/types/learning'
 
@@ -353,6 +360,13 @@ function openTask(task: LearningTask) {
   if (task.status === 'completed') return
   goDetail(ROUTES.studentLearningPlan, { planId: plan.value?.id, taskId: task.id })
 }
+function openNotification(item: LearningNotification) {
+  if (item.entityType === 'pbl_session') {
+    relaunchTo(ROUTES.studentPbl, { dialogueId: item.entityId })
+    return
+  }
+  goDetail(ROUTES.studentLearningPlan, { planId: item.entityId })
+}
 async function readAll() {
   await markLearningNotificationsRead()
   notifications.value = []
@@ -370,22 +384,20 @@ onShow(() => {
 }
 .onboarding,
 .today-card,
-.section,
-.evidence-section {
+.section {
   display: flex;
   margin-bottom: 22rpx;
-  padding: 30rpx;
+  padding: 28rpx;
   flex-direction: column;
   gap: 14rpx;
 }
 .onboarding {
-  padding: 38rpx 32rpx 30rpx;
-  border-top: 6rpx solid var(--med-clinical);
+  padding: 32rpx 30rpx 28rpx;
 }
 .onboarding-title {
   max-width: 600rpx;
   color: var(--med-ink);
-  font-size: 38rpx;
+  font-size: 32rpx;
   font-weight: 800;
   line-height: 1.4;
 }
@@ -442,13 +454,28 @@ onShow(() => {
   background: transparent;
   font-size: 24rpx;
 }
-.today-card {
-  border-top: 6rpx solid var(--med-clinical);
-}
 .title {
   display: block;
-  font-size: 40rpx;
+  font-size: 33rpx;
   font-weight: 800;
+}
+.flat-section {
+  display: flex;
+  margin-bottom: 24rpx;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.flat-head {
+  display: flex;
+  padding-top: 16rpx;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.flat-title {
+  color: var(--med-navy);
+  font-size: 26rpx;
+  font-weight: 750;
+  letter-spacing: 1rpx;
 }
 .muted {
   color: var(--med-muted);
@@ -664,14 +691,6 @@ onShow(() => {
 .link-button::after {
   border: 0;
 }
-.nav {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding-bottom: env(safe-area-inset-bottom);
-  background: var(--med-surface);
-}
 @media screen and (max-width: 360px) {
   .muted,
   .text-action,
@@ -696,7 +715,6 @@ onShow(() => {
 
   .onboarding,
   .today-card,
-  .evidence-section,
   .section {
     width: 100%;
     max-width: 680px;
@@ -706,8 +724,15 @@ onShow(() => {
     margin-left: auto;
   }
 
+  .flat-section {
+    width: 100%;
+    max-width: 680px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
   .onboarding-title {
-    font-size: 30px;
+    font-size: 26px;
   }
 
   .muted {
@@ -769,7 +794,7 @@ onShow(() => {
 
   .onboarding-title {
     max-width: 420px;
-    font-size: 32px;
+    font-size: 28px;
     line-height: 1.3;
     text-wrap: balance;
   }
@@ -816,7 +841,6 @@ onShow(() => {
   }
 
   .today-card,
-  .evidence-section,
   .section {
     width: 100%;
     max-width: 920px;
@@ -825,16 +849,15 @@ onShow(() => {
     margin-left: auto;
   }
 
-  .dimension-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .flat-section {
+    width: 100%;
+    max-width: 920px;
+    margin-right: auto;
+    margin-left: auto;
   }
 
-  .nav {
-    right: auto;
-    left: 50%;
-    width: 1080px;
-    max-width: 100%;
-    transform: translateX(-50%);
+  .dimension-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 </style>

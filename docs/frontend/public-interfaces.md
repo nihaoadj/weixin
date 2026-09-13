@@ -4,17 +4,17 @@
 
 ## 公开入口
 
-| 模块      | 入口                               | 公开能力                                                                                                                             |
-| --------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| identity  | `src/features/identity/public.ts`  | `getSession`、`getRole`、`saveSession`、`clearSession`、`requireRole`、`logout`、`isApiRuntime`、`isDemoRuntime`、微信/Demo 登录同步 |
-| qa        | `src/features/qa/public.ts`        | 对话列表/摘要/详情/保存、学生题目和作答线程、医学助手、Demo 数据初始化                                                               |
-| reports   | `src/features/reports/public.ts`   | 报告详情/摘要、草稿保存、提交批阅和教师评分                                                                                          |
-| content   | `src/features/content/public.ts`   | 题目 CRUD、发布/拒绝、病例 authoring、clone、医学审核和保存                                                                          |
-| training  | `src/features/training/public.ts`  | 五阶段病例 attempt、患者消息、阶段提交和 assessment                                                                                  |
-| learning  | `src/features/learning/public.ts`  | 画像、计划、任务、微训练 attempt、通知和复盘                                                                                         |
-| classroom | `src/features/classroom/public.ts` | 教师班级、学生列表、加退班和班级更新                                                                                                 |
-| analytics | `src/features/analytics/public.ts` | 总览、病例下钻和学生下钻                                                                                                             |
-| pbl       | `src/features/pbl/public.ts`       | 学生个人阶段/消息、教师诊断与建议发布、两轮任务、只读自动结果、课堂汇总及本人 PBL 学情总览/详情                                      |
+| 模块      | 入口                               | 公开能力                                                                                                                                         |
+| --------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| identity  | `src/features/identity/public.ts`  | `getSession`、`getRole`、`saveSession`、`clearSession`、`requireRole`、`logout`、`isApiRuntime`、`isDemoRuntime`、微信/Demo 登录同步             |
+| qa        | `src/features/qa/public.ts`        | 对话列表/摘要/详情/保存、学生题目和作答线程、医学助手、Demo 数据初始化                                                                           |
+| reports   | `src/features/reports/public.ts`   | 报告详情/摘要、草稿保存、提交批阅和教师评分                                                                                                      |
+| content   | `src/features/content/public.ts`   | 题目 CRUD、发布/拒绝、病例 authoring、clone、医学审核和保存                                                                                      |
+| training  | `src/features/training/public.ts`  | 五阶段病例 attempt、患者消息、阶段提交和 assessment                                                                                              |
+| learning  | `src/features/learning/public.ts`  | 画像、计划、任务、微训练 attempt、通知、复盘、知识图、知识点学习路径与个人未审核练习                                                             |
+| classroom | `src/features/classroom/public.ts` | 教师班级、学生列表、加退班和班级更新                                                                                                             |
+| analytics | `src/features/analytics/public.ts` | 总览、病例下钻和学生下钻                                                                                                                         |
+| pbl       | `src/features/pbl/public.ts`       | 学生个人阶段/消息、私有研讨提交预览与提交、教师工作项/反馈/课堂看板/跟进、教师建议发布、两轮任务、只读自动结果、课堂汇总及本人 PBL 学情总览/详情 |
 
 所有入口内部通过 `src/bootstrap/wiring.ts` 取得已装配的 port。调用者不选择 API/Demo、不拼接 URL、不读写 storage；API 失败会保留明确错误，不会切换到 Demo。
 
@@ -22,8 +22,10 @@
 
 - 学生一级导航只包含 `pbl | learning | insights | chat`，分别显示为课堂、学习、学情、答疑；`StudentPrimaryRoute` 只接受这四个根路由。
 - `ROUTES.studentCases` 保留公开兼容路径，但属于学习的二级资源页；用 `view=cases|knowledge|questions` 选择病例、知识或练习，非法值回退到病例。
+- `ROUTES.studentKnowledgeNode` 为知识点学习页，必须携带已编码的 `topicCode`；非法或不存在编码显示可恢复错误并返回 `studentCases?view=knowledge`。知识图纯函数只消费 `getKnowledgeMap()` 的公开视图，不改变 `LearningRepository` 合同。
 - 一级页面切换经 `goPrimary`/`reLaunch`，一级到详情经 `goDetail`/`navigateTo`，连续训练替换经 `replaceDetail`/`redirectTo`。二级页返回失败时必须回到其逻辑父页面。
-- 教师 workspace 公开 key 仍为 `overview | reports | problems | pbl`，显示为待办、学情、内容、PBL；`?tab=` 深链接和页面内 `v-show` 状态保留不变。
+- 教师 workspace 公开 key 仍为 `overview | reports | problems | pbl`，显示为待办、学情、内容、PBL。内容 section 为 `pbl-diagnostics | resources`，默认诊断建议；学情 section 为 `pbl-follow-ups | analytics | records`，默认 PBL 跟进；PBL 无 section 时直接显示课堂。
+- 旧 `tab=pbl&section=work-items|diagnostics` 规范化到内容诊断，`follow-ups|results` 规范化到学情跟进，`classrooms|sessions` 继续进入 PBL 课堂。旧 `ROUTES.teacherAnalytics` 只保留为教师身份校验后的兼容重定向入口。
 - 页面组件只使用导航平台公开函数，不直接拼接页面 URL 或调用散落的 `uni.navigate*`。
 
 ## 数据与身份边界
@@ -35,7 +37,9 @@
 - 会话保存、退出、token 清理和 401 失效由 identity port 与 `platform/http` 协作；页面不直接操作 `apiAccessToken` 或身份 key。
 - 学生公开病例只通过 content/training 的公开结果获取；隐藏事实、参考推理、rubric、审核 digest 和内部字段不进入学生公开 DTO。
 - PBL 页面只消费个人阶段、阶段缺失要素、任务 cycle/variant 和阈值结果；不暴露正确答案、私有 rubric、完整模型提示或隐藏病例事实。教师工作区没有阶段切换和结果重判公开函数。
+- 知识节点只从 learning 公开接口读取材料、路径和个人练习；未完成四阶段时只显示研讨入口。个人 AI 练习读取时没有参考答案和解析，作答后才显示“按 AI 参考答案”的反馈；它不复用正式成绩或知识点状态接口。
 - 学情页面通过 `getPblLearningReports`/`getPblLearningReport` 读取确定性报告；报告可以显示任务公开题面、本人得分与反馈，但不显示原始答案、正确选项、其他学生薄弱点、教师 ID 或 provider failure。
+- 教师端 PBL 能力通过 `getTeacherPblWorkItems`、`getTeacherPblSessions`、`getTeacherPblFollowUps` 和反馈公开函数读取数据；其展示容器分属内容、PBL 课堂与学情，但不改变 `features/pbl` 的领域所有权。学生 PBL 页只读取本人提交快照的反馈摘要与下一行动，不能传入 student、class、snapshot 或 session 以扩大数据范围。
 
 ## 兼容入口与仓内证据
 

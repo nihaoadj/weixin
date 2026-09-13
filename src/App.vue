@@ -161,13 +161,6 @@ button.motion-card.is-pressed {
   transform: scale(0.992);
 }
 
-/* 入场不移动页面根节点，避免改变固定操作栏的定位参照。 */
-/* #ifdef H5 */
-.page-enter {
-  animation: med-page-enter var(--med-motion-enter) var(--med-ease-out);
-}
-/* #endif */
-
 .step-enter {
   animation: med-step-enter var(--med-motion-enter) var(--med-ease-out);
 }

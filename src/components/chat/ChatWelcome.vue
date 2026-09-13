@@ -1,8 +1,8 @@
 <template>
-  <view class="welcome card">
+  <view class="welcome">
     <text class="eyebrow-label">开始一次推理</text>
     <text class="welcome-title">从一个医学问题开始</text>
-    <text class="welcome-description">梳理知识、练习鉴别诊断，或一起分析病例。对话结束后，可以生成学习报告。</text>
+    <text class="welcome-description">梳理知识、练习鉴别诊断，或分析病例；结束后可生成学习报告。</text>
     <view class="quick-list">
       <button
         v-for="question in questions"
@@ -25,7 +25,10 @@
         >
       </button>
     </view>
-    <SafetyBanner class="welcome-safety" />
+    <SafetyBanner
+      compact
+      class="welcome-safety"
+    />
   </view>
 </template>
 
@@ -41,25 +44,24 @@ defineEmits<{ ask: [question: string] }>()
 .welcome {
   display: flex;
   max-width: 720px;
-  margin: 4rpx auto 32rpx;
-  padding: 32rpx;
+  margin: 8rpx auto 20rpx;
   flex-direction: column;
 }
 .welcome-title {
-  margin-top: 10rpx;
+  margin-top: 8rpx;
   color: var(--med-ink);
-  font-size: 38rpx;
+  font-size: 33rpx;
   font-weight: 800;
   line-height: 1.4;
 }
 .welcome-description {
-  margin-top: 14rpx;
+  margin-top: 10rpx;
   color: var(--med-muted);
   font-size: 25rpx;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 .quick-list {
-  margin-top: 28rpx;
+  margin-top: 12rpx;
 }
 .quick-item {
   display: flex;
@@ -87,11 +89,11 @@ defineEmits<{ ask: [question: string] }>()
   font-size: 36rpx;
 }
 .welcome-safety {
-  margin-top: 24rpx;
+  margin-top: 18rpx;
 }
 @media screen and (max-width: 360px) {
   .welcome-title {
-    font-size: 20px;
+    font-size: 19px;
   }
   .welcome-description,
   .quick-item {
@@ -99,19 +101,16 @@ defineEmits<{ ask: [question: string] }>()
   }
 }
 @media screen and (min-width: 600px) {
-  .welcome {
-    padding: 32px;
-  }
   .welcome-title {
-    margin-top: 8px;
-    font-size: 28px;
+    margin-top: 6px;
+    font-size: 24px;
   }
   .welcome-description,
   .quick-item {
     font-size: 16px;
   }
   .quick-list {
-    margin-top: 24px;
+    margin-top: 8px;
   }
   .quick-item {
     min-height: 60px;

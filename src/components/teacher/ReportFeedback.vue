@@ -1,8 +1,5 @@
 <template>
-  <view
-    ref="fieldRoot"
-    class="feedback-form"
-  >
+  <view class="feedback-form">
     <view class="section-heading">
       <text
         class="section-number"
@@ -100,13 +97,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { activateButtonOnKey } from '@/components/ui/keyboard'
-// #ifdef H5
-import { useNativeFieldA11y } from '@/components/ui/nativeFieldA11y'
-// #endif
-const fieldRoot = ref(null)
-// #ifdef H5
-useNativeFieldA11y(fieldRoot)
-// #endif
 const props = defineProps<{
   score: string
   feedback: string

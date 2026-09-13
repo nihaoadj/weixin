@@ -50,7 +50,7 @@ describe('teacher problem editor', () => {
     const wrapper = mount(ProblemEdit)
     const returnButton = wrapper.findAll('button').find((button) => button.text() === '返回')
     await returnButton?.trigger('click')
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems', section: 'resources' })
   })
 
   it('confirms before leaving when the current problem has unsaved changes', async () => {
@@ -69,7 +69,7 @@ describe('teacher problem editor', () => {
       throw new Error('Expected the leave-confirmation modal to be opened.')
     }
     options.success?.({ confirm: true, cancel: false, content: '' })
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems', section: 'resources' })
   })
 
   it('separates task content, audience choice, and the pending-review save state', () => {
@@ -122,7 +122,7 @@ describe('teacher problem editor', () => {
         status: '待审核',
       }),
     )
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems', section: 'resources' })
   })
 
   it('preserves an unknown existing type and blocks a missing editor route from creating a new task', async () => {
@@ -133,7 +133,7 @@ describe('teacher problem editor', () => {
     expect(missing.get('.editor-unavailable').text()).toContain('题目不存在')
     expect(missing.find('.form').exists()).toBe(false)
     await missing.get('.return-button').trigger('click')
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems', section: 'resources' })
 
     routeOptions.value = { id: 'extended-type' }
     findProblem.mockResolvedValueOnce(exampleProblem({ id: 'extended-type', type: '病例单选' }))

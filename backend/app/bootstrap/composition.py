@@ -3,6 +3,7 @@
 from sqlalchemy.orm import Session
 
 from app.modules.learning.application.knowledge_review import KnowledgeReviewApplication
+from app.modules.learning.application.study import StudyApplication
 from app.modules.learning.application.use_cases import LearningApplication
 from app.modules.learning.infrastructure.case_attempt_adapter import TrainingCaseAttemptAdapter
 from app.modules.learning.wiring import knowledge_review_application as build_knowledge_review_application
@@ -56,3 +57,21 @@ def learning_application(session: Session) -> LearningApplication:
 
 def knowledge_review_application(session: Session) -> KnowledgeReviewApplication:
     return build_knowledge_review_application(session)
+
+
+def study_application(session: Session) -> StudyApplication:
+    """Compose the T20 learning path at the single cross-module root."""
+    from app.modules.classroom.wiring import classroom_scope_port
+    from app.modules.learning.infrastructure.study_practice_generator import StudyPracticeGenerator
+    from app.modules.learning.infrastructure.study_repository import SqlStudyRepository
+    from app.modules.pbl.infrastructure.repositories import SqlAlchemyPblRepository
+    from app.modules.pbl.infrastructure.study_dialogues import StudyDialogues
+    from app.modules.pbl.wiring import pbl_application, practice_json_port
+    from app.platform.transactions import SqlAlchemyUnitOfWork
+
+    return StudyApplication(
+        SqlStudyRepository(session),
+        StudyDialogues(pbl_application(session), SqlAlchemyPblRepository(session, classroom_scope_port(session))),
+        StudyPracticeGenerator(practice_json_port()),
+        SqlAlchemyUnitOfWork(session),
+    )

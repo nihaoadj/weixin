@@ -43,7 +43,7 @@ const problem = {
   description: '完整题目说明',
   target: 'all',
   status: '待审核',
-  time: '2026-08-31',
+  time: '2026-08-31T08:30:00.000Z',
 }
 beforeEach(() => {
   getProblems.mockResolvedValue([problem])
@@ -56,6 +56,8 @@ describe('content navigation continuity', () => {
     await (wrapper.vm as unknown as { refresh: () => Promise<void> }).refresh()
     const open = wrapper.get('.problem-open')
     expect(open.text()).toContain('完整题目说明')
+    expect(open.text()).toContain('2026-08-31')
+    expect(open.text()).not.toContain('T08:30')
     expect(open.find('button').exists()).toBe(false)
     expect(open.attributes('hover-start-time')).toBe('0')
     await open.trigger('click')
@@ -64,6 +66,29 @@ describe('content navigation continuity', () => {
     await wrapper.get('.action.edit').trigger('click')
     expect(goDetail).toHaveBeenCalledTimes(1)
     expect(goDetail).toHaveBeenCalledWith('/problem-edit', { id: 'test-problem' })
+  })
+
+  it('keeps status and creation tools compact while exposing secondary content entries', async () => {
+    const wrapper = mount(TeacherProblemList, {
+      props: { showKnowledgeCards: true, showMedicalReview: true },
+    })
+    await (wrapper.vm as unknown as { refresh: () => Promise<void> }).refresh()
+
+    expect(
+      wrapper
+        .get('.toolbar')
+        .findAll('.small-button')
+        .map((button) => button.text()),
+    ).toEqual(['审核', '补充卡', '＋问题', '＋病例'])
+    expect(wrapper.get('.tabs').attributes('role')).toBe('tablist')
+    expect(wrapper.findAll('.tab')).toHaveLength(2)
+    expect(wrapper.findAll('.tab[aria-selected="true"]')).toHaveLength(1)
+
+    expect(wrapper.find('.toolbar-status .status-utility').text()).toBe('审核')
+    await wrapper.findAll('.small-button')[1].trigger('click')
+    await wrapper.findAll('.small-button')[0].trigger('click')
+    expect(wrapper.emitted('knowledge-cards')).toEqual([[]])
+    expect(wrapper.emitted('medical-review')).toEqual([[]])
   })
 
   it('shows a readable loading structure then the detail, rather than a blank page', async () => {
@@ -97,6 +122,6 @@ describe('content navigation continuity', () => {
     const wrapper = mount(ProblemDetail)
     await flushPromises()
     await wrapper.get('.med-state__secondary').trigger('click')
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems', section: 'resources' })
   })
 })

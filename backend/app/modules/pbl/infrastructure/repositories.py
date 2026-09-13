@@ -1,9 +1,11 @@
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import exists, func, or_, select, update
+from sqlalchemy import and_, exists, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 
+from app.modules.classroom.infrastructure.models import ClassMember, ClassRoom
+from app.modules.classroom.public import ClassroomScopePort
 from app.modules.pbl.application.records import (
     InferenceResult,
     PblDiagnosticRecord,
@@ -12,6 +14,7 @@ from app.modules.pbl.application.records import (
     PblSessionRecord,
     PblSnapshotRecord,
     PblSuggestionRecord,
+    PblTeacherFeedbackRecord,
 )
 from app.modules.pbl.infrastructure.models import (
     PblDiagnosticSnapshot,
@@ -19,6 +22,8 @@ from app.modules.pbl.infrastructure.models import (
     PblParticipation,
     PblQuestionSuggestion,
     PblSession,
+    PblSubmission,
+    PblTeacherFeedback,
 )
 from app.shared.errors import AppError, PersistenceConflict
 
@@ -26,8 +31,9 @@ from app.shared.errors import AppError, PersistenceConflict
 class SqlAlchemyPblRepository:
     """PBL-owned persistence adapter; all ORM work stays below the application layer."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, scope: ClassroomScopePort | None = None) -> None:
         self._session = session
+        self._scope = scope
 
     @staticmethod
     def _session_record(value: PblSession) -> PblSessionRecord:
@@ -51,6 +57,22 @@ class SqlAlchemyPblRepository:
             session_kind=value.session_kind,
             created_by_student_id=value.created_by_student_id,
             client_session_id=value.client_session_id,
+        )
+
+    @staticmethod
+    def _feedback_record(value: PblTeacherFeedback) -> PblTeacherFeedbackRecord:
+        return PblTeacherFeedbackRecord(
+            id=value.id,
+            snapshot_id=value.snapshot_id,
+            plan_id=value.plan_id,
+            student_id=value.student_id,
+            class_id=value.class_id,
+            teacher_id=value.teacher_id,
+            action_type=value.action_type,
+            suggestion_id=value.suggestion_id,
+            body=value.body,
+            client_feedback_id=value.client_feedback_id,
+            created_at=value.created_at,
         )
 
     def _part_record(self, value: PblParticipation) -> PblParticipationRecord:
@@ -123,8 +145,8 @@ class SqlAlchemyPblRepository:
 
     def create_session(
         self,
-        class_id: int,
-        teacher_id: int,
+        class_id: int | None,
+        teacher_id: int | None,
         topic_code: str,
         provider: str,
         mode: str | None,
@@ -174,10 +196,7 @@ class SqlAlchemyPblRepository:
                 or_(
                     (PblSession.class_id.in_(class_ids))
                     & (PblSession.status == "active")
-                    & (
-                        (PblSession.session_kind == "classroom")
-                        | (PblSession.created_by_student_id == student_id)
-                    ),
+                    & ((PblSession.session_kind == "classroom") | (PblSession.created_by_student_id == student_id)),
                     exists().where(
                         PblParticipation.session_id == PblSession.id, PblParticipation.student_id == student_id
                     ),
@@ -219,9 +238,7 @@ class SqlAlchemyPblRepository:
             self._session.flush()
         return self._part_record(value)
 
-    def find_student_session_by_client_id(
-        self, student_id: int, client_session_id: str
-    ) -> PblSessionRecord | None:
+    def find_student_session_by_client_id(self, student_id: int, client_session_id: str) -> PblSessionRecord | None:
         value = self._session.scalar(
             select(PblSession).where(
                 PblSession.created_by_student_id == student_id,
@@ -453,19 +470,13 @@ class SqlAlchemyPblRepository:
         )
 
     def diagnostics_for_teacher(self, teacher_id: int, limit: int, offset: int, filters: dict):
-        newer = aliased(PblDiagnosticSnapshot)
         statement = (
             select(PblDiagnosticSnapshot)
             .join(PblParticipation)
             .join(PblSession)
             .where(
-                PblSession.teacher_id == teacher_id,
+                self._teacher_snapshot_condition(teacher_id),
                 PblDiagnosticSnapshot.status == "ready",
-                ~exists().where(
-                    newer.participation_id == PblDiagnosticSnapshot.participation_id,
-                    newer.status == "ready",
-                    newer.revision > PblDiagnosticSnapshot.revision,
-                ),
             )
         )
         for key, column in (
@@ -482,11 +493,22 @@ class SqlAlchemyPblRepository:
                     PblQuestionSuggestion.status == filters["status"],
                 )
             )
-        total = self._session.scalar(select(func.count()).select_from(statement.subquery()))
-        snapshots = self._session.scalars(
-            statement.order_by(PblDiagnosticSnapshot.id.desc()).limit(limit).offset(offset)
-        ).all()
-        return tuple(self._diagnostic_record(snapshot) for snapshot in snapshots), int(total or 0)
+        if filters.get("source") == "student_submission":
+            statement = statement.where(PblSession.session_kind == "student_initiated")
+        elif filters.get("source") == "classroom_diagnostic":
+            statement = statement.where(PblSession.session_kind == "classroom")
+        # A private dialogue may be submitted at an earlier snapshot and then
+        # continue privately.  Keep the newest *visible* snapshot per learner,
+        # rather than allowing a later private revision to hide the submission.
+        visible = self._session.scalars(statement.order_by(PblDiagnosticSnapshot.id.desc())).all()
+        latest = []
+        participations = set()
+        for snapshot in visible:
+            if snapshot.participation_id in participations:
+                continue
+            participations.add(snapshot.participation_id)
+            latest.append(snapshot)
+        return tuple(self._diagnostic_record(snapshot) for snapshot in latest[offset : offset + limit]), len(latest)
 
     def diagnostic_for_teacher(self, teacher_id: int, snapshot_id: int) -> PblDiagnosticRecord | None:
         snapshot = self._session.scalar(
@@ -495,7 +517,7 @@ class SqlAlchemyPblRepository:
             .join(PblSession)
             .where(
                 PblDiagnosticSnapshot.id == snapshot_id,
-                PblSession.teacher_id == teacher_id,
+                self._teacher_snapshot_condition(teacher_id),
                 PblDiagnosticSnapshot.status == "ready",
             )
         )
@@ -505,13 +527,7 @@ class SqlAlchemyPblRepository:
         value = self._session.get(PblQuestionSuggestion, suggestion_id)
         if value is None:
             return None
-        owner = self._session.scalar(
-            select(PblSession.teacher_id)
-            .join(PblParticipation, PblParticipation.session_id == PblSession.id)
-            .join(PblDiagnosticSnapshot, PblDiagnosticSnapshot.participation_id == PblParticipation.id)
-            .where(PblDiagnosticSnapshot.id == value.snapshot_id)
-        )
-        return self._suggestion_record(value) if owner == teacher_id else None
+        return self._suggestion_record(value) if self.diagnostic_for_teacher(teacher_id, value.snapshot_id) else None
 
     def session_for_suggestion(self, suggestion_id: int) -> PblSessionRecord | None:
         value = self._session.scalar(
@@ -601,6 +617,7 @@ class SqlAlchemyPblRepository:
             select(PblDiagnosticSnapshot)
             .where(
                 PblDiagnosticSnapshot.participation_id == diagnostic.snapshot.participation_id,
+                self._teacher_snapshot_condition(teacher_id),
                 PblDiagnosticSnapshot.status == "ready",
             )
             .order_by(PblDiagnosticSnapshot.revision.desc())
@@ -630,3 +647,219 @@ class SqlAlchemyPblRepository:
             or 0,
             "phase_counts": {str(phase): int(count) for phase, count in phase_rows},
         }
+
+    def _teacher_snapshot_condition(self, teacher_id: int):
+        if self._scope is None:
+            return PblDiagnosticSnapshot.id.in_([])
+        active_member = exists().where(
+            ClassMember.class_id == PblSession.class_id,
+            ClassMember.student_id == PblParticipation.student_id,
+        )
+        submitted_snapshot = exists().where(
+            PblSubmission.session_id == PblSession.id,
+            PblSubmission.snapshot_id == PblDiagnosticSnapshot.id,
+            PblSubmission.teacher_id == teacher_id,
+            PblSubmission.class_id == PblSession.class_id,
+        )
+        allowed = (
+            select(PblDiagnosticSnapshot.id)
+            .join(PblParticipation, PblParticipation.id == PblDiagnosticSnapshot.participation_id)
+            .join(PblSession, PblSession.id == PblParticipation.session_id)
+            .join(ClassRoom, ClassRoom.id == PblSession.class_id)
+            .where(
+                PblSession.teacher_id == teacher_id,
+                ClassRoom.teacher_id == teacher_id,
+                ClassRoom.status == "active",
+                active_member,
+                or_(
+                    PblSession.session_kind == "classroom",
+                    and_(PblSession.session_kind == "student_initiated", submitted_snapshot),
+                ),
+            )
+        )
+        return PblDiagnosticSnapshot.id.in_(allowed)
+
+    def submission(self, session_id: int) -> dict | None:
+        row = self._session.scalar(select(PblSubmission).where(PblSubmission.session_id == session_id))
+        return (
+            {
+                "session_id": row.session_id,
+                "snapshot_id": row.snapshot_id,
+                "class_id": row.class_id,
+                "teacher_id": row.teacher_id,
+                "source": row.source,
+                "submitted_at": row.submitted_at,
+                "client_submission_id": row.client_submission_id,
+                "preview_payload": row.preview_payload,
+            }
+            if row
+            else None
+        )
+
+    def save_submission(
+        self,
+        session_id: int,
+        snapshot_id: int,
+        student_id: int,
+        class_id: int,
+        teacher_id: int,
+        client_id: str,
+        preview_payload: dict,
+    ) -> dict:
+        self._session.add(
+            PblSubmission(
+                session_id=session_id,
+                snapshot_id=snapshot_id,
+                student_id=student_id,
+                class_id=class_id,
+                teacher_id=teacher_id,
+                client_submission_id=client_id,
+                source="student",
+                preview_payload=preview_payload,
+                submitted_at=datetime.now(UTC),
+            )
+        )
+        session = self._session.get(PblSession, session_id)
+        session.class_id, session.teacher_id = class_id, teacher_id
+        try:
+            self._session.flush()
+        except IntegrityError as error:
+            raise PersistenceConflict from error
+        return self.submission(session_id)
+
+    def suggestions_for_snapshot(self, snapshot_id: int) -> tuple[PblSuggestionRecord, ...]:
+        return tuple(
+            self._suggestion_record(row)
+            for row in self._session.scalars(
+                select(PblQuestionSuggestion)
+                .where(PblQuestionSuggestion.snapshot_id == snapshot_id)
+                .order_by(PblQuestionSuggestion.id)
+            ).all()
+        )
+
+    def list_sessions_owned_by_teacher(self, teacher_id: int) -> tuple[PblSessionRecord, ...]:
+        rows = self._session.scalars(
+            select(PblSession).where(PblSession.teacher_id == teacher_id).order_by(PblSession.created_at.desc())
+        ).all()
+        return tuple(
+            self._session_record(row)
+            for row in rows
+            if row.class_id and self._scope and self._scope.owned_active(teacher_id, row.class_id)
+        )
+
+    def session_dashboard_rows(self, session_id: int) -> tuple[dict, ...]:
+        rows = self._session.execute(
+            select(PblParticipation, PblDiagnosticSnapshot)
+            .outerjoin(PblDiagnosticSnapshot, PblDiagnosticSnapshot.participation_id == PblParticipation.id)
+            .where(PblParticipation.session_id == session_id)
+            .order_by(PblParticipation.id, PblDiagnosticSnapshot.revision.desc())
+        ).all()
+        result, seen = [], set()
+        for participation, snapshot in rows:
+            if participation.id in seen:
+                continue
+            seen.add(participation.id)
+            result.append(
+                {
+                    "student_id": participation.student_id,
+                    "current_phase": participation.current_phase,
+                    "phase_status": participation.phase_status,
+                    "last_activity_at": participation.updated_at,
+                    "snapshot_id": snapshot.id if snapshot and snapshot.status == "ready" else None,
+                }
+            )
+        return tuple(result)
+
+    def feedbacks_for_snapshot(self, snapshot_id: int) -> tuple[PblTeacherFeedbackRecord, ...]:
+        rows = self._session.scalars(
+            select(PblTeacherFeedback)
+            .where(PblTeacherFeedback.snapshot_id == snapshot_id)
+            .order_by(PblTeacherFeedback.created_at, PblTeacherFeedback.id)
+        ).all()
+        return tuple(self._feedback_record(row) for row in rows)
+
+    def feedbacks_for_snapshots(
+        self, snapshot_ids: tuple[int, ...]
+    ) -> dict[int, tuple[PblTeacherFeedbackRecord, ...]]:
+        grouped: dict[int, list[PblTeacherFeedbackRecord]] = {
+            snapshot_id: [] for snapshot_id in snapshot_ids
+        }
+        if not snapshot_ids:
+            return {}
+        rows = self._session.scalars(
+            select(PblTeacherFeedback)
+            .where(PblTeacherFeedback.snapshot_id.in_(snapshot_ids))
+            .order_by(PblTeacherFeedback.snapshot_id, PblTeacherFeedback.created_at, PblTeacherFeedback.id)
+        ).all()
+        for row in rows:
+            grouped[row.snapshot_id].append(self._feedback_record(row))
+        return {snapshot_id: tuple(items) for snapshot_id, items in grouped.items()}
+
+    def suggestion_statuses_for_snapshots(self, snapshot_ids: tuple[int, ...]) -> dict[int, tuple[str, ...]]:
+        grouped: dict[int, list[str]] = {snapshot_id: [] for snapshot_id in snapshot_ids}
+        if not snapshot_ids:
+            return {}
+        rows = self._session.execute(
+            select(PblQuestionSuggestion.snapshot_id, PblQuestionSuggestion.status).where(
+                PblQuestionSuggestion.snapshot_id.in_(snapshot_ids)
+            )
+        ).all()
+        for snapshot_id, status in rows:
+            grouped[snapshot_id].append(status)
+        return {snapshot_id: tuple(items) for snapshot_id, items in grouped.items()}
+
+    def feedbacks_for_plan(self, plan_id: int) -> tuple[PblTeacherFeedbackRecord, ...]:
+        rows = self._session.scalars(
+            select(PblTeacherFeedback)
+            .where(PblTeacherFeedback.plan_id == plan_id)
+            .order_by(PblTeacherFeedback.created_at, PblTeacherFeedback.id)
+        ).all()
+        return tuple(self._feedback_record(row) for row in rows)
+
+    def append_feedback(
+        self,
+        *,
+        snapshot_id: int,
+        plan_id: int | None,
+        student_id: int,
+        class_id: int,
+        teacher_id: int,
+        action_type: str,
+        suggestion_id: int | None,
+        body: str,
+        client_feedback_id: str,
+    ) -> PblTeacherFeedbackRecord:
+        existing = self._session.scalar(
+            select(PblTeacherFeedback).where(
+                PblTeacherFeedback.teacher_id == teacher_id,
+                PblTeacherFeedback.client_feedback_id == client_feedback_id,
+            )
+        )
+        payload = (snapshot_id, plan_id, student_id, class_id, action_type, suggestion_id, body)
+        if existing:
+            current = (
+                existing.snapshot_id,
+                existing.plan_id,
+                existing.student_id,
+                existing.class_id,
+                existing.action_type,
+                existing.suggestion_id,
+                existing.body,
+            )
+            if current != payload:
+                raise AppError("STATE_CONFLICT", "反馈幂等键已用于不同内容", 409)
+            return self._feedback_record(existing)
+        value = PblTeacherFeedback(
+            snapshot_id=snapshot_id,
+            plan_id=plan_id,
+            student_id=student_id,
+            class_id=class_id,
+            teacher_id=teacher_id,
+            action_type=action_type,
+            suggestion_id=suggestion_id,
+            body=body,
+            client_feedback_id=client_feedback_id,
+        )
+        self._session.add(value)
+        self._session.flush()
+        return self._feedback_record(value)

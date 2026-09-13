@@ -15,6 +15,31 @@ const login = (role: 'student' | 'teacher', openid: string) =>
     classIds: ['demo_class_1'],
   })
 describe('PBL Demo contract', () => {
+  it('shows a synthetic pending diagnostic and exhausted follow-up in the teacher default workspaces', async () => {
+    ensureDemoData()
+    const repository = new DemoPblRepository(new DemoContentRepository())
+    login('teacher', 'demo_teacher')
+
+    const diagnostics = await repository.workItems({ workStatus: 'pending' })
+    expect(diagnostics.items).toHaveLength(1)
+    expect(diagnostics.items[0]).toMatchObject({
+      student: { name: '演示学生·林晓' },
+      status: 'pending',
+      topic: 'pathology.inflammation',
+    })
+    expect((await repository.diagnostic(diagnostics.items[0].snapshotId)).safetyNotice).toContain('Demo 合成教学记录')
+
+    const followUps = await repository.followUps()
+    expect(followUps.items).toEqual([
+      expect.objectContaining({
+        studentName: '演示学生·周宁',
+        status: 'support_needed',
+        currentCycle: 2,
+        automationExhausted: true,
+      }),
+    ])
+  })
+
   it('uses one dialogue contract for direct and guided communication', async () => {
     ensureDemoData()
     const repository = new DemoPblRepository(new DemoContentRepository())
@@ -36,6 +61,55 @@ describe('PBL Demo contract', () => {
     const first = await repository.message(created.session.id, '为什么会局部红肿？', 'direct-message-1')
     expect(first.diagnostic?.assistantReply).toContain('先说明')
     expect(first.diagnostic?.knowledgeGaps).toEqual([])
+  })
+
+  it('returns private submission feedback only to its student through the same contract as the API adapter', async () => {
+    ensureDemoData()
+    const repository = new DemoPblRepository(new DemoContentRepository())
+    login('student', 'demo_student')
+    const created = await repository.createDialogue({
+      clientSessionId: 'private-feedback-21',
+      classId: '1',
+      interactionStyle: 'guided',
+      goalPointCodes: ['pathology.inflammation.vascular'],
+    })
+    for (const [index, message] of ['问题表征', '机制假设', '证据和限制', '综合解释'].entries())
+      await repository.message(created.session.id, message, `private-feedback-message-${index}`)
+    const preview = await repository.dialogueSubmission(created.session.id)
+    await repository.submitDialogue({
+      id: created.session.id,
+      snapshotId: preview.snapshotId,
+      classId: '1',
+      clientSubmissionId: 'private-feedback-submit',
+    })
+    login('teacher', 'demo_teacher')
+    const item = (await repository.workItems({ source: 'student_submission', classId: '1' })).items.find(
+      (value) => value.sessionId === created.session.id,
+    )
+    expect(item).toBeDefined()
+    expect(item?.class).toMatchObject({ id: '1', name: '病理学演示班' })
+    await repository.feedback({
+      snapshotId: item!.snapshotId,
+      clientFeedbackId: 'private-feedback-response',
+      body: '请先把形态证据和机制解释分开整理。',
+      actionType: 'feedback_only',
+    })
+    login('student', 'demo_student')
+    const responded = await repository.dialogueSubmission(created.session.id)
+    expect(responded.teacherStatus).toBe('responded')
+    expect(responded.submission?.submittedAt).toBeTruthy()
+    expect(responded.feedbacks?.map((item) => item.body)).toEqual(['请先把形态证据和机制解释分开整理。'])
+    expect(responded.nextAction).toBe('按反馈开启新一轮研讨')
+    const notifications = await repository.teacherFeedbackNotifications()
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        sessionId: created.session.id,
+        actionType: 'feedback_only',
+      }),
+    ])
+    expect((await repository.report(created.session.id)).timeline.map((item) => item.type)).toEqual(
+      expect.arrayContaining(['submitted_to_teacher', 'teacher_feedback']),
+    )
   })
 
   it('keeps message retries stable, adopts edited content and returns learning evidence to the teacher', async () => {
@@ -71,7 +145,7 @@ describe('PBL Demo contract', () => {
     expect(report.plans[0].evaluations).toHaveLength(1)
     expect((await repository.reports()).summary.statusCounts.improved).toBe(1)
     login('teacher', 'demo_teacher')
-    expect((await repository.summary((await repository.active())[0])).objective_retest_count).toBe(1)
+    expect((await repository.summary((await repository.active())[0])).objective_retest_count).toBe(3)
   })
 
   it('activates only the second-cycle variant and exhausts after a repeated failed retest', async () => {

@@ -9,6 +9,7 @@ from app.modules.pbl.application.records import (
     PblSessionRecord,
     PblSnapshotRecord,
     PblSuggestionRecord,
+    PblTeacherFeedbackRecord,
 )
 
 
@@ -19,8 +20,8 @@ class PblInferenceGateway(Protocol):
 class PblRepository(Protocol):
     def create_session(
         self,
-        class_id: int,
-        teacher_id: int,
+        class_id: int | None,
+        teacher_id: int | None,
         topic_code: str,
         provider: str,
         mode: str | None,
@@ -34,12 +35,12 @@ class PblRepository(Protocol):
     def close_session(self, session_id: int) -> PblSessionRecord: ...
     def list_active_sessions(self, class_ids: tuple[int, ...], student_id: int) -> tuple[PblSessionRecord, ...]: ...
     def list_sessions_for_teacher(self, teacher_id: int, class_id: int) -> tuple[PblSessionRecord, ...]: ...
+    def list_sessions_owned_by_teacher(self, teacher_id: int) -> tuple[PblSessionRecord, ...]: ...
+    def session_dashboard_rows(self, session_id: int) -> tuple[dict, ...]: ...
     def get_or_create_participation(
         self, session_id: int, student_id: int, interaction_style: str = "guided"
     ) -> PblParticipationRecord: ...
-    def find_student_session_by_client_id(
-        self, student_id: int, client_session_id: str
-    ) -> PblSessionRecord | None: ...
+    def find_student_session_by_client_id(self, student_id: int, client_session_id: str) -> PblSessionRecord | None: ...
     def participation(self, participation_id: int) -> PblParticipationRecord | None: ...
     def latest_snapshot(self, participation_id: int) -> PblSnapshotRecord | None: ...
     def append_student_message(
@@ -64,3 +65,35 @@ class PblRepository(Protocol):
     def revisions_for_teacher(self, teacher_id: int, snapshot_id: int) -> tuple[PblDiagnosticRecord, ...]: ...
     def session_counts(self, session_id: int) -> dict[str, int]: ...
     def report_participations(self, student_id: int) -> tuple[PblReportParticipationRecord, ...]: ...
+
+    def submission(self, session_id: int) -> dict | None: ...
+    def save_submission(
+        self,
+        session_id: int,
+        snapshot_id: int,
+        student_id: int,
+        class_id: int,
+        teacher_id: int,
+        client_id: str,
+        preview_payload: dict,
+    ) -> dict: ...
+    def suggestions_for_snapshot(self, snapshot_id: int) -> tuple[PblSuggestionRecord, ...]: ...
+    def feedbacks_for_snapshot(self, snapshot_id: int) -> tuple[PblTeacherFeedbackRecord, ...]: ...
+    def feedbacks_for_snapshots(
+        self, snapshot_ids: tuple[int, ...]
+    ) -> dict[int, tuple[PblTeacherFeedbackRecord, ...]]: ...
+    def suggestion_statuses_for_snapshots(self, snapshot_ids: tuple[int, ...]) -> dict[int, tuple[str, ...]]: ...
+    def feedbacks_for_plan(self, plan_id: int) -> tuple[PblTeacherFeedbackRecord, ...]: ...
+    def append_feedback(
+        self,
+        *,
+        snapshot_id: int,
+        plan_id: int | None,
+        student_id: int,
+        class_id: int,
+        teacher_id: int,
+        action_type: str,
+        suggestion_id: int | None,
+        body: str,
+        client_feedback_id: str,
+    ) -> PblTeacherFeedbackRecord: ...

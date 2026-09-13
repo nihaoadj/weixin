@@ -1,0 +1,51 @@
+{
+  "repository": "nextlevelbuilder/ui-ux-pro-max-skill",
+  "commit": "7f69fed6a2717900085f1bc3b263721f8ba025e2",
+  "files": [
+    {
+      "path": "data/styles.csv",
+      "upstream": "src/ui-ux-pro-max/data/styles.csv",
+      "git_blob_sha": "d1eb2c216e453005ffa8232ffb94491c183afe3c"
+    },
+    {
+      "path": "data/colors.csv",
+      "upstream": "src/ui-ux-pro-max/data/colors.csv",
+      "git_blob_sha": "5d2bf7389105f8a824b504b57cc93c00dc1d7e0a"
+    },
+    {
+      "path": "data/products.csv",
+      "upstream": "src/ui-ux-pro-max/data/products.csv",
+      "git_blob_sha": "9f40f1d1f9743c4a81603076dfbfd115bbb55246"
+    },
+    {
+      "path": "data/typography.csv",
+      "upstream": "src/ui-ux-pro-max/data/typography.csv",
+      "git_blob_sha": "70d107d107de30150863c965767320ec33ef29ad"
+    },
+    {
+      "path": "data/ux-guidelines.csv",
+      "upstream": "src/ui-ux-pro-max/data/ux-guidelines.csv",
+      "git_blob_sha": "4e7d52b296537a03513b18b2c3f2b946cc802051"
+    },
+    {
+      "path": "data/charts.csv",
+      "upstream": "src/ui-ux-pro-max/data/charts.csv",
+      "git_blob_sha": "c6f4f875fd5b34379f24dbb541539492366a1058"
+    },
+    {
+      "path": "data/icons.csv",
+      "upstream": "src/ui-ux-pro-max/data/icons.csv",
+      "git_blob_sha": "cfc3f1eccd7e5aee15d8d70f86d8fa17ba737958"
+    },
+    {
+      "path": "data/stacks/vue.csv",
+      "upstream": "src/ui-ux-pro-max/data/stacks/vue.csv",
+      "git_blob_sha": "83997c515775170f22b638635aae0a67a46dfc87"
+    },
+    {
+      "path": "scripts/core.py",
+      "upstream": "src/ui-ux-pro-max/scripts/core.py",
+      "git_blob_sha": "e7b76486499478518cdfa919c0d2eff62afef65f"
+    }
+  ]
+}

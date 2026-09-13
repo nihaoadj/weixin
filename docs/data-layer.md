@@ -94,6 +94,18 @@ PBL 诊断快照使用 schema v3，知识薄弱点只能引用 `pathology-genera
 
 # T17：统一研讨合同
 
-学生统一入口使用 `GET /student/classes` 和 `/student/learning-dialogues` 的列表、创建、start、详情及消息接口。创建请求以学生范围内的 `client_session_id` 幂等，服务端校验有效班级与同一主题下 1～3 个稳定知识点；教师课堂通过 start 首次写入 `interaction_style`，相同方式幂等、不同方式冲突。消息仍以 `client_message_id` 幂等，并保持完成锁定。
+学生统一入口使用 `GET /student/classes` 和 `/student/learning-dialogues` 的列表、创建、start、详情及消息接口。学生主动研讨创建以学生范围内的 `client_session_id` 幂等，班级可为空；提供班级时服务端校验有效范围。课堂研讨仍要求有效班级。教师课堂通过 start 首次写入 `interaction_style`，相同方式幂等、不同方式冲突。消息仍以 `client_message_id` 幂等，并保持完成锁定。
 
 新 AI 推理只产生 schema v4，请求与响应均携带 `interaction_style`。CheckedGateway 拒绝方式不匹配、非当前阶段学生消息证据和越级完成；direct 的首问只能得到解释与理解检验，不能单凭提问进入 ready。schema v3 历史诊断仍可查看和采用。旧 QA 接口继续兼容但标记 deprecated，旧 conversation/report 数据不自动写入 PBL session、snapshot 或 learning plan。
+
+# T20：私有提交与自主练习合同
+
+`GET/POST /student/learning-dialogues/{session_id}/submission` 仅供创建该自主研讨的学生使用。预览和提交都要求完成四阶段且有合法 ready 快照；POST 使用学生范围的提交键幂等，并将诊断、证据摘要和建议题存为不可覆盖的提交快照。教师诊断列表、详情、修订、建议编辑和采用均由服务端按课堂范围或该提交记录校验，后续私有快照不扩大可见性。
+
+`/learning/knowledge-points/{point_code}/study` 读取版本化材料和学习路径，`start` 幂等创建或续接关联研讨。只有合法 PBL 完成证据或历史正式入口才开放后续练习。`/learning/study-paths/{path_id}/practices` 与 `/learning/self-practices/*` 仅验证本人归属；读取题目不返回参考答案和解析，作答后才返回“按 AI 参考答案”的个人反馈。题目、作答和到期复习独立保存，不写入正式成绩、掌握度或 T14 判定。
+
+# T21：教师 PBL 工作区与反馈合同
+
+`GET /teacher/pbl-work-items`、详情和 `/feedback` 只允许接收教师读取。工作项状态由快照建议和不可覆盖的反馈记录推导为 `pending`、`responded`、`task_published` 或 `closed`，状态过滤在分页之前完成。反馈正文限制为 1–1000 个字符，`client_feedback_id` 在教师范围内幂等；`task_published` 在同一事务内完成反馈、建议采用、两轮正式任务和通知，失败时整体回滚。关闭后的项目拒绝后续反馈和旧采用入口。
+
+`GET /teacher/pbl-sessions` 与班级 session dashboard 仅接受教师拥有的有效班级和课堂 session；看板以批量快照反馈、建议状态和既有学习计划聚合学生进度。`GET /teacher/pbl-follow-ups` 与详情只返回正式任务已发布的记录。学生提交读取接口只返回本人固定提交快照对应的反馈时间线、教师状态和下一行动，不返回教师内部字段、答案或未提交记录。API 与 Demo 都通过 `features/pbl` port 返回同一领域合同，失败不会回退数据源。

@@ -52,7 +52,7 @@
             </button>
           </view>
           <view class="field-group">
-            <text class="field-label">所属班级</text>
+            <text class="field-label">关联班级（可选）</text>
             <picker
               v-if="classes.length"
               :range="classOptions"
@@ -65,8 +65,8 @@
             </picker>
             <text
               v-else
-              class="field-error"
-              >你目前没有有效班级，暂时不能创建研讨。请联系教师加入班级。</text
+              class="field-hint"
+              >本次自主研讨默认仅自己可见；完成后如需提交教师，再选择有效班级。</text
             >
           </view>
           <view class="field-group">
@@ -134,6 +134,7 @@
           >
             {{ submitting ? '正在创建…' : '进入统一学习流程' }}
           </button>
+          <text class="field-hint">自主研讨默认私有，不会进入教师待办或班级统计。</text>
         </view>
       </scroll-view>
     </template>
@@ -143,30 +144,40 @@
         class="dialogue-toolbar"
         aria-label="研讨上下文"
       >
-        <picker
-          class="session-picker"
-          :range="sessionOptions"
-          :value="sessionIndex"
-          aria-label="选择研讨会话"
-          :disabled="sending"
-          @change="selectSession"
-        >
-          <view class="session-selector">{{ sessionOptions[sessionIndex] }} ▾</view>
-        </picker>
-        <button
-          class="new-action"
-          :disabled="sending"
-          @click="openCreate"
-        >
-          ＋ 新研讨
-        </button>
-        <view class="toolbar-meta">
-          <text class="meta-chip">{{ sessionKindLabel }}</text
-          ><text
-            v-if="session.interactionStyle"
-            class="meta-chip accent"
-            >{{ styleLabel }}</text
-          ><text class="meta-chip">{{ phaseLabels[currentPhase] }}</text>
+        <view class="toolbar-heading">
+          <view class="topic-field">
+            <text class="topic-label">当前主题</text>
+            <picker
+              class="session-picker"
+              :range="sessionOptions"
+              :value="sessionIndex"
+              aria-label="选择研讨主题"
+              :disabled="sending"
+              @change="selectSession"
+            >
+              <view class="session-selector"
+                ><text class="session-topic">{{ sessionTopicLabel }}</text
+                ><text
+                  class="selector-icon"
+                  aria-hidden="true"
+                  >⌄</text
+                ></view
+              >
+            </picker>
+          </view>
+          <button
+            class="new-action"
+            :disabled="sending"
+            @click="openCreate"
+          >
+            <text aria-hidden="true">＋</text><text>新研讨</text>
+          </button>
+        </view>
+        <view class="toolbar-context">
+          <text class="context-status"><text class="status-dot" />{{ sessionStatusLabel }}</text
+          ><text>{{ sessionKindLabel }}</text
+          ><text v-if="session.interactionStyle">沟通方式：{{ styleLabel }}</text
+          ><text>当前阶段：{{ phaseLabels[currentPhase] }}</text>
         </view>
       </view>
       <scroll-view
@@ -177,8 +188,8 @@
         aria-label="研讨消息与阶段证据"
       >
         <view class="case-brief">
-          <text class="eyebrow">{{ session.sessionKind === 'classroom' ? 'CLASSROOM CASE' : 'STUDENT DIALOGUE' }}</text>
-          <text class="case-title">{{ session.caseContext?.title || topicTitle(session.topicCode) }}</text>
+          <text class="eyebrow">{{ session.sessionKind === 'classroom' ? '课堂病例' : '研讨主题' }}</text>
+          <text class="case-title">{{ sessionDisplayTitle }}</text>
           <text
             v-if="session.caseContext?.opening"
             class="muted"
@@ -337,14 +348,87 @@
       <view
         v-else-if="session.phaseStatus === 'completed'"
         class="locked-bar"
-        ><text>四阶段研讨已完成，输入已关闭。教师采用并发布后，将进入同一两轮巩固流程。</text
-        ><button
+      >
+        <text>四阶段研讨已完成，输入已关闭。你现在可以回到知识点继续补学和练习。</text>
+        <template v-if="session.sessionKind === 'student_initiated'">
+          <text
+            v-if="submission?.submission"
+            class="submission-state"
+            >{{ submissionStatusText }} 后续自主练习不会自动外发。</text
+          >
+          <view
+            v-if="submission?.feedbacks?.length"
+            class="teacher-feedbacks"
+            aria-label="教师反馈"
+          >
+            <text class="feedback-heading">教师反馈</text>
+            <view
+              v-for="item in submission.feedbacks"
+              :key="item.id"
+              class="teacher-feedback"
+              ><text>{{ feedbackActionLabel(item.actionType) }}</text
+              ><text>{{ item.body }}</text
+              ><text
+                v-if="item.createdAt"
+                class="field-hint"
+                >{{ item.createdAt }}</text
+              ></view
+            >
+            <text
+              v-if="submission.nextAction"
+              class="field-hint"
+              >下一步：{{ submission.nextAction }}</text
+            >
+            <button
+              v-if="submission.teacherStatus === 'responded'"
+              class="text-action"
+              @click="openCreate"
+            >
+              按反馈开启新研讨
+            </button>
+            <button
+              v-if="submission.teacherStatus === 'task_published'"
+              class="text-action"
+              @click="openPublishedPlan"
+            >
+              查看正式任务
+            </button>
+          </view>
+          <text
+            v-else-if="!submission?.submission"
+            class="submission-state"
+            >自主研讨仍是私有的。提交后，教师只能查看本轮完成快照。</text
+          >
+          <picker
+            v-if="!submission?.submission && classes.length"
+            :range="classOptions"
+            range-key="label"
+            :value="classIndex"
+            aria-label="选择提交研讨的班级"
+            @change="selectClass"
+            ><view class="field-picker">提交至：{{ classOptions[classIndex]?.label }} ▾</view></picker
+          >
+          <button
+            v-if="!submission?.submission && classes.length"
+            class="secondary-action"
+            :disabled="submitting || !submission"
+            @click="submitToTeacher"
+          >
+            {{ submitting ? '正在提交…' : '预览后提交教师' }}
+          </button>
+          <text
+            v-else-if="!submission?.submission"
+            class="field-hint"
+            >你尚未加入有效班级，仍可继续个人学习。</text
+          >
+        </template>
+        <button
           class="secondary-action"
           @click="goPrimary(ROUTES.studentLearning)"
         >
           查看后续学习
-        </button></view
-      >
+        </button>
+      </view>
     </template>
     <view
       v-else
@@ -354,15 +438,10 @@
       ><text class="muted">你可以从一个病理问题开始，或等待教师创建课堂病例。</text>
       <button
         class="primary-action compact"
-        :disabled="!classes.length"
         @click="openCreate"
       >
         开始新研讨</button
-      ><text
-        v-if="!classes.length"
-        class="field-error"
-        >加入有效班级后才能创建研讨。</text
-      >
+      ><text class="field-hint">自主研讨默认私有；完成后可选择提交教师。</text>
     </view>
     <StudentPrimaryNav active="pbl" />
   </view>
@@ -378,15 +457,18 @@ import {
   createLearningDialogue,
   createPblMessageId,
   getLearningDialogue,
+  getLearningDialogueSubmission,
   getLearningDialogues,
   getStudentClasses,
   sendPblMessage,
+  submitLearningDialogue,
   startLearningDialogue,
   type InteractionStyle,
   type PblDiagnostic,
   type PblMessage,
   type PblParticipation,
   type PblSession,
+  type LearningDialogueSubmission,
   type StudentClassSummary,
 } from '@/features/pbl/public'
 import { getKnowledgeCatalog, type KnowledgePoint } from '@/features/learning/public'
@@ -411,10 +493,12 @@ const selectedPointCodes = ref<string[]>([]),
   startStyle = ref<InteractionStyle>('guided')
 const participation = ref<PblParticipation>(),
   messages = ref<PblMessage[]>([]),
-  diagnostic = ref<PblDiagnostic>()
+  diagnostic = ref<PblDiagnostic>(),
+  submission = ref<LearningDialogueSubmission>()
 const draft = ref(''),
   starter = ref(''),
   requestedPointCode = ref(''),
+  requestedSessionId = ref(''),
   createRequestId = ref(''),
   scrollTarget = ref('')
 const retry = ref<{ id: string; content: string; sessionId: string }>()
@@ -436,6 +520,16 @@ const phaseLabels = {
   completed: '已完成',
 }
 const session = computed(() => sessions.value[sessionIndex.value])
+const submissionStatusText = computed(() => {
+  const status = submission.value?.teacherStatus
+  return status === 'responded'
+    ? '教师已发送反馈。'
+    : status === 'task_published'
+      ? '教师已反馈并发布正式任务。'
+      : status === 'closed'
+        ? '教师已给出本轮结论。'
+        : '本轮已提交给教师，等待审阅。'
+})
 const currentPhase = computed(() => session.value?.studentPhase || session.value?.phase || 'problem_framing')
 const classOptions = computed(() => classes.value.map((item) => ({ label: `${item.name} · ${item.code}` })))
 const groupedTopics = computed(() => {
@@ -447,17 +541,18 @@ const groupedTopics = computed(() => {
 const topicOptions = computed(() => groupedTopics.value)
 const selectedTopic = computed(() => topicOptions.value[topicIndex.value]?.code || '')
 const topicPoints = computed(() => points.value.filter((item) => item.systemCode === selectedTopic.value))
-const canCreate = computed(
-  () => classes.value.length > 0 && selectedPointCodes.value.length >= 1 && selectedPointCodes.value.length <= 3,
-)
+const canCreate = computed(() => selectedPointCodes.value.length >= 1 && selectedPointCodes.value.length <= 3)
 const sessionOptions = computed(() =>
-  sessions.value.map(
-    (item) =>
-      `${item.caseContext?.title || topicTitle(item.topicCode)} · ${item.status === 'active' ? '进行中' : '已结束'}`,
-  ),
+  sessions.value.map((item) => `${topicTitle(item.topicCode)} · ${item.status === 'active' ? '进行中' : '已结束'}`),
 )
 const sessionKindLabel = computed(() => (session.value?.sessionKind === 'student_initiated' ? '主动研讨' : '课堂研讨'))
 const styleLabel = computed(() => (session.value?.interactionStyle === 'direct' ? '先直接解释' : '引导我思考'))
+const sessionStatusLabel = computed(() => (session.value?.status === 'active' ? '进行中' : '已结束'))
+const sessionTopicLabel = computed(() => (session.value ? topicTitle(session.value.topicCode) : '未选择主题'))
+const sessionDisplayTitle = computed(() => {
+  if (!session.value || session.value.sessionKind === 'student_initiated') return sessionTopicLabel.value
+  return session.value.caseContext?.title || sessionTopicLabel.value
+})
 const welcomeDescription = computed(() =>
   session.value?.interactionStyle === 'direct'
     ? '写下你的问题。助手会先解释，再请你完成与当前阶段对应的理解检验。'
@@ -465,13 +560,31 @@ const welcomeDescription = computed(() =>
 )
 const topicTitle = (code: string) => points.value.find((item) => item.systemCode === code)?.systemLabel ?? code
 const pointTitle = (code: string) => points.value.find((item) => item.code === code)?.title ?? code
+const feedbackActionLabel = (action: string) =>
+  (
+    ({
+      feedback_only: '教师反馈',
+      task_published: '反馈并发布任务',
+      closed: '教师关闭',
+      follow_up: '补充支持',
+    }) as Record<string, string>
+  )[action] || '教师反馈'
+function openPublishedPlan() {
+  const planId = submission.value?.feedbacks?.find((item) => item.planId)?.planId
+  if (planId) goDetail(ROUTES.studentLearningPlan, { planId })
+  else goPrimary(ROUTES.studentLearning)
+}
 
-onLoad((options) => {
-  starter.value = typeof options?.starter === 'string' ? options.starter : ''
-  requestedPointCode.value = typeof options?.topicCode === 'string' ? options.topicCode : ''
+function applyRouteOptions(options?: Record<string, unknown>) {
+  if (typeof options?.starter === 'string') starter.value = options.starter
+  if (typeof options?.topicCode === 'string') requestedPointCode.value = options.topicCode
+  if (typeof options?.dialogueId === 'string') requestedSessionId.value = options.dialogueId
   if (starter.value || requestedPointCode.value) creating.value = true
+}
+onLoad(applyRouteOptions)
+onShow(() => {
+  void load()
 })
-onShow(load)
 async function load() {
   loading.value = true
   error.value = ''
@@ -484,10 +597,18 @@ async function load() {
     sessions.value = page.items
     classes.value = classValues
     points.value = catalog
-    if (sessionIndex.value >= sessions.value.length) sessionIndex.value = 0
+    const requestedIndex = sessions.value.findIndex((item) => item.id === requestedSessionId.value)
+    if (requestedSessionId.value && requestedIndex < 0) {
+      error.value = '指定研讨记录暂不可用，请返回学习页后重试。'
+      return
+    }
+    if (requestedIndex >= 0) sessionIndex.value = requestedIndex
+    else if (sessionIndex.value >= sessions.value.length) sessionIndex.value = 0
     applyRequestedPoint()
-    if (!sessions.value.length && classes.value.length) creating.value = true
-    if (!creating.value && session.value) await loadDialogue(session.value.id)
+    if (!sessions.value.length) creating.value = true
+    if (!creating.value && session.value) {
+      await loadDialogue(session.value.id)
+    }
   } catch {
     error.value = '研讨加载失败，请检查网络后重新加载。'
   } finally {
@@ -508,6 +629,14 @@ async function loadDialogue(id: string) {
   participation.value = value.participation
   messages.value = value.participation?.messages ?? []
   diagnostic.value = value.participation?.diagnostic
+  submission.value = undefined
+  if (value.session.sessionKind === 'student_initiated' && value.participation?.currentPhase === 'completed') {
+    try {
+      submission.value = await getLearningDialogueSubmission(id)
+    } catch {
+      submission.value = undefined
+    }
+  }
   draft.value = starter.value && !messages.value.length ? starter.value : draft.value
   await refreshScroll()
 }
@@ -535,14 +664,14 @@ function togglePoint(code: string) {
 }
 async function createDialogue() {
   const selectedClass = classes.value[classIndex.value]
-  if (!selectedClass || !canCreate.value || submitting.value) return
+  if (!canCreate.value || submitting.value) return
   submitting.value = true
   createError.value = ''
   if (!createRequestId.value) createRequestId.value = createPblMessageId()
   try {
     const value = await createLearningDialogue({
       clientSessionId: createRequestId.value,
-      classId: selectedClass.id,
+      classId: selectedClass?.id,
       interactionStyle: createStyle.value,
       goalPointCodes: selectedPointCodes.value,
     })
@@ -557,6 +686,24 @@ async function createDialogue() {
     await refreshScroll()
   } catch {
     createError.value = '创建未确认，设置已保留。重试会沿用同一会话标识。'
+  } finally {
+    submitting.value = false
+  }
+}
+async function submitToTeacher() {
+  const selectedClass = classes.value[classIndex.value]
+  if (!session.value || !submission.value || !selectedClass || submitting.value) return
+  submitting.value = true
+  sendError.value = ''
+  try {
+    submission.value = await submitLearningDialogue({
+      id: session.value.id,
+      snapshotId: submission.value.snapshotId,
+      classId: selectedClass.id,
+      clientSubmissionId: createPblMessageId(),
+    })
+  } catch {
+    sendError.value = '提交未确认，请重新预览后重试。'
   } finally {
     submitting.value = false
   }
@@ -621,6 +768,13 @@ async function send() {
     session.value.studentPhase = result.currentPhase
     session.value.phaseStatus = result.phaseStatus
     session.value.interactionStyle = result.interactionStyle
+    if (result.currentPhase === 'completed' && session.value.sessionKind === 'student_initiated') {
+      try {
+        submission.value = await getLearningDialogueSubmission(session.value.id)
+      } catch {
+        submission.value = undefined
+      }
+    }
     draft.value = ''
     retry.value = undefined
   } catch {
@@ -688,8 +842,7 @@ async function send() {
   border-radius: var(--med-radius-md);
 }
 .launch-heading,
-.field-heading,
-.toolbar-meta {
+.field-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -829,42 +982,91 @@ async function send() {
 }
 .dialogue-toolbar {
   display: flex;
-  padding: 12rpx 24rpx;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12rpx;
+  padding: 18rpx 24rpx 16rpx;
+  flex-direction: column;
+  gap: 14rpx;
   background: var(--med-surface);
   border-bottom: 1rpx solid var(--med-border);
 }
-.session-picker {
+.toolbar-heading {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: flex-end;
+  gap: 20rpx;
+}
+.topic-field {
+  display: flex;
   min-width: 0;
   flex: 1;
+  flex-direction: column;
+  gap: 5rpx;
+}
+.topic-label {
+  color: var(--med-muted);
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+.session-picker {
+  min-width: 0;
 }
 .session-selector {
-  padding: 12rpx 18rpx;
-  overflow: hidden;
+  display: flex;
+  min-height: 62rpx;
+  padding: 0 2rpx 6rpx;
+  align-items: center;
+  justify-content: space-between;
   color: var(--med-clinical);
-  background: var(--med-wash);
-  border-radius: 99rpx;
-  font-size: 24rpx;
-  font-weight: 650;
+  border-bottom: 3rpx solid var(--med-clinical);
+  font-size: 30rpx;
+  font-weight: 800;
+  gap: 12rpx;
+}
+.session-topic {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.toolbar-meta {
+.selector-icon {
+  display: flex;
+  width: 38rpx;
+  height: 38rpx;
+  flex: 0 0 38rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--med-surface);
+  background: var(--med-clinical);
+  border-radius: 50%;
+  font-size: 25rpx;
+  line-height: 1;
+}
+.toolbar-context {
   width: 100%;
-  justify-content: flex-start;
-}
-.meta-chip {
-  padding: 6rpx 14rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   color: var(--med-muted);
-  background: var(--med-page);
-  border-radius: 99rpx;
   font-size: 21rpx;
+  gap: 10rpx;
 }
-.meta-chip.accent {
+.toolbar-context > text + text {
+  padding-left: 12rpx;
+  border-left: 1rpx solid var(--med-border);
+}
+.context-status {
+  display: flex;
+  align-items: center;
   color: var(--med-clinical);
-  background: var(--med-wash);
+  font-weight: 700;
+  gap: 7rpx;
+}
+.status-dot {
+  display: inline-block;
+  width: 12rpx;
+  height: 12rpx;
+  background: currentColor;
+  border-radius: 50%;
 }
 .chat-scroll {
   height: 0;
@@ -1028,6 +1230,23 @@ async function send() {
   border-top: 1rpx solid var(--med-border);
   font-size: 24rpx;
   line-height: 1.6;
+}
+.teacher-feedbacks {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 16rpx 0;
+  border-top: 1rpx solid var(--med-border);
+}
+.feedback-heading {
+  color: var(--med-ink);
+  font-weight: 700;
+}
+.teacher-feedback {
+  color: var(--med-text);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .empty-state {
   display: flex;

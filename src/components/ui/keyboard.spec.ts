@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { activateButtonOnKey } from './keyboard'
+import { activateButtonOnKey, activatePickerOnKey } from './keyboard'
 
 function keyEvent(tagName: string, key: string, disabled: string | null = null) {
   const click = vi.fn()
@@ -29,21 +29,26 @@ describe('uni-app button keyboard activation', () => {
     activateButtonOnKey(action.event)
     expect(action.click).not.toHaveBeenCalled()
   })
+})
 
-  it('handles uni-app normalized targets through the focused H5 button', () => {
-    const button = globalThis.document.createElement('uni-button')
-    button.tabIndex = 0
-    const clicked = vi.fn()
-    button.addEventListener('click', clicked)
-    globalThis.document.body.append(button)
-    button.focus()
-    try {
-      const event = { key: 'Enter', preventDefault: vi.fn(), currentTarget: { id: '', dataset: {} } }
-      activateButtonOnKey(event as unknown as KeyboardEvent)
-      expect(clicked).toHaveBeenCalledOnce()
-      expect(event.preventDefault).toHaveBeenCalledOnce()
-    } finally {
-      button.remove()
-    }
+describe('uni-app picker keyboard activation', () => {
+  it.each(['Enter', ' '])('activates a focusable picker with %s', (key) => {
+    const action = keyEvent('UNI-PICKER', key)
+    activatePickerOnKey(action.event)
+    expect(action.click).toHaveBeenCalledOnce()
+    expect(action.preventDefault).toHaveBeenCalledOnce()
+  })
+
+  it('ignores unrelated keys', () => {
+    const action = keyEvent('UNI-PICKER', 'Escape')
+    activatePickerOnKey(action.event)
+    expect(action.click).not.toHaveBeenCalled()
+    expect(action.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('does not activate a disabled picker', () => {
+    const action = keyEvent('UNI-PICKER', 'Enter', 'true')
+    activatePickerOnKey(action.event)
+    expect(action.click).not.toHaveBeenCalled()
   })
 })

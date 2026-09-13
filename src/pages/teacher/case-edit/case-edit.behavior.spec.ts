@@ -89,7 +89,7 @@ describe('case authoring flow', () => {
     const wrapper = mount(CaseEdit)
     const returnButton = wrapper.findAll('button').find((button) => button.text() === '返回内容列表')
     await returnButton?.trigger('click')
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems', section: 'resources' })
   })
 
   it('confirms before discarding a generated case that has not been saved', async () => {

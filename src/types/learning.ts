@@ -63,8 +63,9 @@ export interface LearningNotification {
     | 'pbl_mastery_improved'
     | 'pbl_reinforcement_activated'
     | 'pbl_automation_exhausted'
-  entityType: 'learning_plan'
-  entityId: number
+    | 'pbl_teacher_feedback'
+  entityType: 'learning_plan' | 'pbl_session'
+  entityId: number | string
   title: string
   body: string
   readAt?: string

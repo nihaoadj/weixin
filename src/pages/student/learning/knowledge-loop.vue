@@ -1,26 +1,16 @@
 <template>
   <view class="safe-page loop-page">
-    <view class="card hero">
-      <text class="eyebrow-label">问答驱动巩固</text>
-      <text class="title">把本次问答变成可复习的知识证据</text>
-      <text class="muted">选择最多三个主题后完成客观小测；提交前不会显示答案或解析。</text>
+    <view class="flow-section flow-hero">
+      <text class="eyebrow-label">本知识点巩固</text>
+      <text class="title">{{ selectedTopics[0]?.title || '知识点巩固' }}</text>
+      <text class="muted">完成本轮客观小测；提交前不会显示答案或解析。</text>
       <view class="topic-list">
-        <button
+        <text
           v-for="topic in selectedTopics"
           :key="topic.code"
           class="topic-chip"
-          @click="removeTopic(topic.code)"
+          >{{ topic.title }}</text
         >
-          {{ topic.title }} ×
-        </button>
-        <picker
-          v-if="options.length"
-          :range="options"
-          range-key="label"
-          @change="addTopic"
-        >
-          <button class="topic-add">添加学习主题</button>
-        </picker>
       </view>
       <button
         class="primary"
@@ -29,32 +19,6 @@
       >
         {{ cards.length ? '重新抽取小测' : '开始 3 题巩固' }}
       </button>
-    </view>
-
-    <view class="card map-section">
-      <view class="section-head">
-        <text class="section-title">知识地图</text>
-        <text class="muted">只根据你的客观练习和复习记录更新</text>
-      </view>
-      <view
-        v-for="system in mapSystems"
-        :key="system.label"
-        class="map-system"
-      >
-        <text class="map-system-title">{{ system.label }}</text>
-        <view class="map-topics">
-          <button
-            v-for="point in system.points"
-            :key="point.code"
-            class="map-topic"
-            :class="`status-${point.status}`"
-            @click="askAbout(point.code, '解释核心机制')"
-          >
-            <text>{{ point.title }}</text
-            ><text class="map-status">{{ statusLabel(point.status) }}</text>
-          </button>
-        </view>
-      </view>
     </view>
 
     <view
@@ -99,12 +63,19 @@
         <text>{{ result.correct ? '回答正确' : '这题需要回顾' }}</text>
         <text>{{ result.explanation }}</text>
         <text class="muted">下次复习：{{ formatDue(result.dueAt) }}</text>
+        <button
+          v-if="cardIndex < cards.length - 1"
+          class="secondary"
+          @click="nextCard"
+        >
+          下一题
+        </button>
       </view>
     </view>
 
     <view
       v-if="recallCards.length"
-      class="card recall-section"
+      class="flow-section recall-section"
     >
       <text class="section-title">教师补充 · 主动回忆</text>
       <text class="muted">先在心中作答，再揭晓教学要点并记录你的回忆质量。</text>
@@ -156,7 +127,7 @@
       </view>
     </view>
 
-    <view class="card section">
+    <view class="flow-section section">
       <view class="section-head">
         <text class="section-title">待复习</text>
         <text class="badge">{{ dashboard.dueCount }} 张</text>
@@ -201,7 +172,6 @@ import {
   createExitQuiz,
   getDueReviewQueue,
   getKnowledgeCatalog,
-  getKnowledgeMap,
   getReviewDashboard,
   gradeObjectiveCard,
   rateRecallCard,
@@ -210,7 +180,6 @@ import {
 import { getKnowledgeCardContributions } from '@/features/content/public'
 import type {
   KnowledgeCardContribution,
-  KnowledgeMapPoint,
   KnowledgePoint,
   RecallReveal,
   ReviewCard,
@@ -220,7 +189,6 @@ import type {
 import { goDetail, ROUTES } from '@/platform/navigation'
 
 const points = ref<KnowledgePoint[]>([])
-const mapPoints = ref<KnowledgeMapPoint[]>([])
 const topicCodes = ref<string[]>([])
 const cards = ref<ReviewCard[]>([])
 const cardIndex = ref(0)
@@ -248,20 +216,6 @@ const recallRatings = [
   { value: 'easy' as const, label: '轻松想起' },
 ]
 const selectedTopics = computed(() => points.value.filter((point) => topicCodes.value.includes(point.code)))
-const mapSystems = computed(() => {
-  const systems = new Map<string, { label: string; points: KnowledgeMapPoint[] }>()
-  for (const point of mapPoints.value) {
-    const existing = systems.get(point.systemCode) || { label: point.systemLabel, points: [] }
-    existing.points.push(point)
-    systems.set(point.systemCode, existing)
-  }
-  return [...systems.values()]
-})
-const options = computed(() =>
-  points.value
-    .filter((point) => !topicCodes.value.includes(point.code))
-    .map((point) => ({ label: `${point.systemLabel} · ${point.title}`, code: point.code })),
-)
 const currentCard = computed(() => cards.value[cardIndex.value])
 
 onLoad((options) => {
@@ -277,31 +231,26 @@ onLoad((options) => {
 async function load(requestedTopics: string[]) {
   loading.value = true
   try {
-    const [catalog, knowledgeMap, reviewDashboard, supplementalCards] = await Promise.all([
+    const [catalog, reviewDashboard, supplementalCards] = await Promise.all([
       getKnowledgeCatalog(),
-      getKnowledgeMap(),
       getReviewDashboard(),
       getKnowledgeCardContributions(),
     ])
     points.value = catalog
-    mapPoints.value = knowledgeMap
-    topicCodes.value = requestedTopics.filter((code) => points.value.some((point) => point.code === code)).slice(0, 3)
-    dashboard.value = reviewDashboard
-    recallCards.value = supplementalCards.filter((card) => card.cardType === 'recall' && card.status === 'approved')
+    topicCodes.value = requestedTopics.filter((code) => points.value.some((point) => point.code === code)).slice(0, 1)
+    dashboard.value = {
+      ...reviewDashboard,
+      items: reviewDashboard.items.filter((item) => topicCodes.value.includes(item.pointCode)),
+      dueCount: reviewDashboard.items.filter((item) => topicCodes.value.includes(item.pointCode)).length,
+    }
+    recallCards.value = supplementalCards.filter(
+      (card) => card.cardType === 'recall' && card.status === 'approved' && topicCodes.value.includes(card.pointCode),
+    )
   } catch (error) {
     uni.showToast({ title: error instanceof Error ? error.message : '学习数据加载失败', icon: 'none' })
   } finally {
     loading.value = false
   }
-}
-
-function addTopic(event: { detail: { value: string | number } }) {
-  const point = options.value[Number(event.detail.value)]
-  if (point && topicCodes.value.length < 3) topicCodes.value = [...topicCodes.value, point.code]
-}
-
-function removeTopic(code: string) {
-  topicCodes.value = topicCodes.value.filter((item) => item !== code)
 }
 
 async function startExitQuiz() {
@@ -326,18 +275,18 @@ async function submitAnswer() {
   try {
     result.value = await gradeObjectiveCard(currentCard.value.cardCode, selectedOption.value, confidence.value)
     dashboard.value = await getReviewDashboard()
-    if (cardIndex.value < cards.value.length - 1) {
-      setTimeout(() => {
-        cardIndex.value += 1
-        selectedOption.value = undefined
-        result.value = undefined
-      }, 900)
-    }
   } catch (error) {
     uni.showToast({ title: error instanceof Error ? error.message : '提交失败', icon: 'none' })
   } finally {
     submitting.value = false
   }
+}
+
+function nextCard() {
+  if (cardIndex.value >= cards.value.length - 1) return
+  cardIndex.value += 1
+  selectedOption.value = undefined
+  result.value = undefined
 }
 
 async function loadDueQueue() {
@@ -390,16 +339,6 @@ function topicName(code: string) {
   return points.value.find((point) => point.code === code)?.title || code
 }
 
-function statusLabel(status: KnowledgeMapPoint['status']) {
-  return {
-    not_started: '未开始',
-    weak: '薄弱',
-    learning: '学习中',
-    due: '待复习',
-    stable: '相对稳定',
-  }[status]
-}
-
 function formatDue(value: string) {
   return value.replace('T', ' ').slice(0, 16)
 }
@@ -418,12 +357,19 @@ function askAbout(pointCode: string | undefined, prompt: string) {
   padding: 28rpx;
   background: var(--med-page);
 }
-.card {
+.quiz {
   margin-bottom: 20rpx;
   padding: 28rpx;
-  background: var(--med-surface);
-  border: 1rpx solid var(--med-border);
-  border-radius: var(--med-radius-md);
+}
+.flow-section {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 34rpx 2rpx;
+  border-top: 1rpx solid var(--med-border);
+}
+.flow-hero {
+  padding-top: 12rpx;
+  border-top: 0;
 }
 .hero,
 .quiz,

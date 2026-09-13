@@ -45,6 +45,7 @@ pbl_participations
 pbl_messages
 pbl_diagnostic_snapshots
 pbl_question_suggestions
+pbl_teacher_feedbacks
 learning_plan_evaluations
 ```
 
@@ -135,13 +136,15 @@ problems.target/target_ids
 
 ## 当前迁移链、验证和回退
 
-当前工作树的 Alembic head 是 `20260907_0020`。0015 建立 PBL 课堂、参与、诊断及建议的持久化；0016 规范化 PBL 消息并使学生提交可幂等；0017 增加课堂上下文、诊断请求/响应身份和独立 PBL 干预计划；0018 增加参与级阶段证据、两轮任务变式与自动判定字段；0019 新增 `learning_plan_evaluations`，以 `(plan_id, cycle_number)` 唯一约束保留每轮自动判定历史；0020 增加 session 来源、学生创建幂等键和 participation 固定沟通方式。
+当前工作树的 Alembic head 是 `20260909_0023`。0015 建立 PBL 课堂、参与、诊断及建议的持久化；0016 规范化 PBL 消息并使学生提交可幂等；0017 增加课堂上下文、诊断请求/响应身份和独立 PBL 干预计划；0018 增加参与级阶段证据、两轮任务变式与自动判定字段；0019 新增 `learning_plan_evaluations`，以 `(plan_id, cycle_number)` 唯一约束保留每轮自动判定历史；0020 增加 session 来源、学生创建幂等键和 participation 固定沟通方式；0021 允许自主会话没有班级或教师，并保存不可覆盖的学生提交快照；0022 增加学习路径、未审核练习组与个人作答记录；0023 增加不可覆盖的 `pbl_teacher_feedbacks`，以 `(teacher_id, client_feedback_id)` 保证反馈请求幂等。
 
 0018 downgrade 只允许数据库中不存在 schema v3 快照和 cycle 2 任务；否则必须从已验证的 T14 前备份恢复。`backend/scripts/transition_pbl_t14.py` 是独立历史转换工具，默认 dry-run；apply 必须同时提供 `--confirm-development` 与未存在的备份路径。它不应指向未知、共享或生产数据库。
 
 0019 downgrade 只允许评价历史表为空；存在任何评价记录时会拒绝降级，必须从已验证的 T15 前备份恢复。`backend/scripts/backfill_pbl_evaluations.py` 默认 dry-run，只重建现有 task/attempt/`decision_basis` 能证明的轮次；旧人工结果只写 `record_source=legacy` 且不伪造成绩。apply 同样要求 `--confirm-development` 和新的备份路径。
 
 0020 将历史 session/participation 回填为 `classroom`/`guided`，并以 `(created_by_student_id, client_session_id)` 保证学生主动创建幂等。downgrade 仅在不存在 `student_initiated` session 且所有 participation 均为 `guided` 时允许；否则拒绝降级，必须从已验证的 T17 前备份恢复。
+
+0023 downgrade 仅在 `pbl_teacher_feedbacks` 为空时允许；发现任何教师反馈即拒绝降级，必须采用前进修复或从已验证的 T21 前备份恢复。它不会删除教师反馈、正式任务或通知来制造可降级状态。
 
 可用安全入口：
 

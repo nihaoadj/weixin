@@ -1,19 +1,20 @@
 <template>
   <view class="safe-page page">
-    <view class="card intro">
+    <view class="intro">
       <text class="title">医学审核队列</text>
       <text class="muted">审核专家可查看病例完整内容、量表和练习蓝图；历史记录不可覆盖。</text>
     </view>
-    <view class="card tabs">
-      <text
+    <view class="tabs">
+      <button
         v-for="tab in tabs"
         :key="tab.id"
         class="tab"
         :class="{ active: status === tab.id }"
+        :aria-pressed="status === tab.id"
         @click="select(tab.id)"
       >
         {{ tab.label }} {{ counts[tab.id] }}
-      </text>
+      </button>
     </view>
     <MedState
       v-if="loading"
@@ -58,7 +59,7 @@
 </template>
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { onBackPress, onShow } from '@dcloudio/uni-app'
+import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import { requireRole } from '@/features/identity/public'
 import { backOrRoute, goDetail, handleBackPress, ROUTES } from '@/platform/navigation'
@@ -76,6 +77,8 @@ const items = ref<Problem[]>([])
 const counts = reactive<Record<ReviewStatus, number>>({ pending: 0, approved: 0, rejected: 0 })
 const loading = ref(false)
 const error = ref('')
+const returnTab = ref<'overview' | 'problems'>('overview')
+const returnSection = ref<'resources' | undefined>()
 
 async function load() {
   if (loading.value) return
@@ -106,15 +109,33 @@ function reviewLabel(item: Problem) {
       : '待审核'
 }
 function open(id: string) {
-  goDetail(ROUTES.teacherReviewDetail, { id })
+  goDetail(ROUTES.teacherReviewDetail, {
+    id,
+    returnTab: returnTab.value,
+    returnSection: returnSection.value,
+  })
 }
 function back() {
-  backOrRoute(ROUTES.teacherWorkspace)
+  backOrRoute(ROUTES.teacherWorkspace, {
+    tab: returnTab.value,
+    section: returnSection.value,
+  })
 }
+onLoad((query) => {
+  if (query?.returnTab === 'problems' && query?.returnSection === 'resources') {
+    returnTab.value = 'problems'
+    returnSection.value = 'resources'
+  }
+})
 onShow(() => {
   if (requireRole('teacher')) void load()
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace))
+onBackPress(({ from }) =>
+  handleBackPress(from, ROUTES.teacherWorkspace, {
+    tab: returnTab.value,
+    section: returnSection.value,
+  }),
+)
 </script>
 <style scoped>
 .page {
@@ -122,12 +143,14 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace))
   padding: 28rpx;
   background: var(--med-page);
 }
-.intro,
 .item,
 .empty,
-.tabs {
+.intro {
   margin-bottom: 18rpx;
   padding: 28rpx;
+}
+.intro {
+  padding: 18rpx 2rpx 28rpx;
 }
 .title {
   display: block;
@@ -147,11 +170,18 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace))
 }
 .tabs {
   display: flex;
+  margin-bottom: 24rpx;
+  padding: 0 2rpx;
   gap: 28rpx;
+  border-bottom: 1rpx solid var(--med-border);
 }
 .tab {
+  min-height: 72rpx;
+  margin: 0;
   padding-bottom: 12rpx;
   color: var(--med-muted);
+  background: transparent;
+  border-radius: 0;
   font-size: 24rpx;
 }
 .tab.active {

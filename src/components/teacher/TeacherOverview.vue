@@ -1,6 +1,6 @@
 <template>
   <view class="overview">
-    <view class="priority-panel card">
+    <view class="priority-panel">
       <text class="eyebrow-label">今日待办</text>
       <text class="priority-title">需要你反馈的学习记录</text>
       <text class="priority-description">先完成报告批阅，再跟进班级的学习进展。</text>
@@ -34,6 +34,31 @@
           >
         </button>
         <button
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
+          class="priority-row"
+          @keydown="activateButtonOnKey"
+          @click="pblError ? $emit('retry') : $emit('pbl')"
+        >
+          <view class="priority-copy"
+            ><text class="row-title">PBL 待处理</text
+            ><text class="row-description">{{
+              pblError
+                ? '队列读取失败，点击重试'
+                : !loading && pendingPbl === 0
+                  ? '暂无需要反馈的 PBL 提交'
+                  : '学生主动提交与课堂诊断'
+            }}</text></view
+          >
+          <view class="row-action"
+            ><text>{{ loading ? '…' : pblError ? '重试' : (pendingPbl ?? '—') }}</text
+            ><text aria-hidden="true">›</text></view
+          >
+        </button>
+        <button
           v-if="isReviewer"
           hover-class="is-pressed"
           :hover-start-time="0"
@@ -55,13 +80,13 @@
         </button>
       </view>
       <text
-        v-if="reportError || reviewError"
+        v-if="reportError || reviewError || pblError"
         class="queue-error"
         role="alert"
         >部分待办暂时无法读取，不代表没有待处理内容。</text
       >
     </view>
-    <view class="management card">
+    <view class="management">
       <text class="section-title">教学管理</text>
       <button
         hover-class="is-pressed"
@@ -117,10 +142,12 @@ defineProps<{
   isReviewer: boolean
   pendingReports?: number
   pendingReview?: number
+  pendingPbl?: number
   reportError: boolean
   reviewError: boolean
+  pblError: boolean
 }>()
-defineEmits<{ reports: []; review: []; classes: []; analytics: []; knowledgeCards: []; retry: [] }>()
+defineEmits<{ reports: []; review: []; pbl: []; classes: []; analytics: []; knowledgeCards: []; retry: [] }>()
 </script>
 
 <style scoped>
@@ -133,11 +160,14 @@ defineEmits<{ reports: []; review: []; classes: []; analytics: []; knowledgeCard
 .priority-panel,
 .management {
   display: flex;
-  padding: 30rpx;
   flex-direction: column;
 }
 .priority-panel {
-  border-top: 6rpx solid var(--med-clinical);
+  padding: 18rpx 2rpx 38rpx;
+}
+.management {
+  padding: 34rpx 2rpx 12rpx;
+  border-top: 1rpx solid var(--med-border);
 }
 .priority-title {
   margin-top: 8rpx;
@@ -212,7 +242,8 @@ defineEmits<{ reports: []; review: []; classes: []; analytics: []; knowledgeCard
 @media screen and (min-width: 600px) {
   .priority-panel,
   .management {
-    padding: 28px;
+    padding-right: 4px;
+    padding-left: 4px;
   }
   .priority-title {
     font-size: 26px;

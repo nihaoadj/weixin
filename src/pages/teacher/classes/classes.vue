@@ -1,10 +1,10 @@
 <template>
   <view class="safe-page page">
-    <view class="card intro">
+    <view class="intro">
       <text class="title">班级管理</text>
       <text class="muted">只显示当前教师的班级；使用学生 external ID 精确加入，不展示全库学生名单。</text>
     </view>
-    <view class="card form">
+    <view class="form">
       <input
         v-model="newName"
         placeholder="新班级名称"
@@ -275,9 +275,23 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace))
   padding: 28rpx;
   background: var(--med-page);
 }
-.card {
+.intro,
+.form,
+.class-card {
+  max-width: 920px;
+  margin-right: auto;
+  margin-left: auto;
+}
+.class-card {
   margin-bottom: 18rpx;
   padding: 28rpx;
+}
+.intro {
+  padding: 12rpx 2rpx 28rpx;
+}
+.form {
+  padding: 30rpx 2rpx 34rpx;
+  border-top: 1rpx solid var(--med-border);
 }
 .title,
 .class-name {

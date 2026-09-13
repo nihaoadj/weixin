@@ -25,7 +25,7 @@
           aria-hidden="true"
           ><text /><text /><text /><text
         /></view>
-        <text class="eyebrow-label">PBL EVIDENCE FILE</text>
+        <text class="eyebrow-label">个人 PBL 学情档案</text>
         <text class="page-title">{{ report.session.caseTitle }}</text>
         <view class="cover-meta">
           <text>{{ report.session.topicLabel }}</text
@@ -48,7 +48,7 @@
 
       <view class="report-section">
         <SectionHeading
-          kicker="DISCUSSION"
+          kicker="讨论过程"
           title="四阶段讨论证据"
           note="每个阶段只使用该阶段开始后的学生消息作为推进依据。"
         />
@@ -65,7 +65,7 @@
 
       <view class="report-section">
         <SectionHeading
-          kicker="FINDINGS"
+          kicker="个人证据"
           title="本次个人学习线索"
           note="这些是学习过程中的知识和推理薄弱点，不是临床诊断。"
         />
@@ -101,7 +101,7 @@
 
       <view class="report-section">
         <SectionHeading
-          kicker="MASTERY"
+          kicker="判定规则"
           title="目标改善对照"
           note="知识再测要求 100 分，推理微训练和病例目标维度要求至少 70 分。"
         />
@@ -122,7 +122,7 @@
         class="report-section"
       >
         <SectionHeading
-          :kicker="`PLAN ${plan.id}`"
+          kicker="学习安排"
           :title="plan.assignmentBasis === 'personal' ? '针对个人线索的学习任务' : '课堂共同训练任务'"
           :note="`第 ${plan.currentCycle}/${plan.maxCycles} 轮 · ${plan.decisionPolicyVersion}`"
         />
@@ -162,7 +162,7 @@
 
       <view class="report-section">
         <SectionHeading
-          kicker="TIMELINE"
+          kicker="历史留痕"
           title="本次闭环时间线"
           note="系统事件按发生顺序保存，历史评价不会被下一轮覆盖。"
         />
@@ -286,18 +286,18 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentInsights))
 .report-section {
   display: flex;
   max-width: 920px;
-  margin: 0 auto 22rpx;
-  padding: 30rpx;
+  margin: 0 auto;
   flex-direction: column;
   gap: 18rpx;
-  background: var(--med-surface);
-  border: 1rpx solid var(--med-border);
-  border-radius: var(--med-radius-md);
 }
 .report-cover {
   position: relative;
   overflow: hidden;
-  padding-top: 42rpx;
+  padding: 48rpx 2rpx 40rpx;
+}
+.report-section {
+  padding: 40rpx 2rpx 34rpx;
+  border-top: 1rpx solid var(--med-border);
 }
 .specimen-mark {
   position: absolute;
@@ -317,7 +317,7 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentInsights))
 }
 .page-title {
   color: var(--med-navy);
-  font-size: 40rpx;
+  font-size: 42rpx;
   font-weight: 850;
   line-height: 1.3;
 }
@@ -360,10 +360,9 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentInsights))
 }
 .section-kicker {
   color: var(--med-clinical);
-  font-family: var(--med-font-utility);
   font-size: 20rpx;
   font-weight: 750;
-  letter-spacing: 2rpx;
+  letter-spacing: 3rpx;
 }
 .section-title {
   color: var(--med-ink);
@@ -464,15 +463,18 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentInsights))
   margin: 0;
   color: white;
   background: var(--med-clinical);
+  border-radius: var(--med-radius-sm);
   font-size: 27rpx;
 }
 @media (min-width: 768px) {
   .detail-page {
     padding: 32px 32px 96px;
   }
-  .report-cover,
+  .report-cover {
+    padding: 52px 4px 44px;
+  }
   .report-section {
-    padding: 34px;
+    padding: 44px 4px 38px;
   }
   .page-title {
     font-size: 34px;

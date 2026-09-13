@@ -2,15 +2,24 @@
   <view class="safe-page page"
     ><view
       v-if="attempt"
-      class="card head"
+      class="case-heading"
+      ><view class="case-meta"
+        ><text class="eyebrow">模拟接诊 · {{ attempt.opening.setting || '病理病例研讨' }}</text
+        ><text class="stage-count">阶段 {{ currentStageNumber }} / {{ caseStages.length }}</text></view
       ><text class="title">{{ attempt.opening.chiefComplaint }}</text
-      ><text class="muted">虚拟患者 · 合成教学病例，不构成诊疗建议</text
-      ><view class="progress"
-        ><text
-          v-for="item in caseStages"
+      ><view class="case-caption"
+        ><text class="patient-intro">{{ attempt.opening.patientIntro || '虚拟患者' }}</text
+        ><text class="caption-divider">·</text><text>合成教学病例，不构成诊疗建议</text></view
+      ><view
+        class="progress"
+        aria-label="病例训练进度"
+        ><view
+          v-for="(item, index) in caseStages"
           :key="item.id"
+          class="progress-step"
           :class="{ active: item.id === attempt.currentStage, done: done(item.id) }"
-          >{{ item.label }}</text
+          ><text class="progress-index">{{ done(item.id) ? '✓' : index + 1 }}</text
+          ><text class="progress-label">{{ item.label }}</text></view
         ></view
       ></view
     ><MedState
@@ -24,31 +33,129 @@
       @secondary-action="back"
     /><view
       v-if="attempt"
-      class="card form"
+      class="stage-content"
       ><template v-if="attempt.currentStage === 'history'"
-        ><text class="section">虚拟患者对话</text
-        ><view
-          v-for="message in attempt.messages"
-          :key="message.id"
-          class="message"
-          :class="message.role"
-          >{{ message.content }}</view
-        ><input
-          v-model="question"
-          placeholder="例如：发热多久、最高多少度？"
-        /><button
-          class="secondary"
-          :disabled="sending"
-          @click="ask"
-        >
-          询问患者</button
-        ><textarea
-          v-model="summary"
-          placeholder="病史小结"
-        /><textarea
-          v-model="keyFindingsText"
-          placeholder="关键发现，以逗号分隔"
-        /></template
+        ><text
+          class="sr-only"
+          role="heading"
+          aria-level="2"
+          >与虚拟患者交流</text
+        ><view class="history-workspace"
+          ><view class="dialogue-panel"
+            ><view class="dialogue-header"
+              ><view class="patient-profile"
+                ><view class="patient-avatar"><text>患</text><text class="presence-dot" /></view
+                ><view class="patient-copy"
+                  ><text class="patient-name">虚拟患者</text
+                  ><text class="patient-state">只回应你已经询问的内容</text></view
+                ></view
+              ><text class="reply-count">{{ patientReplyCount }} 次回应</text></view
+            ><scroll-view
+              class="dialogue-stream"
+              scroll-y
+              scroll-with-animation
+              :scroll-into-view="lastMessageAnchor"
+              role="log"
+              aria-live="polite"
+              aria-label="虚拟患者对话记录"
+              ><view
+                v-if="!attempt.messages.length"
+                id="case-message-welcome"
+                class="message assistant"
+                ><text class="message-avatar">患</text
+                ><view class="message-body"
+                  ><text class="message-role">虚拟患者</text
+                  ><text class="message-bubble">你好，请问你想先了解哪些不适和经过？</text></view
+                ></view
+              ><view
+                v-for="message in attempt.messages"
+                :id="messageAnchor(message.id)"
+                :key="message.id"
+                class="message"
+                :class="message.role"
+                ><text class="message-avatar">{{ message.role === 'user' ? '你' : '患' }}</text
+                ><view class="message-body"
+                  ><text class="message-role">{{ message.role === 'user' ? '你的提问' : '虚拟患者' }}</text
+                  ><text class="message-bubble">{{ message.content }}</text></view
+                ></view
+              ><view
+                v-if="sending"
+                id="case-message-typing"
+                class="message assistant is-typing"
+                role="status"
+                ><text class="message-avatar">患</text
+                ><view class="message-body"
+                  ><text class="message-role">虚拟患者正在回应</text
+                  ><view class="typing-bubble"><text /><text /><text /></view></view></view></scroll-view
+            ><view class="question-guide"
+              ><text class="guide-label">可以这样继续问</text
+              ><view class="prompt-list"
+                ><button
+                  v-for="prompt in promptSuggestions"
+                  :key="prompt"
+                  class="prompt-action"
+                  :disabled="sending"
+                  :aria-label="`填写问题：${prompt}`"
+                  @click="usePrompt(prompt)"
+                >
+                  {{ prompt }}
+                </button></view
+              ></view
+            ><view class="question-composer"
+              ><view class="composer-row"
+                ><input
+                  v-model="question"
+                  aria-label="输入向患者提出的问题"
+                  placeholder="输入一个具体问题…"
+                  :disabled="sending"
+                  confirm-type="send"
+                  @confirm="ask"
+                /><button
+                  class="ask-action"
+                  :disabled="sending || !question.trim()"
+                  @click="ask"
+                >
+                  {{ sending ? '询问中' : '发送' }}
+                </button></view
+              ><text class="composer-tip">一次询问一个线索，更容易判断回答的意义。</text></view
+            ></view
+          ><view
+            class="history-notes"
+            :class="{ expanded: notesExpanded }"
+            ><button
+              class="notes-toggle"
+              :aria-expanded="notesExpanded"
+              aria-controls="history-note-fields"
+              @click="toggleNotes"
+            >
+              <view class="notes-copy"
+                ><text class="notes-kicker">临床笔记</text><text class="notes-title">整理问诊依据</text></view
+              ><view class="notes-state"
+                ><text>{{ historyNoteStatus }}</text
+                ><text
+                  class="notes-arrow"
+                  :class="{ expanded: notesExpanded }"
+                  >⌄</text
+                ></view
+              ></button
+            ><view
+              v-if="notesExpanded"
+              id="history-note-fields"
+              class="notes-fields"
+              ><text class="notes-hint">将对话提炼为症状、时间进程、关键阳性与阴性信息。</text
+              ><label class="field-label"
+                ><text>病史小结</text
+                ><textarea
+                  v-model="summary"
+                  aria-label="病史小结"
+                  placeholder="用自己的话概括本次问诊"
+                /></label
+              ><label class="field-label"
+                ><text>关键发现</text
+                ><input
+                  v-model="keyFindingsText"
+                  aria-label="关键发现"
+                  placeholder="例如：发热 3 天、咳嗽、无胸痛" /></label></view></view></view></template
       ><template v-else-if="attempt.currentStage === 'problem_representation'"
         ><text class="section">问题表征</text
         ><textarea
@@ -136,15 +243,15 @@
         class="primary"
         :loading="submitting"
         :disabled="submitting"
-        @click="submit"
+        @click="handlePrimaryAction"
       >
-        提交{{ stageLabel(attempt.currentStage) }}
+        {{ primaryActionLabel }}
       </button></view
     ></view
   >
 </template>
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import { requireRole } from '@/features/identity/public'
@@ -161,6 +268,7 @@ const error = ref('')
 const question = ref('')
 const summary = ref('')
 const keyFindingsText = ref('')
+const notesExpanded = ref(false)
 const safetyText = ref('')
 const differentialItems = ref<Array<{ diagnosis: string; supportingEvidence: string; opposingEvidence: string }>>([
   { diagnosis: '', supportingEvidence: '', opposingEvidence: '' },
@@ -173,12 +281,58 @@ const managementItems = ref<Array<{ action: string; rationale: string }>>([{ act
 const sending = ref(false)
 const submitting = ref(false)
 const completing = ref(false)
+const promptSuggestions = ['症状从什么时候开始？', '症状是怎样变化的？', '还伴随哪些不适？']
 let id = ''
 const stageLabel = (stage: string) => caseStages.find((i) => i.id === stage)?.label || '报告'
+const currentStageNumber = computed(() => {
+  if (!attempt.value || attempt.value.currentStage === 'completed') return caseStages.length
+  return caseStages.findIndex((item) => item.id === attempt.value!.currentStage) + 1
+})
+const patientReplyCount = computed(
+  () => attempt.value?.messages.filter((message) => message.role === 'assistant').length || 0,
+)
+const historyNoteStatus = computed(() => {
+  if (summary.value.trim() || keyFindingsText.value.trim()) return '已记录'
+  return notesExpanded.value ? '编辑中' : '待整理'
+})
+const primaryActionLabel = computed(() => {
+  if (attempt.value?.currentStage === 'history' && !notesExpanded.value) return '整理本次问诊'
+  return `提交${stageLabel(attempt.value?.currentStage || '')}`
+})
+const lastMessageAnchor = computed(() => {
+  if (sending.value) return 'case-message-typing'
+  const messages = attempt.value?.messages || []
+  return messages.length ? messageAnchor(messages[messages.length - 1].id) : 'case-message-welcome'
+})
 const done = (stage: string) =>
   attempt.value
     ? caseStages.findIndex((i) => i.id === stage) < caseStages.findIndex((i) => i.id === attempt.value!.currentStage)
     : false
+function messageAnchor(messageId: string) {
+  return `case-message-${messageId.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+}
+function usePrompt(prompt: string) {
+  if (!sending.value) question.value = prompt
+}
+async function revealHistoryNotes() {
+  notesExpanded.value = true
+  await nextTick()
+  uni.pageScrollTo({ selector: '#history-note-fields', duration: 180 })
+}
+function toggleNotes() {
+  if (notesExpanded.value) {
+    notesExpanded.value = false
+    return
+  }
+  void revealHistoryNotes()
+}
+function handlePrimaryAction() {
+  if (attempt.value?.currentStage === 'history' && !notesExpanded.value) {
+    void revealHistoryNotes()
+    return
+  }
+  void submit()
+}
 function addDifferential() {
   if (differentialItems.value.length < 12)
     differentialItems.value.push({ diagnosis: '', supportingEvidence: '', opposingEvidence: '' })
@@ -302,6 +456,7 @@ async function submit() {
     ]
     testItems.value = [{ testName: '', rationale: '', priority: 'necessary' }]
     managementItems.value = [{ action: '', rationale: '' }]
+    notesExpanded.value = false
     await load()
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : '提交失败', icon: 'none' })
@@ -342,98 +497,541 @@ onBackPress(({ from }) => {
 </script>
 <style scoped>
 .page {
-  padding: 24rpx 24rpx 150rpx;
+  padding: 24rpx 24rpx 190rpx;
 }
-.head,
-.form {
+.case-heading,
+.stage-content {
   display: flex;
-  padding: 28rpx;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
   flex-direction: column;
-  gap: 18rpx;
+}
+.case-heading {
+  padding-bottom: 22rpx;
+  gap: 12rpx;
+  border-bottom: 1rpx solid var(--med-border);
+}
+.stage-content {
+  padding-top: 24rpx;
+  gap: 26rpx;
+}
+.case-meta,
+.case-caption,
+.dialogue-header,
+.patient-profile,
+.notes-toggle,
+.notes-state {
+  display: flex;
+  align-items: center;
+}
+.case-meta,
+.dialogue-header,
+.notes-toggle {
+  justify-content: space-between;
+}
+.eyebrow {
+  color: var(--med-clinical);
+  font-family: var(--med-font-utility);
+  font-size: 20rpx;
+  font-weight: 750;
+  letter-spacing: 2rpx;
+}
+.stage-count,
+.reply-count {
+  color: var(--med-muted);
+  font-family: var(--med-font-utility);
+  font-size: 20rpx;
 }
 .title {
-  font-size: 32rpx;
-  font-weight: 700;
+  color: var(--med-ink);
+  font-family: var(--med-font-display);
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.35;
 }
-.muted {
+.case-caption {
+  flex-wrap: wrap;
+  gap: 8rpx;
   color: var(--med-muted);
   font-size: 22rpx;
 }
+.patient-intro {
+  color: var(--med-text-secondary);
+  font-weight: 700;
+}
+.caption-divider {
+  color: var(--med-border);
+}
 .progress {
+  display: flex;
+  padding-top: 12rpx;
+  align-items: flex-start;
+}
+.progress-step {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  flex-direction: column;
+  gap: 8rpx;
+  text-align: center;
+}
+.progress-step:not(:last-child)::after {
+  position: absolute;
+  z-index: 0;
+  top: 15rpx;
+  right: calc(-50% + 18rpx);
+  left: calc(50% + 18rpx);
+  height: 1rpx;
+  background: var(--med-border);
+  content: '';
+}
+.progress-index {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 30rpx;
+  height: 30rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--med-muted);
+  background: var(--med-page);
+  border: 1rpx solid var(--med-border);
+  border-radius: 50%;
+  font-family: var(--med-font-utility);
+  font-size: 17rpx;
+  font-weight: 700;
+}
+.progress-label {
+  max-width: 100%;
+  color: var(--med-muted);
+  font-size: 19rpx;
+  line-height: 1.3;
+}
+.progress-step.active .progress-index {
+  color: var(--med-surface);
+  background: var(--med-clinical);
+  border-color: var(--med-clinical);
+}
+.progress-step.active .progress-label {
+  color: var(--med-clinical);
+  font-weight: 800;
+}
+.progress-step.done .progress-index {
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  border-color: var(--med-clinical);
+}
+.progress-step.done::after {
+  background: var(--med-clinical);
+}
+.section {
+  color: var(--med-ink);
+  font-size: 28rpx;
+  font-weight: 800;
+}
+.history-workspace,
+.dialogue-panel,
+.patient-copy,
+.question-guide,
+.question-composer,
+.history-notes,
+.notes-copy,
+.notes-fields,
+.field-label {
+  display: flex;
+  flex-direction: column;
+}
+.history-workspace {
+  gap: 22rpx;
+}
+.dialogue-panel {
+  overflow: hidden;
+  background: var(--med-surface);
+  border-top: 4rpx solid var(--med-clinical);
+  border-bottom: 1rpx solid var(--med-border);
+}
+.dialogue-header {
+  min-height: 76rpx;
+  padding: 14rpx 18rpx;
+  box-sizing: border-box;
+  border-bottom: 1rpx solid var(--med-divider);
+}
+.patient-profile {
+  min-width: 0;
+  gap: 12rpx;
+}
+.patient-avatar {
+  position: relative;
+  display: flex;
+  width: 46rpx;
+  height: 46rpx;
+  flex: 0 0 46rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--med-surface);
+  background: var(--med-clinical);
+  border-radius: 50%;
+  font-size: 19rpx;
+  font-weight: 800;
+}
+.presence-dot {
+  position: absolute;
+  right: -2rpx;
+  bottom: -2rpx;
+  width: 12rpx;
+  height: 12rpx;
+  background: var(--med-accent);
+  border: 3rpx solid var(--med-surface);
+  border-radius: 50%;
+}
+.patient-copy {
+  min-width: 0;
+  gap: 2rpx;
+}
+.patient-name {
+  color: var(--med-ink);
+  font-size: 23rpx;
+  font-weight: 800;
+}
+.patient-state {
+  overflow: hidden;
+  color: var(--med-muted);
+  font-size: 19rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialogue-stream {
+  height: 620rpx;
+  padding: 24rpx 20rpx 8rpx;
+  box-sizing: border-box;
+  background: var(--med-page);
+}
+.message {
+  display: flex;
+  max-width: 88%;
+  margin-bottom: 22rpx;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+.message.user {
+  margin-left: auto;
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.message-avatar {
+  display: flex;
+  width: 42rpx;
+  height: 42rpx;
+  flex: 0 0 42rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--med-clinical);
+  background: var(--med-wash);
+  border: 1rpx solid var(--med-border);
+  border-radius: 50%;
+  font-size: 18rpx;
+  font-weight: 800;
+}
+.message.user .message-avatar {
+  color: var(--med-surface);
+  background: var(--med-ink);
+  border-color: var(--med-ink);
+}
+.message-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5rpx;
+}
+.message.user .message-body {
+  align-items: flex-end;
+}
+.message-role {
+  color: var(--med-muted);
+  font-size: 20rpx;
+  font-weight: 700;
+}
+.message-bubble {
+  display: block;
+  padding: 17rpx 20rpx;
+  color: var(--med-text);
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-radius: 4rpx var(--med-radius-sm) var(--med-radius-sm);
+  font-size: 25rpx;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.message.user {
+  color: var(--med-surface);
+}
+.message.user .message-bubble {
+  color: var(--med-surface);
+  background: var(--med-ink);
+  border-color: var(--med-ink);
+  border-radius: var(--med-radius-sm) 6rpx var(--med-radius-sm) var(--med-radius-sm);
+}
+.typing-bubble {
+  display: flex;
+  height: 58rpx;
+  padding: 0 20rpx;
+  align-items: center;
+  gap: 7rpx;
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-radius: 4rpx var(--med-radius-sm) var(--med-radius-sm);
+}
+.typing-bubble text {
+  width: 7rpx;
+  height: 7rpx;
+  background: var(--med-clinical);
+  border-radius: 50%;
+  animation: patient-thinking 900ms ease-in-out infinite alternate;
+}
+.typing-bubble text:nth-child(2) {
+  animation-delay: 150ms;
+}
+.typing-bubble text:nth-child(3) {
+  animation-delay: 300ms;
+}
+.question-guide {
+  padding: 16rpx 20rpx 2rpx;
+  gap: 10rpx;
+  border-top: 1rpx solid var(--med-divider);
+}
+.guide-label {
+  color: var(--med-muted);
+  font-size: 19rpx;
+  font-weight: 700;
+}
+.prompt-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8rpx;
 }
-.progress text {
-  padding: 7rpx;
+.prompt-action {
+  width: auto;
+  min-height: 52rpx;
+  margin: 0;
+  padding: 0 14rpx;
+  color: var(--med-clinical);
+  background: transparent;
+  border: 1rpx solid var(--med-border);
+  border-radius: 6rpx;
+  font-size: 19rpx;
+  line-height: 50rpx;
+}
+.question-composer {
+  padding: 14rpx 20rpx 20rpx;
+  gap: 8rpx;
+}
+.composer-row {
+  display: flex;
+  padding: 6rpx;
+  align-items: center;
+  gap: 8rpx;
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-radius: var(--med-radius-sm);
+}
+.composer-row input {
+  min-width: 0;
+  min-height: 66rpx;
+  flex: 1;
+  padding: 0 14rpx;
+  border: 0;
+  background: transparent;
+}
+.ask-action {
+  width: auto;
+  min-height: 62rpx;
+  margin: 0;
+  padding: 0 22rpx;
+  color: var(--med-surface);
+  background: var(--med-clinical);
+  border-radius: 8rpx;
+  font-size: 21rpx;
+  font-weight: 800;
+  line-height: 62rpx;
+}
+.ask-action[disabled] {
   color: var(--med-muted);
   background: var(--med-divider);
-  border-radius: 99rpx;
-  font-size: 19rpx;
+  opacity: 1;
 }
-.progress .active {
-  color: #fff;
-  background: var(--med-brand);
-}
-.progress .done {
-  color: var(--med-brand);
-  background: var(--med-brand-soft);
-}
-.section {
-  font-size: 28rpx;
-  font-weight: 700;
-}
-.message {
-  margin: 4rpx 0;
-  padding: 16rpx;
-  border-radius: 16rpx;
+.composer-tip {
+  color: var(--med-muted);
+  font-size: 18rpx;
   line-height: 1.5;
 }
-.message.user {
-  background: var(--med-brand-soft);
+.history-notes {
+  border-top: 1rpx solid var(--med-border);
+  border-bottom: 1rpx solid var(--med-border);
 }
-.message.assistant {
-  background: #f1f5f9;
+.notes-toggle {
+  width: 100%;
+  min-height: 92rpx;
+  margin: 0;
+  padding: 18rpx 4rpx;
+  color: var(--med-text);
+  background: transparent;
+  border-radius: 0;
+  line-height: 1.3;
+  text-align: left;
+}
+.notes-copy {
+  gap: 3rpx;
+}
+.notes-kicker {
+  color: var(--med-clinical);
+  font-family: var(--med-font-utility);
+  font-size: 17rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+}
+.notes-title {
+  color: var(--med-ink);
+  font-size: 24rpx;
+  font-weight: 800;
+}
+.notes-state {
+  flex: 0 0 auto;
+  gap: 10rpx;
+  color: var(--med-muted);
+  font-size: 20rpx;
+}
+.notes-arrow {
+  display: inline-block;
+  color: var(--med-clinical);
+  font-size: 28rpx;
+  transition: transform var(--med-motion-settle) var(--med-ease-out);
+}
+.notes-arrow.expanded {
+  transform: rotate(180deg);
+}
+.notes-fields {
+  padding: 18rpx 0 8rpx 20rpx;
+  gap: 18rpx;
+  border-left: 3rpx solid var(--med-wash);
+}
+.notes-hint {
+  color: var(--med-muted);
+  font-size: 20rpx;
+  line-height: 1.55;
+}
+.field-label {
+  gap: 8rpx;
+  color: var(--med-text-secondary);
+  font-size: 21rpx;
+  font-weight: 700;
 }
 .answer-card {
   display: flex;
   padding: 16rpx;
   flex-direction: column;
   gap: 12rpx;
-  background: #f8fafc;
-  border: 1rpx solid #e2e8f0;
-  border-radius: 14rpx;
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-radius: var(--med-radius-sm);
 }
 input,
 textarea {
   width: auto;
   min-height: 80rpx;
   padding: 16rpx;
-  border: 1rpx solid #cbd5e1;
-  border-radius: 14rpx;
-  background: #fff;
+  box-sizing: border-box;
+  color: var(--med-text);
+  border: 1rpx solid var(--med-border);
+  border-radius: var(--med-radius-sm);
+  background: var(--med-surface);
+  font-size: 25rpx;
 }
 textarea {
-  min-height: 160rpx;
+  min-height: 140rpx;
 }
 .primary,
 .secondary {
   height: 78rpx;
   line-height: 78rpx;
-  color: #fff;
-  background: var(--med-brand);
+  color: var(--med-surface);
+  background: var(--med-clinical);
 }
 .secondary {
-  color: var(--med-brand);
-  background: var(--med-brand-soft);
+  color: var(--med-clinical);
+  background: var(--med-wash);
 }
 .bottom {
   position: fixed;
-  right: 24rpx;
-  bottom: calc(18rpx + env(safe-area-inset-bottom));
-  left: 24rpx;
+  z-index: 10;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 14rpx 24rpx calc(14rpx + env(safe-area-inset-bottom));
+  background: var(--med-page);
+  border-top: 1rpx solid var(--med-border);
 }
 .bottom .primary {
   width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  border-radius: var(--med-radius-sm);
+}
+@media screen and (min-width: 600px) {
+  .page {
+    padding: 28px 32px 110px;
+  }
+  .title {
+    font-size: 26px;
+  }
+  .stage-content {
+    padding-top: 28px;
+  }
+  .history-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr);
+    align-items: start;
+    gap: 32px;
+  }
+  .dialogue-stream {
+    height: 460px;
+    padding: 24px 22px 8px;
+  }
+  .history-notes {
+    position: sticky;
+    top: 24px;
+  }
+  .message-bubble,
+  input,
+  textarea {
+    font-size: 16px;
+  }
+  .message-avatar {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    font-size: 13px;
+  }
+}
+@keyframes patient-thinking {
+  from {
+    opacity: 0.35;
+    transform: translateY(1rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-2rpx);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typing-bubble text {
+    animation: none;
+  }
+  .notes-arrow {
+    transition: none;
+  }
 }
 </style>

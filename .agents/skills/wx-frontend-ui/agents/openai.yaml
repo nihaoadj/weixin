@@ -1,0 +1,4 @@
+interface:
+  display_name: 'WX Frontend UI'
+  short_description: 'Design and verify refined Vue/uni-app interfaces'
+  default_prompt: "Use $wx-frontend-ui to design, implement, or audit this interface against the project's cross-platform quality bar."

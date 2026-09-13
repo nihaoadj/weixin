@@ -4,70 +4,110 @@
     class="problem-list-page"
   >
     <view class="toolbar">
-      <view class="toolbar-buttons">
+      <view
+        class="toolbar-status"
+        aria-label="内容状态筛选"
+      >
+        <view
+          class="tabs"
+          role="tablist"
+          aria-label="教学内容状态"
+        >
+          <button
+            hover-class="is-pressed"
+            :hover-start-time="0"
+            :hover-stay-time="80"
+            tabindex="0"
+            role="tab"
+            class="tab"
+            :class="{ active: currentStatus === 'pending' }"
+            :aria-selected="currentStatus === 'pending'"
+            @keydown="activateButtonOnKey"
+            @click="switchStatus('pending')"
+          >
+            待审核
+            <text
+              v-if="pendingCount"
+              class="count"
+              >{{ pendingCount }}</text
+            >
+          </button>
+          <button
+            hover-class="is-pressed"
+            :hover-start-time="0"
+            :hover-stay-time="80"
+            tabindex="0"
+            role="tab"
+            class="tab"
+            :class="{ active: currentStatus === 'published' }"
+            :aria-selected="currentStatus === 'published'"
+            @keydown="activateButtonOnKey"
+            @click="switchStatus('published')"
+          >
+            已发布
+          </button>
+        </view>
         <button
+          v-if="showMedicalReview"
           hover-class="is-pressed"
           :hover-start-time="0"
           :hover-stay-time="80"
           tabindex="0"
           role="button"
-          class="small-button add"
+          class="small-button utility status-utility"
+          aria-label="进入医学审核"
           @keydown="activateButtonOnKey"
-          @click="addProblem"
+          @click="$emit('medical-review')"
         >
-          新建问题
-        </button>
-        <button
-          hover-class="is-pressed"
-          :hover-start-time="0"
-          :hover-stay-time="80"
-          tabindex="0"
-          role="button"
-          class="small-button assist"
-          @keydown="activateButtonOnKey"
-          @click="addCase"
-        >
-          生成病例
+          审核
         </button>
       </view>
       <view
-        class="tabs"
-        role="group"
-        aria-label="教学内容状态"
+        class="toolbar-actions"
+        aria-label="内容创建与审核"
       >
-        <button
-          hover-class="is-pressed"
-          :hover-start-time="0"
-          :hover-stay-time="80"
-          tabindex="0"
-          role="button"
-          class="tab"
-          :class="{ active: currentStatus === 'pending' }"
-          :aria-pressed="currentStatus === 'pending'"
-          @keydown="activateButtonOnKey"
-          @click="switchStatus('pending')"
-        >
-          待审核
-          <text
-            v-if="pendingCount"
-            class="count"
-            >{{ pendingCount }}</text
+        <view class="utility-actions">
+          <button
+            v-if="showKnowledgeCards"
+            hover-class="is-pressed"
+            :hover-start-time="0"
+            :hover-stay-time="80"
+            tabindex="0"
+            role="button"
+            class="small-button utility"
+            aria-label="管理知识补充卡"
+            @keydown="activateButtonOnKey"
+            @click="$emit('knowledge-cards')"
           >
-        </button>
-        <button
-          hover-class="is-pressed"
-          :hover-start-time="0"
-          :hover-stay-time="80"
-          tabindex="0"
-          role="button"
-          class="tab"
-          :class="{ active: currentStatus === 'published' }"
-          :aria-pressed="currentStatus === 'published'"
-          @keydown="activateButtonOnKey"
-          @click="switchStatus('published')"
-        >
-          已发布
-        </button>
+            补充卡
+          </button>
+        </view>
+        <view class="creation-actions">
+          <button
+            hover-class="is-pressed"
+            :hover-start-time="0"
+            :hover-stay-time="80"
+            tabindex="0"
+            role="button"
+            class="small-button add"
+            @keydown="activateButtonOnKey"
+            @click="addProblem"
+          >
+            <text aria-hidden="true">＋</text>问题
+          </button>
+          <button
+            hover-class="is-pressed"
+            :hover-start-time="0"
+            :hover-stay-time="80"
+            tabindex="0"
+            role="button"
+            class="small-button assist"
+            @keydown="activateButtonOnKey"
+            @click="addCase"
+          >
+            <text aria-hidden="true">＋</text>病例
+          </button>
+        </view>
       </view>
     </view>
 
@@ -121,7 +161,7 @@
               ><text class="type">{{ problem.type }}</text
               ><text class="target">{{ targetText(problem) }}</text></view
             >
-            <text class="time">{{ problem.time }}</text>
+            <text class="time">{{ displayDate(problem.time) }}</text>
           </view>
           <view class="title-row">
             <text class="title">{{ problem.title }}</text>
@@ -297,7 +337,16 @@ import { getGuidedCasesAsync, publishGuidedCaseAsync, submitGuidedCaseForReviewA
 import type { Problem } from '@/types/domain'
 
 type StatusTab = 'pending' | 'published'
-const emit = defineEmits<{ count: [value: number]; published: [value: number] }>()
+withDefaults(defineProps<{ showKnowledgeCards?: boolean; showMedicalReview?: boolean }>(), {
+  showKnowledgeCards: false,
+  showMedicalReview: false,
+})
+const emit = defineEmits<{
+  count: [value: number]
+  published: [value: number]
+  'knowledge-cards': []
+  'medical-review': []
+}>()
 const currentStatus = ref<StatusTab>('pending')
 const allProblems = ref<Problem[]>([])
 const page = ref(1)
@@ -353,6 +402,10 @@ function targetText(problem: Problem) {
   if (problem.target === 'class') return problem.targetLabel || problem.className || '指定班级'
   if (problem.target === 'individual') return problem.targetLabel || `指定学生 ${problem.targetIds?.length || 0} 人`
   return '全体学生'
+}
+
+function displayDate(value: string) {
+  return value.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || value
 }
 
 function loadMore() {
@@ -456,27 +509,36 @@ defineExpose({ refresh })
 
 <style scoped>
 .problem-list-page {
-  padding: 24rpx 0 40rpx;
+  padding: 8rpx 0 40rpx;
 }
 .toolbar {
   position: sticky;
   z-index: 2;
   top: 0;
-  margin-bottom: 20rpx;
-  padding: 0;
+  margin-bottom: 10rpx;
+  padding: 8rpx 0 10rpx;
   background: var(--med-page);
+}
+.toolbar-status {
+  display: flex;
+  min-height: 88rpx;
+  min-height: 44px;
+  align-items: stretch;
+  border-bottom: 1rpx solid var(--med-border);
 }
 .tabs {
   display: flex;
-  margin-top: 16rpx;
-  border-bottom: 1rpx solid var(--med-border);
+  min-width: 0;
+  max-width: 500rpx;
+  flex: 1;
+  gap: 8rpx;
 }
 .tab {
   display: flex;
   min-height: 88rpx;
   min-height: 44px;
   margin: 0;
-  padding: 16rpx 24rpx;
+  padding: 12rpx 24rpx;
   flex: 1;
   align-items: center;
   justify-content: center;
@@ -500,24 +562,45 @@ defineExpose({ refresh })
   border-radius: 99rpx;
   font-size: 22rpx;
 }
-.toolbar-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14rpx;
+.toolbar-actions,
+.utility-actions,
+.creation-actions {
+  display: flex;
+  align-items: center;
+}
+.toolbar-actions {
+  min-height: 88rpx;
+  min-height: 44px;
+  padding: 12rpx 0 2rpx;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+.utility-actions,
+.creation-actions {
+  gap: 8rpx;
+}
+.creation-actions {
+  margin-left: auto;
+  padding-left: 16rpx;
+  border-left: 1rpx solid var(--med-border);
 }
 .small-button {
   display: flex;
+  width: auto !important;
   min-height: 88rpx;
   min-height: 44px;
   margin: 0;
-  padding: 0 24rpx;
+  padding: 0 16rpx;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+  gap: 2rpx;
   line-height: 1.2;
+  white-space: nowrap;
   color: var(--med-text-secondary);
-  background: var(--med-divider);
-  border-radius: 14rpx;
-  font-size: 26rpx;
+  background: transparent;
+  border-radius: 8rpx;
+  font-size: 23rpx;
 }
 .small-button.add {
   color: #fff;
@@ -526,6 +609,19 @@ defineExpose({ refresh })
 .small-button.assist {
   color: var(--med-brand-deep);
   background: var(--med-brand-soft);
+}
+.small-button.utility {
+  padding-right: 10rpx;
+  padding-left: 10rpx;
+  color: var(--med-muted);
+}
+.small-button.status-utility {
+  min-width: 88rpx;
+  margin-left: 12rpx;
+  color: var(--med-text-secondary);
+}
+.creation-actions .small-button {
+  min-width: 108rpx;
 }
 .content-state {
   padding: 48rpx 28rpx;
@@ -538,17 +634,18 @@ defineExpose({ refresh })
   font-size: 23rpx;
 }
 .problem-card {
-  margin-bottom: 20rpx;
+  margin-bottom: 12rpx;
   padding: 0;
+  border-radius: var(--med-radius-sm);
 }
 .problem-open {
   display: block;
   width: 100%;
   margin: 0;
-  padding: 24rpx 28rpx 20rpx;
+  padding: 20rpx 24rpx 14rpx;
   color: var(--med-text);
   background: transparent;
-  border-radius: var(--med-radius-md);
+  border-radius: var(--med-radius-sm);
   line-height: 1.5;
   text-align: left;
 }
@@ -590,7 +687,7 @@ defineExpose({ refresh })
   overflow-wrap: anywhere;
   color: var(--med-text);
   background: transparent;
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 700;
   line-height: 1.5;
   text-align: left;
@@ -599,7 +696,7 @@ defineExpose({ refresh })
   display: flex;
   align-items: baseline;
   gap: 16rpx;
-  margin-top: 16rpx;
+  margin-top: 12rpx;
 }
 .detail-arrow {
   flex: none;
@@ -611,7 +708,7 @@ defineExpose({ refresh })
   margin-top: 10rpx;
   overflow: hidden;
   color: var(--med-text-secondary);
-  font-size: 28rpx;
+  font-size: 26rpx;
   line-height: 1.55;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -624,8 +721,8 @@ defineExpose({ refresh })
 }
 .actions {
   display: flex;
-  margin: 0 28rpx;
-  padding: 16rpx 0;
+  margin: 0 24rpx;
+  padding: 12rpx 0;
   border-top: 1rpx solid var(--med-divider);
   justify-content: flex-end;
   gap: 12rpx;
@@ -674,6 +771,15 @@ defineExpose({ refresh })
   font-size: 24rpx;
 }
 @media screen and (max-width: 360px) {
+  .toolbar-actions {
+    gap: 8rpx;
+  }
+
+  .creation-actions {
+    padding-left: 10rpx;
+    gap: 6rpx;
+  }
+
   .tab,
   .small-button,
   .action {
@@ -695,10 +801,20 @@ defineExpose({ refresh })
   .title {
     font-size: 16px;
   }
+
+  .small-button {
+    padding-right: 8rpx;
+    padding-left: 8rpx;
+  }
+
+  .small-button.status-utility,
+  .creation-actions .small-button {
+    min-width: 84rpx;
+  }
 }
 @media screen and (min-width: 600px) {
   .problem-list-page {
-    padding: 20px 0 32px;
+    padding: 8px 0 32px;
   }
 
   .problem-card {
@@ -710,16 +826,37 @@ defineExpose({ refresh })
   }
 
   .toolbar {
-    margin-bottom: 16px;
+    margin-bottom: 10px;
+    padding: 8px 0 10px;
   }
 
   .tabs {
-    margin-top: 12px;
+    max-width: 300px;
+    gap: 4px;
   }
 
-  .toolbar-buttons,
+  .toolbar-actions,
+  .utility-actions,
+  .creation-actions,
   .actions {
     gap: 12px;
+  }
+
+  .toolbar-actions {
+    padding-top: 8px;
+  }
+
+  .creation-actions {
+    padding-left: 12px;
+  }
+
+  .small-button.status-utility {
+    min-width: 48px;
+    margin-left: 12px;
+  }
+
+  .creation-actions .small-button {
+    min-width: 72px;
   }
 
   .tab,
@@ -732,6 +869,7 @@ defineExpose({ refresh })
   }
 
   .tab {
+    min-width: 120px;
     border-radius: 0;
     border-bottom-width: 2px;
   }

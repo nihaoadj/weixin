@@ -2,8 +2,8 @@
   <view class="safe-page page">
     <view
       v-if="task"
-      class="card panel"
-      ><text class="eyebrow-label">TASK {{ task.position }} / 3</text
+      class="flow-section panel"
+      ><text class="eyebrow-label">第 {{ task.position }} / 3 项任务</text
       ><text class="title">{{ task.publicDefinition.title || task.taskType }}</text
       ><text class="muted">{{ task.publicDefinition.instruction }}</text
       ><text
@@ -22,7 +22,7 @@
     />
     <view
       v-if="task"
-      class="card panel"
+      class="flow-section panel status-section"
       ><text class="section-title">任务状态</text><text>{{ statusLabel(task.status) }}</text
       ><button
         class="primary"
@@ -95,10 +95,17 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentLearning))
 }
 .panel {
   display: flex;
-  margin-bottom: 22rpx;
-  padding: 30rpx;
+  max-width: 920px;
+  margin: 0 auto;
   flex-direction: column;
   gap: 16rpx;
+}
+.flow-section {
+  padding: 30rpx 2rpx 36rpx;
+}
+.status-section {
+  padding-top: 36rpx;
+  border-top: 1rpx solid var(--med-border);
 }
 .title {
   color: var(--med-navy);
@@ -125,5 +132,6 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentLearning))
 .primary {
   color: #fff;
   background: var(--med-brand);
+  border-radius: var(--med-radius-sm);
 }
 </style>

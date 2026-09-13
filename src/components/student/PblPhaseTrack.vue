@@ -86,12 +86,14 @@ const stateLabel = { completed: '已有证据', current: '当前阶段', pending
 }
 .phase-content {
   display: flex;
-  padding: 4rpx 0 24rpx;
+  min-width: 0;
+  padding: 4rpx 12rpx 24rpx 0;
   flex-direction: column;
   gap: 8rpx;
 }
 .phase-heading {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 16rpx;
 }
@@ -101,6 +103,7 @@ const stateLabel = { completed: '已有证据', current: '当前阶段', pending
   font-weight: 750;
 }
 .phase-state {
+  flex: none;
   color: var(--med-muted);
   font-size: 21rpx;
 }

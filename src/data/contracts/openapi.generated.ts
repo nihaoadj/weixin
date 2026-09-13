@@ -1291,6 +1291,109 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/learning/knowledge-points/{point_code}/study': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Read Study */
+    get: operations['read_study_learning_knowledge_points__point_code__study_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/learning/knowledge-points/{point_code}/study/start': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Start Study */
+    post: operations['start_study_learning_knowledge_points__point_code__study_start_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/learning/study-paths/{path_id}/practices': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Practices */
+    get: operations['practices_learning_study_paths__path_id__practices_get']
+    put?: never
+    /** Start Practice */
+    post: operations['start_practice_learning_study_paths__path_id__practices_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/learning/self-practices/history': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** History */
+    get: operations['history_learning_self_practices_history_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/learning/self-practices/{group_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Practice */
+    get: operations['practice_learning_self_practices__group_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/learning/self-practices/{group_id}/answers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Answer */
+    post: operations['answer_learning_self_practices__group_id__answers_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/classes/{class_id}/pbl-sessions': {
     parameters: {
       query?: never
@@ -1506,6 +1609,142 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/teacher/pbl-work-items': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Work Items */
+    get: operations['work_items_teacher_pbl_work_items_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/teacher/pbl-work-items/{snapshot_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Work Item */
+    get: operations['work_item_teacher_pbl_work_items__snapshot_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/teacher/pbl-work-items/{snapshot_id}/feedback': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Work Item Feedback */
+    post: operations['work_item_feedback_teacher_pbl_work_items__snapshot_id__feedback_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/teacher/pbl-follow-ups': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Follow Ups */
+    get: operations['follow_ups_teacher_pbl_follow_ups_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/teacher/pbl-follow-ups/{plan_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Follow Up */
+    get: operations['follow_up_teacher_pbl_follow_ups__plan_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/teacher/pbl-follow-ups/{plan_id}/feedback': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Follow Up Feedback */
+    post: operations['follow_up_feedback_teacher_pbl_follow_ups__plan_id__feedback_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/teacher/pbl-sessions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Teacher Sessions */
+    get: operations['teacher_sessions_teacher_pbl_sessions_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/classes/{class_id}/pbl-sessions/{session_id}/dashboard': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Session Dashboard */
+    get: operations['session_dashboard_classes__class_id__pbl_sessions__session_id__dashboard_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/teacher/pbl-question-suggestions/{suggestion_id}': {
     parameters: {
       query?: never
@@ -1693,6 +1932,24 @@ export interface paths {
     get: operations['summary_classes__class_id__pbl_sessions__session_id__summary_get']
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/student/learning-dialogues/{session_id}/submission': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Submission Preview */
+    get: operations['submission_preview_student_learning_dialogues__session_id__submission_get']
+    put?: never
+    /** Submit Dialogue */
+    post: operations['submit_dialogue_student_learning_dialogues__session_id__submission_post']
     delete?: never
     options?: never
     head?: never
@@ -2249,6 +2506,75 @@ export interface components {
       /** Goal Point Codes */
       goal_point_codes: string[]
     }
+    /** DashboardResponse */
+    DashboardResponse: {
+      session: components['schemas']['DashboardSessionResponse']
+      summary: components['schemas']['DashboardSummaryResponse']
+      /** Students */
+      students: components['schemas']['DashboardStudentRow'][]
+    }
+    /** DashboardSessionResponse */
+    DashboardSessionResponse: {
+      /** Id */
+      id: number
+      /** Class Id */
+      class_id: number
+      /** Status */
+      status: string
+    }
+    /** DashboardStudentRow */
+    DashboardStudentRow: {
+      /** Student Id */
+      student_id: number
+      /** Student Name */
+      student_name: string
+      /** Current Phase */
+      current_phase: string
+      /** Phase Status */
+      phase_status: string
+      /** Last Activity At */
+      last_activity_at: string | null
+      /** Snapshot Id */
+      snapshot_id: number | null
+      /** Work Item Status */
+      work_item_status: string | null
+      task_progress: components['schemas']['TaskProgressResponse']
+      /** Current Cycle */
+      current_cycle: number | null
+      /** Verification Status */
+      verification_status: string | null
+    }
+    /** DashboardSummaryResponse */
+    DashboardSummaryResponse: {
+      /** Participants */
+      participants: number
+      /** Diagnoses */
+      diagnoses: number
+      /** Published Suggestions */
+      published_suggestions: number
+      /** Plans */
+      plans: number
+      /** Tasks */
+      tasks: number
+      /** Completed Tasks */
+      completed_tasks: number
+      /** Pending Verification */
+      pending_verification: number
+      /** Improved */
+      improved: number
+      /** Needs Reinforcement */
+      needs_reinforcement: number
+      /** Objective Retest Count */
+      objective_retest_count: number
+      /** Objective Retest Average */
+      objective_retest_average: number | null
+      /** Phase Counts */
+      phase_counts: {
+        [key: string]: number
+      }
+      /** Automation Exhausted */
+      automation_exhausted: number
+    }
     /** DiagnosticPageResponse */
     DiagnosticPageResponse: {
       /** Items */
@@ -2265,7 +2591,7 @@ export interface components {
       /** Client Session Id */
       client_session_id: string
       /** Class Id */
-      class_id: number
+      class_id?: number | null
       /**
        * Interaction Style
        * @enum {string}
@@ -2368,6 +2694,218 @@ export interface components {
     ExitQuizRequest: {
       /** Topic Codes */
       topic_codes: string[]
+    }
+    /** FailedTargetResponse */
+    FailedTargetResponse: {
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Label */
+      label?: string | null
+    }
+    /** FollowUpCheckResponse */
+    FollowUpCheckResponse: {
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Label */
+      label?: string | null
+      /** Threshold */
+      threshold: number | null
+      /** Score */
+      score: number | null
+      /** Evidence Present */
+      evidence_present: boolean
+      /** Passed */
+      passed: boolean
+    }
+    /** FollowUpDecisionBasis */
+    FollowUpDecisionBasis: {
+      /** Result */
+      result?: string | null
+      /** Cycle */
+      cycle?: number | null
+      /** Offline Support Required */
+      offline_support_required?: boolean | null
+      /** Failed Targets */
+      failed_targets?: components['schemas']['FailedTargetResponse'][]
+      /** Checks */
+      checks?: components['schemas']['FollowUpCheckResponse'][]
+    }
+    /** FollowUpDetailResponse */
+    FollowUpDetailResponse: {
+      plan: components['schemas']['FollowUpPlanResponse']
+      /** Feedbacks */
+      feedbacks: components['schemas']['TeacherFeedbackResponse'][]
+    }
+    /** FollowUpEvaluationResponse */
+    FollowUpEvaluationResponse: {
+      /** Id */
+      id: number
+      /** Cycle Number */
+      cycle_number: number
+      /** Policy Version */
+      policy_version: string
+      /** Result */
+      result: string
+      /** Checks */
+      checks: components['schemas']['FollowUpCheckResponse'][]
+      /** Failed Targets */
+      failed_targets: components['schemas']['FailedTargetResponse'][]
+      /** Automation Exhausted */
+      automation_exhausted: boolean
+      /** Record Source */
+      record_source: string
+      /**
+       * Evaluated At
+       * Format: date-time
+       */
+      evaluated_at: string
+    }
+    /** FollowUpFeedbackRequest */
+    FollowUpFeedbackRequest: {
+      /** Client Feedback Id */
+      client_feedback_id: string
+      /** Body */
+      body: string
+    }
+    /** FollowUpListItem */
+    FollowUpListItem: {
+      /** Plan Id */
+      plan_id: number
+      /** Student Id */
+      student_id: number
+      /** Student Name */
+      student_name: string
+      /** Class Id */
+      class_id: number
+      /** Class Name */
+      class_name: string
+      /** Session Id */
+      session_id: number
+      /** Session Topic */
+      session_topic: string
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: 'in_progress' | 'cycle_2' | 'support_needed' | 'improved'
+      /** Current Cycle */
+      current_cycle: number
+      /** Verification Status */
+      verification_status: string
+      /** Automation Exhausted */
+      automation_exhausted: boolean
+      /** Failed Targets */
+      failed_targets: components['schemas']['FailedTargetResponse'][]
+    }
+    /** FollowUpPageResponse */
+    FollowUpPageResponse: {
+      /** Items */
+      items: components['schemas']['FollowUpListItem'][]
+      /** Total */
+      total: number
+      /** Limit */
+      limit: number
+      /** Offset */
+      offset: number
+    }
+    /** FollowUpPlanResponse */
+    FollowUpPlanResponse: {
+      /** Id */
+      id: number
+      /** Student Id */
+      student_id: number
+      source_context: components['schemas']['FollowUpSourceContext']
+      /** Status */
+      status: string
+      /** Verification Status */
+      verification_status: string
+      /** Current Cycle */
+      current_cycle: number
+      /** Max Cycles */
+      max_cycles: number
+      /** Automation Exhausted */
+      automation_exhausted: boolean
+      decision_basis: components['schemas']['FollowUpDecisionBasis']
+      /** Tasks */
+      tasks: components['schemas']['FollowUpTaskResponse'][]
+      /** Evaluations */
+      evaluations: components['schemas']['FollowUpEvaluationResponse'][]
+    }
+    /** FollowUpPublicDefinition */
+    FollowUpPublicDefinition: {
+      /** Prompt */
+      prompt: string
+      /** Options */
+      options?: string[] | null
+      /** Point Code */
+      point_code?: string | null
+      /** Card Code */
+      card_code?: string | null
+      /** Target Label */
+      target_label?: string | null
+      /** Reference */
+      reference?: string | null
+    }
+    /** FollowUpSourceContext */
+    FollowUpSourceContext: {
+      /** Teacher Id */
+      teacher_id: number
+      /** Class Id */
+      class_id: number
+      /** Class Name */
+      class_name: string
+      /** Session Id */
+      session_id: number
+      /** Snapshot Id */
+      snapshot_id: number
+      /** Suggestion Id */
+      suggestion_id: number
+      /** Point Codes */
+      point_codes: string[]
+      /** Dimension Ids */
+      dimension_ids: string[]
+      /** Topic Code */
+      topic_code: string
+    }
+    /** FollowUpTaskResponse */
+    FollowUpTaskResponse: {
+      /** Id */
+      id: number
+      /** Position */
+      position: number
+      /** Task Type */
+      task_type: string
+      /** Status */
+      status: string
+      /** Problem Id */
+      problem_id: number | null
+      public_definition: components['schemas']['FollowUpPublicDefinition']
+      result: components['schemas']['FollowUpTaskResult'] | null
+      /** Cycle Number */
+      cycle_number: number
+      /** Target Type */
+      target_type: string
+      /** Target Code */
+      target_code: string
+      /** Variant Code */
+      variant_code: string
+    }
+    /** FollowUpTaskResult */
+    FollowUpTaskResult: {
+      /** Score */
+      score: number | null
+      /** Feedback */
+      feedback: string
+      /** Evidence */
+      evidence: string[]
+      /** Answer */
+      answer: Record<string, unknown>
+      /** Submitted At */
+      submitted_at: string | null
     }
     /** GradeReviewCardRead */
     GradeReviewCardRead: {
@@ -2758,6 +3296,13 @@ export interface components {
       /** Rationale */
       rationale: string
     }
+    /** MaterialSection */
+    MaterialSection: {
+      /** Title */
+      title: string
+      /** Text */
+      text: string
+    }
     /** MedicalChatRequest */
     MedicalChatRequest: {
       /** Prompt */
@@ -2968,12 +3513,12 @@ export interface components {
         | 'pbl_mastery_improved'
         | 'pbl_reinforcement_activated'
         | 'pbl_automation_exhausted'
+        | 'pbl_teacher_feedback'
       /**
        * Entity Type
-       * @constant
        * @enum {string}
        */
-      entity_type: 'learning_plan'
+      entity_type: 'learning_plan' | 'pbl_session'
       /** Entity Id */
       entity_id: number
       /** Title */
@@ -3098,6 +3643,15 @@ export interface components {
       /** Evaluated At */
       evaluated_at: string | null
     }
+    /** PracticeAnswer */
+    PracticeAnswer: {
+      /** Client Id */
+      client_id: string
+      /** Question Index */
+      question_index: number
+      /** Selected Option */
+      selected_option: number
+    }
     /** PracticeBlueprint */
     PracticeBlueprint: {
       /** Id */
@@ -3127,6 +3681,91 @@ export interface components {
       answer_schema: 'short_text' | 'evidence_grid' | 'decision_cards'
       /** Criteria */
       criteria: Record<string, unknown>[]
+    }
+    /** PracticeFeedback */
+    PracticeFeedback: {
+      /** Id */
+      id: number
+      /** Question Index */
+      question_index: number
+      /** Selected Option */
+      selected_option: number
+      /** Correct */
+      correct: boolean
+      /** Explanation */
+      explanation: string
+      /** Reference Option */
+      reference_option: number
+      /**
+       * Due At
+       * Format: date-time
+       */
+      due_at: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+    }
+    /** PracticeGroupRead */
+    PracticeGroupRead: {
+      /** Id */
+      id: number
+      /** Path Id */
+      path_id: number
+      /**
+       * Cycle
+       * @enum {integer}
+       */
+      cycle: 1 | 2
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: 'generating' | 'ready' | 'failed'
+      /** Failure */
+      failure: string | null
+      /** Questions */
+      questions: components['schemas']['PracticeQuestionRead'][]
+      /** Attempts */
+      attempts: Record<string, unknown>[]
+      /** Due Indexes */
+      due_indexes: number[]
+      /** Can Retest */
+      can_retest: boolean
+      /** Exhausted */
+      exhausted: boolean
+    }
+    /** PracticeQuestionRead */
+    PracticeQuestionRead: {
+      /** Index */
+      index: number
+      /** Point Code */
+      point_code: string
+      /** Prompt */
+      prompt: string
+      /** Options */
+      options: string[]
+    }
+    /** PracticeStart */
+    PracticeStart: {
+      /** Client Id */
+      client_id: string
+      /**
+       * Cycle
+       * @default 1
+       * @enum {integer}
+       */
+      cycle: 1 | 2
+    }
+    /** PreviewQuestion */
+    PreviewQuestion: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Prompt */
+      prompt: string
     }
     /** ProblemAuthoringRead */
     ProblemAuthoringRead: {
@@ -4117,7 +4756,7 @@ export interface components {
       /** Id */
       id: number
       /** Class Id */
-      class_id: number
+      class_id: number | null
       /** Topic Code */
       topic_code: string
       /** Status */
@@ -4159,6 +4798,19 @@ export interface components {
       interaction_style?: ('guided' | 'direct') | null
       /** Style Selected At */
       style_selected_at?: string | null
+    }
+    /** SharedSubmission */
+    SharedSubmission: {
+      /** Session Id */
+      session_id: number
+      /** Snapshot Id */
+      snapshot_id: number
+      /** Class Id */
+      class_id: number
+      /** Source */
+      source: string
+      /** Submitted At */
+      submitted_at: string | null
     }
     /** StageSubmissionCreate */
     StageSubmissionCreate: {
@@ -4261,6 +4913,128 @@ export interface components {
       /** Topic Codes */
       topic_codes?: string[]
     }
+    /** StudentTeacherFeedback */
+    StudentTeacherFeedback: {
+      /** Id */
+      id: number
+      /**
+       * Action Type
+       * @enum {string}
+       */
+      action_type: 'feedback_only' | 'task_published' | 'closed' | 'follow_up'
+      /** Body */
+      body: string
+      /** Created At */
+      created_at: string | null
+      /** Plan Id */
+      plan_id: number | null
+    }
+    /** StudyMaterialRead */
+    StudyMaterialRead: {
+      /** Version */
+      version: string
+      /** Point Code */
+      point_code: string
+      /** Title */
+      title: string
+      /** Objective */
+      objective: string
+      /** Scenario */
+      scenario: string
+      /** Background */
+      background: components['schemas']['MaterialSection'][]
+      example: components['schemas']['MaterialSection']
+      /** Remediation */
+      remediation: components['schemas']['MaterialSection'][]
+      /** Reference */
+      reference: string
+      /**
+       * Review Status
+       * @constant
+       * @enum {string}
+       */
+      review_status: 'unreviewed'
+    }
+    /** StudyPathRead */
+    StudyPathRead: {
+      /** Id */
+      id: number
+      /** Point Code */
+      point_code: string
+      /** Session Id */
+      session_id: number
+      /** Material Version */
+      material_version: string
+    }
+    /** StudyRead */
+    StudyRead: {
+      material: components['schemas']['StudyMaterialRead']
+      path: components['schemas']['StudyPathRead'] | null
+      /** Phase */
+      phase: string
+      /** Practice Unlocked */
+      practice_unlocked: boolean
+      /** Review Unlocked */
+      review_unlocked: boolean
+      /** Legacy Access */
+      legacy_access: boolean
+      /** Summary */
+      summary: string
+      /** Lock Reason */
+      lock_reason: string
+      /** History */
+      history: components['schemas']['StudyPathRead'][]
+    }
+    /** StudyStart */
+    StudyStart: {
+      /** Client Id */
+      client_id: string
+      /**
+       * Interaction Style
+       * @default guided
+       * @enum {string}
+       */
+      interaction_style: 'guided' | 'direct'
+      /**
+       * New Round
+       * @default false
+       */
+      new_round: boolean
+    }
+    /** SubmissionPreview */
+    SubmissionPreview: {
+      /** Session Id */
+      session_id: number
+      /** Snapshot Id */
+      snapshot_id: number
+      /** Knowledge Gaps */
+      knowledge_gaps: components['schemas']['KnowledgeGap'][]
+      /** Reasoning Issues */
+      reasoning_issues: components['schemas']['ReasoningIssue'][]
+      /** Evidence Summary */
+      evidence_summary: string
+      /** Questions */
+      questions: components['schemas']['PreviewQuestion'][]
+      submission: components['schemas']['SharedSubmission'] | null
+      /** Teacher Status */
+      teacher_status?: ('pending' | 'responded' | 'task_published' | 'closed') | null
+      /** Feedbacks */
+      feedbacks?: components['schemas']['StudentTeacherFeedback'][]
+      /**
+       * Next Action
+       * @default
+       */
+      next_action: string
+    }
+    /** SubmissionRequest */
+    SubmissionRequest: {
+      /** Snapshot Id */
+      snapshot_id: number
+      /** Class Id */
+      class_id: number
+      /** Client Submission Id */
+      client_submission_id: string
+    }
     /** SubmitTask */
     SubmitTask: {
       /** Client Submission Id */
@@ -4315,6 +5089,13 @@ export interface components {
       }
       /** Automation Exhausted */
       automation_exhausted: number
+    }
+    /** TaskProgressResponse */
+    TaskProgressResponse: {
+      /** Completed */
+      completed: number
+      /** Total */
+      total: number
     }
     /** TaskResponse */
     TaskResponse: {
@@ -4420,6 +5201,90 @@ export interface components {
        */
       interaction_style: 'guided' | 'direct'
     }
+    /** TeacherFeedbackRequest */
+    TeacherFeedbackRequest: {
+      /** Client Feedback Id */
+      client_feedback_id: string
+      /** Body */
+      body: string
+      /**
+       * Action Type
+       * @enum {string}
+       */
+      action_type: 'feedback_only' | 'task_published' | 'closed'
+      /** Suggestion Id */
+      suggestion_id?: number | null
+      /** Suggestion Version */
+      suggestion_version?: number | null
+      /**
+       * Title
+       * @default
+       */
+      title: string
+      /**
+       * Prompt
+       * @default
+       */
+      prompt: string
+      /** Target Student Ids */
+      target_student_ids?: number[]
+      /**
+       * Whole Class
+       * @default false
+       */
+      whole_class: boolean
+      /**
+       * Include Case Retry
+       * @default false
+       */
+      include_case_retry: boolean
+    }
+    /** TeacherFeedbackResponse */
+    TeacherFeedbackResponse: {
+      /** Id */
+      id: number
+      /** Snapshot Id */
+      snapshot_id: number
+      /** Plan Id */
+      plan_id: number | null
+      /** Action Type */
+      action_type: string
+      /** Body */
+      body: string
+      /** Created At */
+      created_at: string | null
+    }
+    /** TeacherSessionListItem */
+    TeacherSessionListItem: {
+      /** Id */
+      id: number
+      /** Class Id */
+      class_id: number
+      /** Class Name */
+      class_name: string
+      /** Topic Code */
+      topic_code: string
+      /** Status */
+      status: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Closed At */
+      closed_at: string | null
+    }
+    /** TeacherSessionPageResponse */
+    TeacherSessionPageResponse: {
+      /** Items */
+      items: components['schemas']['TeacherSessionListItem'][]
+      /** Total */
+      total: number
+      /** Limit */
+      limit: number
+      /** Offset */
+      offset: number
+    }
     /** TestItem */
     TestItem: {
       /** Test Name */
@@ -4502,6 +5367,66 @@ export interface components {
        * @default student
        */
       requested_role: string
+    }
+    /** WorkItemActor */
+    WorkItemActor: {
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+    }
+    /** WorkItemDetailResponse */
+    WorkItemDetailResponse: {
+      work_item: components['schemas']['WorkItemResponse'] | null
+      diagnostic: components['schemas']['TeacherDiagnosticResponse']
+      /** Feedbacks */
+      feedbacks: components['schemas']['TeacherFeedbackResponse'][]
+    }
+    /** WorkItemPageResponse */
+    WorkItemPageResponse: {
+      /** Items */
+      items: components['schemas']['WorkItemResponse'][]
+      /** Total */
+      total: number
+      /** Limit */
+      limit: number
+      /** Offset */
+      offset: number
+      /** Summary */
+      summary: {
+        [key: string]: number
+      }
+    }
+    /** WorkItemResponse */
+    WorkItemResponse: {
+      /** Snapshot Id */
+      snapshot_id: number
+      /** Session Id */
+      session_id: number
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'student_submission' | 'classroom_diagnostic'
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: 'pending' | 'responded' | 'task_published' | 'closed'
+      student: components['schemas']['WorkItemActor']
+      class: components['schemas']['WorkItemActor']
+      /** Topic */
+      topic: string
+      /** Entered At */
+      entered_at: string | null
+      /** Last Activity At */
+      last_activity_at: string | null
+      /** Knowledge Gap Count */
+      knowledge_gap_count: number
+      /** Reasoning Issue Count */
+      reasoning_issue_count: number
+      /** Next Action */
+      next_action: string
     }
   }
   responses: never
@@ -12473,6 +13398,674 @@ export interface operations {
       }
     }
   }
+  read_study_learning_knowledge_points__point_code__study_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        point_code: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StudyRead']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  start_study_learning_knowledge_points__point_code__study_start_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        point_code: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StudyStart']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StudyRead']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  practices_learning_study_paths__path_id__practices_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        path_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PracticeGroupRead'][]
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  start_practice_learning_study_paths__path_id__practices_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        path_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PracticeStart']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PracticeGroupRead']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  history_learning_self_practices_history_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PracticeGroupRead'][]
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  practice_learning_self_practices__group_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        group_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PracticeGroupRead']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  answer_learning_self_practices__group_id__answers_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        group_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PracticeAnswer']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PracticeFeedback']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   sessions_classes__class_id__pbl_sessions_get: {
     parameters: {
       query?: never
@@ -13810,6 +15403,781 @@ export interface operations {
       }
     }
   }
+  work_items_teacher_pbl_work_items_get: {
+    parameters: {
+      query?: {
+        class_id?: number | null
+        source?: ('student_submission' | 'classroom_diagnostic') | null
+        status?: ('pending' | 'responded' | 'task_published' | 'closed') | null
+        session_id?: number | null
+        student_id?: number | null
+        limit?: number
+        offset?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WorkItemPageResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  work_item_teacher_pbl_work_items__snapshot_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        snapshot_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WorkItemDetailResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  work_item_feedback_teacher_pbl_work_items__snapshot_id__feedback_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        snapshot_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TeacherFeedbackRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TeacherFeedbackResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  follow_ups_teacher_pbl_follow_ups_get: {
+    parameters: {
+      query?: {
+        class_id?: number | null
+        session_id?: number | null
+        student_id?: number | null
+        status?: ('in_progress' | 'cycle_2' | 'support_needed' | 'improved') | null
+        limit?: number
+        offset?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FollowUpPageResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  follow_up_teacher_pbl_follow_ups__plan_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        plan_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FollowUpDetailResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  follow_up_feedback_teacher_pbl_follow_ups__plan_id__feedback_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        plan_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FollowUpFeedbackRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TeacherFeedbackResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  teacher_sessions_teacher_pbl_sessions_get: {
+    parameters: {
+      query?: {
+        class_id?: number | null
+        status?: string | null
+        limit?: number
+        offset?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TeacherSessionPageResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  session_dashboard_classes__class_id__pbl_sessions__session_id__dashboard_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        class_id: number
+        session_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DashboardResponse']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   edit_teacher_pbl_question_suggestions__suggestion_id__patch: {
     parameters: {
       query?: never
@@ -14789,6 +17157,198 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['Summary']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  submission_preview_student_learning_dialogues__session_id__submission_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        session_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SubmissionPreview']
+        }
+      }
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unprocessable Content */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  submit_dialogue_student_learning_dialogues__session_id__submission_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        session_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SubmissionRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SubmissionPreview']
         }
       }
       /** @description Bad Request */

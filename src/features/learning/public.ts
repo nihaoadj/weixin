@@ -1,8 +1,27 @@
 import { getApplicationServices } from '@/bootstrap/wiring'
+export { buildKnowledgeGraph } from '@/features/learning/application/knowledgeGraph'
 
 const learning = () => getApplicationServices().learning
 
 export const getKnowledgeCatalog = () => learning().getKnowledgeCatalog()
+export const getStudyPath = (pointCode: string) => learning().getStudyPath(pointCode)
+export const startStudyPath = (input: {
+  pointCode: string
+  clientId: string
+  interactionStyle: 'guided' | 'direct'
+  newRound?: boolean
+}) => learning().startStudyPath(input)
+export const getStudyPractices = (pathId: number) => learning().getStudyPractices(pathId)
+export const generateStudyPractice = (pathId: number, cycle: 1 | 2, clientId: string) =>
+  learning().generateStudyPractice(pathId, cycle, clientId)
+export const getPrivatePractice = (id: number) => learning().getPrivatePractice(id)
+export const getPrivatePracticeHistory = () => learning().getPrivatePracticeHistory()
+export const answerPrivatePractice = (input: {
+  groupId: number
+  clientId: string
+  questionIndex: number
+  selectedOption: number
+}) => learning().answerPrivatePractice(input)
 export const getKnowledgeMap = () => learning().getKnowledgeMap()
 export const createExitQuiz = (topicCodes: string[]) => learning().createExitQuiz(topicCodes)
 export const getReviewDashboard = () => learning().getReviewDashboard()
@@ -40,6 +59,11 @@ export type {
 } from '@/types/learning'
 export type {
   KnowledgePoint,
+  KnowledgeGraph,
+  KnowledgeGraphEdge,
+  KnowledgeGraphIssue,
+  KnowledgeGraphModule,
+  KnowledgeGraphNode,
   KnowledgeMapPoint,
   KnowledgeStatus,
   RecallReveal,
@@ -48,3 +72,10 @@ export type {
   ReviewGrade,
   ReviewItem,
 } from '@/types/knowledge'
+export type {
+  PrivatePracticeFeedback,
+  PrivatePracticeGroup,
+  StudyMaterial,
+  StudyPath,
+  StudyPathState,
+} from '@/types/study'

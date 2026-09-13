@@ -33,7 +33,7 @@ describe('remote authentication', () => {
   })
 
   it('exposes a platform capability boolean under the active compile target', () => {
-    // Conditional compilation itself is verified by the H5/MP builds. This
+    // Conditional compilation itself is verified by the MP build. This
     // unit assertion only protects the adapter contract from returning a
     // non-boolean value in the current target.
     expect(typeof isWechatMiniProgram()).toBe('boolean')

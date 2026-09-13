@@ -90,6 +90,24 @@ class PblLearningStore:
         self._session.flush()
         return tuple(plan_ids)
 
+    def notify(self, student_id: int, entity_id: int, title: str, body: str, dedupe_key: str) -> None:
+        existing = self._session.scalar(
+            select(StudentNotification.id).where(StudentNotification.dedupe_key == dedupe_key)
+        )
+        if existing is None:
+            self._session.add(
+                StudentNotification(
+                    student_id=student_id,
+                    type="pbl_teacher_feedback",
+                    entity_type="pbl_session",
+                    entity_id=entity_id,
+                    title=title,
+                    body=body[:280],
+                    dedupe_key=dedupe_key,
+                )
+            )
+            self._session.flush()
+
     @staticmethod
     def _view(plan: LearningPlan):
         tasks = []
@@ -188,9 +206,7 @@ class PblLearningStore:
             raise AppError("STATE_CONFLICT", "学习计划当前不能提交", 409)
         if task.status in {"inactive", "skipped"} or task.cycle_number != task.plan.current_cycle:
             raise AppError("STATE_CONFLICT", "该轮任务尚未激活", 409)
-        previous = [
-            t for t in task.plan.tasks if t.cycle_number == task.cycle_number and t.position < task.position
-        ]
+        previous = [t for t in task.plan.tasks if t.cycle_number == task.cycle_number and t.position < task.position]
         if any(t.status not in {"completed", "skipped"} for t in previous):
             raise AppError("STATE_CONFLICT", "请先完成前面的任务", 409)
         score, evidence, feedback = None, [], "已保存学习证据，系统将在本轮完成后自动判定。"

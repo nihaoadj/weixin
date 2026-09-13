@@ -44,8 +44,8 @@ class InferenceResult:
 @dataclass(frozen=True, slots=True)
 class PblSessionRecord:
     id: int
-    class_id: int
-    teacher_id: int
+    class_id: int | None
+    teacher_id: int | None
     topic_code: str
     provider: str
     invocation_mode: str | None
@@ -135,3 +135,18 @@ class PblReportParticipationRecord:
     session: PblSessionRecord
     participation: PblParticipationRecord
     snapshots: tuple[PblSnapshotRecord, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PblTeacherFeedbackRecord:
+    id: int
+    snapshot_id: int
+    plan_id: int | None
+    student_id: int
+    class_id: int
+    teacher_id: int
+    action_type: str
+    suggestion_id: int | None
+    body: str
+    client_feedback_id: str
+    created_at: datetime | None

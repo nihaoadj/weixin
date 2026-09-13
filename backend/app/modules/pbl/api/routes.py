@@ -47,7 +47,7 @@ class Message(BaseModel):
 
 class DialogueCreate(BaseModel):
     client_session_id: str = Field(min_length=1, max_length=100)
-    class_id: int = Field(gt=0)
+    class_id: int | None = Field(default=None, gt=0)
     interaction_style: Literal["guided", "direct"]
     goal_point_codes: list[str] = Field(min_length=1, max_length=3)
 
@@ -65,7 +65,7 @@ class Edit(BaseModel):
 
 class SessionResponse(BaseModel):
     id: int
-    class_id: int
+    class_id: int | None
     topic_code: str
     status: str
     created_at: datetime
@@ -181,6 +181,252 @@ class DiagnosticPageResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class TeacherFeedbackRequest(BaseModel):
+    client_feedback_id: str = Field(min_length=1, max_length=100)
+    body: str = Field(min_length=1, max_length=1000)
+    action_type: Literal["feedback_only", "task_published", "closed"]
+    suggestion_id: int | None = Field(default=None, gt=0)
+    suggestion_version: int | None = Field(default=None, ge=1)
+    title: str = Field(default="", max_length=200)
+    prompt: str = Field(default="", max_length=2000)
+    target_student_ids: list[int] = Field(default_factory=list, max_length=500)
+    whole_class: bool = False
+    include_case_retry: bool = False
+
+
+class FollowUpFeedbackRequest(BaseModel):
+    client_feedback_id: str = Field(min_length=1, max_length=100)
+    body: str = Field(min_length=1, max_length=1000)
+
+
+class TeacherFeedbackResponse(BaseModel):
+    id: int
+    snapshot_id: int
+    plan_id: int | None
+    action_type: str
+    body: str
+    created_at: datetime | None
+
+
+class WorkItemPageResponse(BaseModel):
+    items: list["WorkItemResponse"]
+    total: int
+    limit: int
+    offset: int
+    summary: dict[str, int]
+
+
+class WorkItemActor(BaseModel):
+    id: int
+    name: str
+
+
+class WorkItemResponse(BaseModel):
+    snapshot_id: int
+    session_id: int
+    source: Literal["student_submission", "classroom_diagnostic"]
+    status: Literal["pending", "responded", "task_published", "closed"]
+    student: WorkItemActor
+    classroom: WorkItemActor = Field(alias="class")
+    topic: str
+    entered_at: datetime | None
+    last_activity_at: datetime | None
+    knowledge_gap_count: int
+    reasoning_issue_count: int
+    next_action: str
+
+    model_config = {"populate_by_name": True}
+
+
+class WorkItemDetailResponse(BaseModel):
+    work_item: WorkItemResponse | None
+    diagnostic: TeacherDiagnosticResponse
+    feedbacks: list[TeacherFeedbackResponse]
+
+
+class TeacherSessionListItem(BaseModel):
+    id: int
+    class_id: int
+    class_name: str
+    topic_code: str
+    status: str
+    created_at: datetime
+    closed_at: datetime | None
+
+
+class TeacherSessionPageResponse(BaseModel):
+    items: list[TeacherSessionListItem]
+    total: int
+    limit: int
+    offset: int
+
+
+class FailedTargetResponse(BaseModel):
+    target_type: str
+    target_code: str
+    label: str | None = None
+
+
+class FollowUpListItem(BaseModel):
+    plan_id: int
+    student_id: int
+    student_name: str
+    class_id: int
+    class_name: str
+    session_id: int
+    session_topic: str
+    status: Literal["in_progress", "cycle_2", "support_needed", "improved"]
+    current_cycle: int
+    verification_status: str
+    automation_exhausted: bool
+    failed_targets: list[FailedTargetResponse]
+
+
+class FollowUpPageResponse(BaseModel):
+    items: list[FollowUpListItem]
+    total: int
+    limit: int
+    offset: int
+
+
+class FollowUpSourceContext(BaseModel):
+    teacher_id: int
+    class_id: int
+    class_name: str
+    session_id: int
+    snapshot_id: int
+    suggestion_id: int
+    point_codes: list[str]
+    dimension_ids: list[str]
+    topic_code: str
+
+
+class FollowUpPublicDefinition(BaseModel):
+    prompt: str
+    options: list[str] | None = None
+    point_code: str | None = None
+    card_code: str | None = None
+    target_label: str | None = None
+    reference: str | None = None
+
+
+class FollowUpTaskResult(BaseModel):
+    score: float | None
+    feedback: str
+    evidence: list[str]
+    answer: dict[str, object]
+    submitted_at: datetime | None
+
+
+class FollowUpTaskResponse(BaseModel):
+    id: int
+    position: int
+    task_type: str
+    status: str
+    problem_id: int | None
+    public_definition: FollowUpPublicDefinition
+    result: FollowUpTaskResult | None
+    cycle_number: int
+    target_type: str
+    target_code: str
+    variant_code: str
+
+
+class FollowUpCheckResponse(BaseModel):
+    target_type: str
+    target_code: str
+    label: str | None = None
+    threshold: float | None
+    score: float | None
+    evidence_present: bool
+    passed: bool
+
+
+class FollowUpEvaluationResponse(BaseModel):
+    id: int
+    cycle_number: int
+    policy_version: str
+    result: str
+    checks: list[FollowUpCheckResponse]
+    failed_targets: list[FailedTargetResponse]
+    automation_exhausted: bool
+    record_source: str
+    evaluated_at: datetime
+
+
+class FollowUpDecisionBasis(BaseModel):
+    result: str | None = None
+    cycle: int | None = None
+    offline_support_required: bool | None = None
+    failed_targets: list[FailedTargetResponse] = Field(default_factory=list)
+    checks: list[FollowUpCheckResponse] = Field(default_factory=list)
+
+
+class FollowUpPlanResponse(BaseModel):
+    id: int
+    student_id: int
+    source_context: FollowUpSourceContext
+    status: str
+    verification_status: str
+    current_cycle: int
+    max_cycles: int
+    automation_exhausted: bool
+    decision_basis: FollowUpDecisionBasis
+    tasks: list[FollowUpTaskResponse]
+    evaluations: list[FollowUpEvaluationResponse]
+
+
+class FollowUpDetailResponse(BaseModel):
+    plan: FollowUpPlanResponse
+    feedbacks: list[TeacherFeedbackResponse]
+
+
+class DashboardStudentRow(BaseModel):
+    student_id: int
+    student_name: str
+    current_phase: str
+    phase_status: str
+    last_activity_at: datetime | None
+    snapshot_id: int | None
+    work_item_status: str | None
+    task_progress: "TaskProgressResponse"
+    current_cycle: int | None
+    verification_status: str | None
+
+
+class TaskProgressResponse(BaseModel):
+    completed: int
+    total: int
+
+
+class DashboardSessionResponse(BaseModel):
+    id: int
+    class_id: int
+    status: str
+
+
+class DashboardSummaryResponse(BaseModel):
+    participants: int
+    diagnoses: int
+    published_suggestions: int
+    plans: int
+    tasks: int
+    completed_tasks: int
+    pending_verification: int
+    improved: int
+    needs_reinforcement: int
+    objective_retest_count: int
+    objective_retest_average: float | None
+    phase_counts: dict[str, int]
+    automation_exhausted: int
+
+
+class DashboardResponse(BaseModel):
+    session: DashboardSessionResponse
+    summary: DashboardSummaryResponse
+    students: list[DashboardStudentRow]
 
 
 def _session(value: PblSessionRecord, participation=None, phase_counts=None) -> dict[str, object]:
@@ -313,9 +559,7 @@ def learning_dialogues(
     return {"items": items, "total": len(values), "limit": limit, "offset": offset}
 
 
-@router.post(
-    "/student/learning-dialogues", response_model=DialogueDetailResponse, status_code=status.HTTP_201_CREATED
-)
+@router.post("/student/learning-dialogues", response_model=DialogueDetailResponse, status_code=status.HTTP_201_CREATED)
 def create_learning_dialogue(
     payload: DialogueCreate,
     student: User = Depends(require_student),
@@ -371,9 +615,7 @@ def learning_dialogue_message(
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ):
-    value, snapshot = pbl_application(db).message(
-        student.id, session_id, payload.client_message_id, payload.content
-    )
+    value, snapshot = pbl_application(db).message(student.id, session_id, payload.client_message_id, payload.content)
     return {
         "messages": value.messages,
         "diagnostic": _snapshot(snapshot),
@@ -395,17 +637,13 @@ def active(student: User = Depends(require_student), db: Session = Depends(get_d
     return result
 
 
-@router.get(
-    "/student/pbl-sessions/{session_id}/participation", response_model=ParticipationResponse, deprecated=True
-)
+@router.get("/student/pbl-sessions/{session_id}/participation", response_model=ParticipationResponse, deprecated=True)
 def participation(session_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)):
     value, snapshot = pbl_application(db).participation(student.id, session_id)
     return _participation(value, snapshot)
 
 
-@router.post(
-    "/student/pbl-sessions/{session_id}/messages", response_model=MessageSubmissionResponse, deprecated=True
-)
+@router.post("/student/pbl-sessions/{session_id}/messages", response_model=MessageSubmissionResponse, deprecated=True)
 def message(session_id: int, payload: Message, student: User = Depends(require_student), db: Session = Depends(get_db)):
     value, snapshot = pbl_application(db).message(
         student.id,
@@ -440,6 +678,17 @@ def _diagnostic(value: PblDiagnosticRecord) -> dict[str, object]:
     }
 
 
+def _feedback(value) -> dict[str, object]:
+    return {
+        "id": value.id,
+        "snapshot_id": value.snapshot_id,
+        "plan_id": value.plan_id,
+        "action_type": value.action_type,
+        "body": value.body,
+        "created_at": value.created_at,
+    }
+
+
 @router.get("/teacher/pbl-diagnostics", response_model=DiagnosticPageResponse)
 def diagnostics(
     class_id: int | None = Query(default=None, gt=0),
@@ -463,6 +712,124 @@ def diagnostics(
 @router.get("/teacher/pbl-diagnostics/{snapshot_id}", response_model=TeacherDiagnosticResponse)
 def diagnostic(snapshot_id: int, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
     return _diagnostic(pbl_application(db).diagnostic(teacher.id, snapshot_id))
+
+
+@router.get("/teacher/pbl-work-items", response_model=WorkItemPageResponse)
+def work_items(
+    class_id: int | None = Query(default=None, gt=0),
+    source: Literal["student_submission", "classroom_diagnostic"] | None = None,
+    status: Literal["pending", "responded", "task_published", "closed"] | None = None,
+    session_id: int | None = Query(default=None, gt=0),
+    student_id: int | None = Query(default=None, gt=0),
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    values = pbl_application(db).work_items(
+        teacher.id,
+        limit,
+        offset,
+        {
+            "class_id": class_id,
+            "session_id": session_id,
+            "student_id": student_id,
+            "source": source,
+            "work_status": status,
+        },
+    )
+    return values
+
+
+@router.get("/teacher/pbl-work-items/{snapshot_id}", response_model=WorkItemDetailResponse)
+def work_item(snapshot_id: int, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
+    value = pbl_application(db).work_item(teacher.id, snapshot_id)
+    return {
+        "work_item": value["work_item"],
+        "diagnostic": _diagnostic(value["diagnostic"]),
+        "feedbacks": [_feedback(item) for item in value["feedbacks"]],
+    }
+
+
+@router.post("/teacher/pbl-work-items/{snapshot_id}/feedback", response_model=TeacherFeedbackResponse)
+def work_item_feedback(
+    snapshot_id: int,
+    payload: TeacherFeedbackRequest,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _feedback(
+        pbl_application(db).feedback(
+            teacher.id,
+            snapshot_id,
+            payload.client_feedback_id,
+            payload.body,
+            payload.action_type,
+            payload.suggestion_id,
+            payload.suggestion_version,
+            payload.title,
+            payload.prompt,
+            tuple(payload.target_student_ids),
+            payload.whole_class,
+            payload.include_case_retry,
+        )
+    )
+
+
+@router.get("/teacher/pbl-follow-ups", response_model=FollowUpPageResponse)
+def follow_ups(
+    class_id: int | None = Query(default=None, gt=0),
+    session_id: int | None = Query(default=None, gt=0),
+    student_id: int | None = Query(default=None, gt=0),
+    status: Literal["in_progress", "cycle_2", "support_needed", "improved"] | None = None,
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return pbl_application(db).follow_ups(
+        teacher.id,
+        limit,
+        offset,
+        {"class_id": class_id, "session_id": session_id, "student_id": student_id, "status": status},
+    )
+
+
+@router.get("/teacher/pbl-follow-ups/{plan_id}", response_model=FollowUpDetailResponse)
+def follow_up(plan_id: int, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
+    value = pbl_application(db).follow_up(teacher.id, plan_id)
+    return {"plan": value["plan"], "feedbacks": [_feedback(item) for item in value["feedbacks"]]}
+
+
+@router.post("/teacher/pbl-follow-ups/{plan_id}/feedback", response_model=TeacherFeedbackResponse)
+def follow_up_feedback(
+    plan_id: int,
+    payload: FollowUpFeedbackRequest,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _feedback(
+        pbl_application(db).follow_up_feedback(teacher.id, plan_id, payload.client_feedback_id, payload.body)
+    )
+
+
+@router.get("/teacher/pbl-sessions", response_model=TeacherSessionPageResponse)
+def teacher_sessions(
+    class_id: int | None = Query(default=None, gt=0),
+    status: str | None = None,
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return pbl_application(db).teacher_sessions(teacher.id, limit, offset, class_id, status)
+
+
+@router.get("/classes/{class_id}/pbl-sessions/{session_id}/dashboard", response_model=DashboardResponse)
+def session_dashboard(
+    class_id: int, session_id: int, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)
+):
+    return pbl_application(db).session_dashboard(teacher.id, class_id, session_id)
 
 
 @router.patch("/teacher/pbl-question-suggestions/{suggestion_id}", response_model=SuggestionResponse)
@@ -490,9 +857,7 @@ def adopt(suggestion_id: int, payload: Adopt, teacher: User = Depends(require_te
     )
 
 
-@router.patch(
-    "/classes/{class_id}/pbl-sessions/{session_id}/phase", response_model=SessionResponse, deprecated=True
-)
+@router.patch("/classes/{class_id}/pbl-sessions/{session_id}/phase", response_model=SessionResponse, deprecated=True)
 def phase(
     class_id: int,
     session_id: int,
@@ -815,3 +1180,58 @@ def verify_result(
 @router.get("/classes/{class_id}/pbl-sessions/{session_id}/summary", response_model=Summary)
 def summary(class_id: int, session_id: int, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
     return pbl_application(db).summary(teacher.id, class_id, session_id)
+
+
+class SubmissionRequest(BaseModel):
+    snapshot_id: int = Field(gt=0)
+    class_id: int = Field(gt=0)
+    client_submission_id: str = Field(min_length=1, max_length=100)
+
+
+class PreviewQuestion(BaseModel):
+    id: int
+    title: str
+    prompt: str
+
+
+class SharedSubmission(BaseModel):
+    session_id: int
+    snapshot_id: int
+    class_id: int
+    source: str
+    submitted_at: datetime | None
+
+
+class StudentTeacherFeedback(BaseModel):
+    id: int
+    action_type: Literal["feedback_only", "task_published", "closed", "follow_up"]
+    body: str
+    created_at: datetime | None
+    plan_id: int | None
+
+
+class SubmissionPreview(BaseModel):
+    session_id: int
+    snapshot_id: int
+    knowledge_gaps: list[KnowledgeGap]
+    reasoning_issues: list[ReasoningIssue]
+    evidence_summary: str
+    questions: list[PreviewQuestion]
+    submission: SharedSubmission | None
+    teacher_status: Literal["pending", "responded", "task_published", "closed"] | None = None
+    feedbacks: list[StudentTeacherFeedback] = Field(default_factory=list)
+    next_action: str = ""
+
+
+@router.get("/student/learning-dialogues/{session_id}/submission", response_model=SubmissionPreview)
+def submission_preview(session_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)):
+    return pbl_application(db).submission_preview(student.id, session_id)
+
+
+@router.post("/student/learning-dialogues/{session_id}/submission", response_model=SubmissionPreview)
+def submit_dialogue(
+    session_id: int, payload: SubmissionRequest, student: User = Depends(require_student), db: Session = Depends(get_db)
+):
+    return pbl_application(db).submit_to_teacher(
+        student.id, session_id, payload.snapshot_id, payload.class_id, payload.client_submission_id
+    )

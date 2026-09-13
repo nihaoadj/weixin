@@ -1,11 +1,11 @@
 <template>
   <view class="safe-page page">
-    <view class="card intro">
+    <view class="flow-section intro">
       <text class="eyebrow-label">知识巩固内容</text>
       <text class="title">系统知识点下的教师补充卡</text>
       <text class="muted">系统目录不可改写；学生只能看到医学审核通过的补充卡。</text>
     </view>
-    <view class="card">
+    <view class="flow-section create-section">
       <text class="section-title">新建单选补充卡</text>
       <picker
         :range="pointOptions"
@@ -51,7 +51,7 @@
         保存为草稿
       </button>
     </view>
-    <view class="card">
+    <view class="flow-section list-section">
       <view class="section-head"
         ><text class="section-title">我的补充卡</text
         ><button
@@ -106,7 +106,7 @@
     </view>
     <view
       v-if="isReviewer"
-      class="card"
+      class="flow-section list-section"
     >
       <view class="section-head"
         ><text class="section-title">待审核补充卡</text
@@ -150,7 +150,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import { getSession, requireRole } from '@/features/identity/public'
 import {
@@ -161,6 +161,7 @@ import {
   submitKnowledgeCardContribution,
 } from '@/features/content/public'
 import { getKnowledgeCatalog } from '@/features/learning/public'
+import { handleBackPress, ROUTES } from '@/platform/navigation'
 import type { KnowledgeCardContribution, KnowledgeCardContributionInput, KnowledgePoint } from '@/types/knowledge'
 
 const points = ref<KnowledgePoint[]>([])
@@ -170,6 +171,8 @@ const selectedCode = ref('')
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
+const returnTab = ref<'overview' | 'problems'>('overview')
+const returnSection = ref<'resources' | undefined>()
 const form = ref({ prompt: '', options: ['', '', '', ''], correctOption: 0, explanation: '', reference: '' })
 const isReviewer = computed(() => getSession()?.permissions?.includes('medical_review') || false)
 const pointOptions = computed(() =>
@@ -182,6 +185,18 @@ const correctLabel = computed(() => answerOptions[form.value.correctOption] || '
 onShow(() => {
   if (requireRole('teacher')) void load()
 })
+onLoad((query) => {
+  if (query?.returnTab === 'problems' && query?.returnSection === 'resources') {
+    returnTab.value = 'problems'
+    returnSection.value = 'resources'
+  }
+})
+onBackPress(({ from }) =>
+  handleBackPress(from, ROUTES.teacherWorkspace, {
+    tab: returnTab.value,
+    section: returnSection.value,
+  }),
+)
 async function load() {
   loading.value = true
   error.value = ''
@@ -280,18 +295,18 @@ function statusLabel(status: KnowledgeCardContribution['status']) {
   padding: 28rpx;
   background: var(--med-page);
 }
-.card {
+.flow-section {
   display: flex;
-  margin-bottom: 20rpx;
-  padding: 28rpx;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 34rpx 2rpx;
   flex-direction: column;
   gap: 16rpx;
-  background: var(--med-surface);
-  border: 1rpx solid var(--med-border);
-  border-radius: var(--med-radius-md);
+  border-top: 1rpx solid var(--med-border);
 }
 .intro {
-  border-top: 6rpx solid var(--med-clinical);
+  padding-top: 12rpx;
+  border-top: 0;
 }
 .title {
   color: var(--med-ink);

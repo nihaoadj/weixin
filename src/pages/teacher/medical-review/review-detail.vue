@@ -13,8 +13,8 @@
       icon="retry"
       title="审核详情加载失败"
       :description="loadError"
-      :action-label="id ? '重新加载' : '返回工作台'"
-      :secondary-action-label="id ? '返回工作台' : ''"
+      :action-label="id ? '重新加载' : '返回审核队列'"
+      :secondary-action-label="id ? '返回审核队列' : ''"
       @action="id ? load : back"
       @secondary-action="back"
     />
@@ -161,6 +161,8 @@ const deciding = ref(false)
 const loading = ref(false)
 const loadError = ref('')
 let id = ''
+const returnTab = ref<'overview' | 'problems'>('overview')
+const returnSection = ref<'resources' | undefined>()
 const reasoning = computed(() => item.value?.caseDefinition.referenceReasoning || {})
 const referenceProblem = computed(() => String(reasoning.value.problemRepresentation || ''))
 const differentials = computed(() => reasoning.value.differentials || [])
@@ -175,7 +177,10 @@ const statusLabel = computed(() =>
 )
 
 function back() {
-  backOrRoute(ROUTES.teacherReviewList)
+  backOrRoute(ROUTES.teacherReviewList, {
+    returnTab: returnTab.value,
+    returnSection: returnSection.value,
+  })
 }
 
 async function load() {
@@ -198,9 +203,18 @@ async function load() {
 onLoad((query) => {
   if (!requireRole('teacher')) return
   id = typeof query?.id === 'string' ? query.id : ''
+  if (query?.returnTab === 'problems' && query?.returnSection === 'resources') {
+    returnTab.value = 'problems'
+    returnSection.value = 'resources'
+  }
   void load()
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherReviewList))
+onBackPress(({ from }) =>
+  handleBackPress(from, ROUTES.teacherReviewList, {
+    returnTab: returnTab.value,
+    returnSection: returnSection.value,
+  }),
+)
 async function decide(decision: 'approved' | 'rejected') {
   if (deciding.value || !item.value) return
   if (decision === 'rejected' && comment.value.trim().length < 5) {

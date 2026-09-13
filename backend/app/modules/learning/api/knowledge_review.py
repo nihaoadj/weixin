@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.bootstrap.composition import knowledge_review_application
+from app.bootstrap.composition import knowledge_review_application, study_application
 from app.core.config import get_settings
 from app.db import get_db
 from app.dependencies import require_student
@@ -61,8 +61,15 @@ def create_exit_quiz(
 ) -> dict[str, list[dict[str, object]]]:
     if not get_settings().t08_exit_quiz_enabled:
         raise AppError("FEATURE_DISABLED", "结束小测当前未开放", 409)
+    topic_codes = tuple(dict.fromkeys(payload.topic_codes))
+    # This legacy endpoint remains available for formally assigned or previously
+    # practiced points, but a new point must enter through its PBL study path.
+    for point_code in topic_codes:
+        study = study_application(db).read(student.id, point_code)
+        if not study["practice_unlocked"]:
+            raise AppError("STATE_CONFLICT", "请先完成本知识点的四阶段研讨", 409)
     cards = knowledge_review_application(db).exit_quiz(
-        Actor.from_user(student), tuple(dict.fromkeys(payload.topic_codes)), _visible_choice_cards(student, db)
+        Actor.from_user(student), topic_codes, _visible_choice_cards(student, db)
     )
     return {"cards": [review_card_view(card) for card in cards]}
 

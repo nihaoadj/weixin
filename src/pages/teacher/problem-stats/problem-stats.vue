@@ -27,24 +27,24 @@
       @action="back"
     />
     <template v-else>
-      <view class="card hero"
+      <view class="hero"
         ><text class="type">{{ problem.type }}</text
         ><text class="title">{{ problem.title }}</text
         ><text class="muted">{{ problem.publishTime || problem.time }}</text></view
       >
       <view class="grid">
-        <view class="metric card"
+        <view class="metric"
           ><text class="number">{{ answerCount }}</text
           ><text class="label">本机已回答</text></view
         >
-        <view class="metric card"
+        <view class="metric"
           ><text class="number">{{ problem.status === '已发布' ? 1 : 0 }}</text
           ><text class="label">发布状态</text></view
         >
-        <view class="metric card"><text class="number">—</text><text class="label">相关报告</text></view>
-        <view class="metric card"><text class="number">—</text><text class="label">平均得分</text></view>
+        <view class="metric"><text class="number">—</text><text class="label">相关报告</text></view>
+        <view class="metric"><text class="number">—</text><text class="label">平均得分</text></view>
       </view>
-      <view class="card note"
+      <view class="note"
         ><text class="note-title">统计说明</text
         ><text
           >当前 Demo
@@ -70,7 +70,7 @@ const loading = ref(false)
 const loadError = ref('')
 let problemId = ''
 function back() {
-  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems' })
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
 }
 onLoad((options) => {
   if (!requireRole('teacher')) return
@@ -78,7 +78,7 @@ onLoad((options) => {
   problemId = id
   void loadStats(id)
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems' }))
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' }))
 
 async function loadStats(id: string) {
   if (loading.value) return
@@ -101,11 +101,13 @@ async function loadStats(id: string) {
 
 <style scoped>
 .stats-page {
-  padding: 28rpx;
+  padding: 32rpx 28rpx 64rpx;
 }
 .hero {
   display: flex;
-  padding: 32rpx;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 18rpx 2rpx 36rpx;
   flex-direction: column;
   gap: 16rpx;
 }
@@ -124,15 +126,23 @@ async function loadStats(id: string) {
 }
 .grid {
   display: grid;
-  margin-top: 24rpx;
+  max-width: 920px;
+  margin: 0 auto;
   grid-template-columns: 1fr 1fr;
-  gap: 20rpx;
+  border-top: 1rpx solid var(--med-border);
+  border-bottom: 1rpx solid var(--med-border);
 }
 .metric {
   display: flex;
   padding: 34rpx 20rpx;
   align-items: center;
   flex-direction: column;
+}
+.metric:nth-child(odd) {
+  border-right: 1rpx solid var(--med-divider);
+}
+.metric:nth-child(-n + 2) {
+  border-bottom: 1rpx solid var(--med-divider);
 }
 .number {
   color: var(--med-brand);
@@ -145,15 +155,17 @@ async function loadStats(id: string) {
   font-size: 22rpx;
 }
 .note {
-  margin-top: 24rpx;
-  padding: 28rpx;
-  color: #64748b;
+  max-width: 920px;
+  margin: 34rpx auto 0;
+  padding: 6rpx 2rpx 6rpx 22rpx;
+  color: var(--med-muted);
+  border-left: 4rpx solid var(--med-safety);
   line-height: 1.65;
 }
 .note-title {
   display: block;
   margin-bottom: 12rpx;
-  color: #183153;
+  color: var(--med-ink);
   font-size: 29rpx;
   font-weight: 700;
 }

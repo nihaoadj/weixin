@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.modules.classroom.wiring import classroom_scope_port
 from app.modules.content.wiring import question_publication_port
-from app.modules.learning.wiring import pbl_learning_port
 from app.modules.pbl.application.records import InferenceRequest, InferenceResult
 from app.modules.pbl.application.use_cases import PblApplication
 from app.modules.pbl.infrastructure.checked_gateway import CheckedGateway
@@ -145,9 +144,11 @@ def _gateway():
 
 
 def pbl_application(session: Session) -> PblApplication:
+    from app.modules.learning.wiring import pbl_learning_port
+
     gateway, provider, mode = _gateway()
     return PblApplication(
-        SqlAlchemyPblRepository(session),
+        SqlAlchemyPblRepository(session, classroom_scope_port(session)),
         session,
         CheckedGateway(gateway),
         classroom_scope_port(session),
@@ -156,3 +157,15 @@ def pbl_application(session: Session) -> PblApplication:
         mode,
         pbl_learning_port(session),
     )
+
+
+def study_dialogue_port(session: Session):
+    from app.modules.pbl.infrastructure.study_dialogues import StudyDialogues
+
+    return StudyDialogues(pbl_application(session), SqlAlchemyPblRepository(session, classroom_scope_port(session)))
+
+
+def practice_json_port():
+    from app.modules.pbl.infrastructure.practice_transport import PracticeTransport
+
+    return PracticeTransport(get_settings())

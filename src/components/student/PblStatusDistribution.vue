@@ -91,7 +91,7 @@ const description = computed(() => items.value.map((item) => `${item.label} ${it
 }
 .segment--improved,
 .marker--improved {
-  background: var(--med-primary);
+  background: var(--med-accent);
 }
 .segment--support_needed,
 .marker--support_needed {

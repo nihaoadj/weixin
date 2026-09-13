@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   apiLearningPlanSchema,
   apiLearningProfileSchema,
@@ -31,9 +32,227 @@ import type {
   ReviewGrade,
   ReviewItem,
 } from '@/types/knowledge'
+import type { PrivatePracticeFeedback, PrivatePracticeGroup, StudyPathState } from '@/types/study'
 
 const ANALYTICS_TTL = 60_000
 const STATE_TTL = 15_000
+const studySectionSchema = z.object({ title: z.string(), text: z.string() })
+const studyPathSchema = z.object({
+  id: z.number(),
+  point_code: z.string(),
+  session_id: z.number(),
+  material_version: z.string(),
+})
+const studySchema = z.object({
+  material: z.object({
+    version: z.string(),
+    point_code: z.string(),
+    title: z.string(),
+    objective: z.string(),
+    scenario: z.string(),
+    background: z.array(studySectionSchema),
+    example: studySectionSchema,
+    remediation: z.array(studySectionSchema),
+    reference: z.string(),
+    review_status: z.literal('unreviewed'),
+  }),
+  path: studyPathSchema.nullable(),
+  phase: z.string(),
+  practice_unlocked: z.boolean(),
+  review_unlocked: z.boolean(),
+  legacy_access: z.boolean(),
+  summary: z.string(),
+  lock_reason: z.string(),
+  history: z.array(studyPathSchema),
+})
+const privatePracticeSchema = z.object({
+  id: z.number(),
+  path_id: z.number(),
+  cycle: z.union([z.literal(1), z.literal(2)]),
+  status: z.enum(['generating', 'ready', 'failed']),
+  failure: z.string().nullable(),
+  questions: z.array(
+    z.object({ index: z.number(), point_code: z.string(), prompt: z.string(), options: z.array(z.string()) }),
+  ),
+  attempts: z.array(
+    z.object({
+      id: z.number(),
+      question_index: z.number(),
+      selected_option: z.number(),
+      correct: z.boolean(),
+      due_at: z.string(),
+      created_at: z.string(),
+    }),
+  ),
+  due_indexes: z.array(z.number()),
+  can_retest: z.boolean(),
+  exhausted: z.boolean(),
+})
+const privateFeedbackSchema = z.object({
+  id: z.number(),
+  question_index: z.number(),
+  selected_option: z.number(),
+  correct: z.boolean(),
+  explanation: z.string(),
+  reference_option: z.number(),
+  due_at: z.string(),
+  created_at: z.string(),
+})
+
+const mapPath = (value: z.infer<typeof studyPathSchema>) => ({
+  id: value.id,
+  pointCode: value.point_code,
+  sessionId: String(value.session_id),
+  materialVersion: value.material_version,
+})
+const mapStudy = (value: z.infer<typeof studySchema>): StudyPathState => ({
+  material: {
+    version: value.material.version,
+    pointCode: value.material.point_code,
+    title: value.material.title,
+    objective: value.material.objective,
+    scenario: value.material.scenario,
+    background: value.material.background,
+    example: value.material.example,
+    remediation: value.material.remediation,
+    reference: value.material.reference,
+    reviewStatus: value.material.review_status,
+  },
+  path: value.path ? mapPath(value.path) : undefined,
+  phase: value.phase,
+  practiceUnlocked: value.practice_unlocked,
+  reviewUnlocked: value.review_unlocked,
+  legacyAccess: value.legacy_access,
+  summary: value.summary,
+  lockReason: value.lock_reason,
+  history: value.history.map(mapPath),
+})
+const mapPrivatePractice = (value: z.infer<typeof privatePracticeSchema>): PrivatePracticeGroup => ({
+  id: value.id,
+  pathId: value.path_id,
+  cycle: value.cycle,
+  status: value.status,
+  failure: value.failure || undefined,
+  questions: value.questions.map((question) => ({
+    index: question.index,
+    pointCode: question.point_code,
+    prompt: question.prompt,
+    options: question.options,
+  })),
+  attempts: value.attempts.map((attempt) => ({
+    id: attempt.id,
+    questionIndex: attempt.question_index,
+    selectedOption: attempt.selected_option,
+    correct: attempt.correct,
+    dueAt: attempt.due_at,
+    createdAt: attempt.created_at,
+  })),
+  dueIndexes: value.due_indexes,
+  canRetest: value.can_retest,
+  exhausted: value.exhausted,
+})
+
+export async function getStudyPath(pointCode: string): Promise<StudyPathState> {
+  return mapStudy(
+    await apiRequest({
+      path: `/learning/knowledge-points/${encodePathSegment(pointCode)}/study`,
+      cacheTtlMs: STATE_TTL,
+      schema: studySchema,
+    }),
+  )
+}
+
+export async function startStudyPath(input: {
+  pointCode: string
+  clientId: string
+  interactionStyle: 'guided' | 'direct'
+  newRound?: boolean
+}): Promise<StudyPathState> {
+  return mapStudy(
+    await apiRequest({
+      path: `/learning/knowledge-points/${encodePathSegment(input.pointCode)}/study/start`,
+      method: 'POST',
+      body: {
+        client_id: input.clientId,
+        interaction_style: input.interactionStyle,
+        new_round: Boolean(input.newRound),
+      },
+      schema: studySchema,
+      invalidateCache: [`/learning/knowledge-points/${encodePathSegment(input.pointCode)}/study`],
+    }),
+  )
+}
+
+export async function getStudyPractices(pathId: number): Promise<PrivatePracticeGroup[]> {
+  return (
+    await apiRequest({
+      path: `/learning/study-paths/${encodePathSegment(pathId)}/practices`,
+      cacheTtlMs: STATE_TTL,
+      schema: z.array(privatePracticeSchema),
+    })
+  ).map(mapPrivatePractice)
+}
+
+export async function generateStudyPractice(
+  pathId: number,
+  cycle: 1 | 2,
+  clientId: string,
+): Promise<PrivatePracticeGroup> {
+  return mapPrivatePractice(
+    await apiRequest({
+      path: `/learning/study-paths/${encodePathSegment(pathId)}/practices`,
+      method: 'POST',
+      body: { cycle, client_id: clientId },
+      schema: privatePracticeSchema,
+      invalidateCache: ['/learning/self-practices/history'],
+    }),
+  )
+}
+
+export async function getPrivatePractice(id: number): Promise<PrivatePracticeGroup> {
+  return mapPrivatePractice(
+    await apiRequest({
+      path: `/learning/self-practices/${encodePathSegment(id)}`,
+      cacheTtlMs: STATE_TTL,
+      schema: privatePracticeSchema,
+    }),
+  )
+}
+
+export async function getPrivatePracticeHistory(): Promise<PrivatePracticeGroup[]> {
+  return (
+    await apiRequest({
+      path: '/learning/self-practices/history',
+      cacheTtlMs: STATE_TTL,
+      schema: z.array(privatePracticeSchema),
+    })
+  ).map(mapPrivatePractice)
+}
+
+export async function answerPrivatePractice(input: {
+  groupId: number
+  clientId: string
+  questionIndex: number
+  selectedOption: number
+}): Promise<PrivatePracticeFeedback> {
+  const value = await apiRequest({
+    path: `/learning/self-practices/${encodePathSegment(input.groupId)}/answers`,
+    method: 'POST',
+    body: { client_id: input.clientId, question_index: input.questionIndex, selected_option: input.selectedOption },
+    schema: privateFeedbackSchema,
+    invalidateCache: [`/learning/self-practices/${input.groupId}`, '/learning/self-practices/history'],
+  })
+  return {
+    id: value.id,
+    questionIndex: value.question_index,
+    selectedOption: value.selected_option,
+    correct: value.correct,
+    explanation: value.explanation,
+    referenceOption: value.reference_option,
+    dueAt: value.due_at,
+    createdAt: value.created_at,
+  }
+}
 
 export async function getKnowledgeCatalog(): Promise<KnowledgePoint[]> {
   const catalog = await apiRequest({
@@ -136,7 +355,12 @@ export async function gradeObjectiveCard(
     method: 'POST',
     body: { selected_option: selectedOption, confidence },
     schema: apiReviewGradeSchema,
-    invalidateCache: ['/learning/review-dashboard', '/learning/reviews/due', '/learning/review-items'],
+    invalidateCache: [
+      '/learning/knowledge-map',
+      '/learning/review-dashboard',
+      '/learning/reviews/due',
+      '/learning/review-items',
+    ],
   })
   return {
     cardCode: value.card_code,
@@ -167,7 +391,12 @@ export async function rateRecallCard(cardId: number, rating: 'again' | 'hard' | 
     method: 'POST',
     body: { rating },
     schema: apiReviewGradeSchema,
-    invalidateCache: ['/learning/review-dashboard', '/learning/reviews/due', '/learning/review-items'],
+    invalidateCache: [
+      '/learning/knowledge-map',
+      '/learning/review-dashboard',
+      '/learning/reviews/due',
+      '/learning/review-items',
+    ],
   })
   return {
     cardCode: value.card_code,
@@ -195,7 +424,7 @@ export async function captureManualReviewItem(input: {
         note: input.note || '',
       },
       schema: apiReviewItemSchema,
-      invalidateCache: ['/learning/review-dashboard', '/learning/review-items'],
+      invalidateCache: ['/learning/knowledge-map', '/learning/review-dashboard', '/learning/review-items'],
     }),
   )
 }
@@ -204,7 +433,7 @@ export async function dismissReviewItem(id: number): Promise<void> {
   await apiRequest({
     path: `/learning/review-items/${encodePathSegment(id)}/dismiss`,
     method: 'POST',
-    invalidateCache: ['/learning/review-dashboard', '/learning/review-items'],
+    invalidateCache: ['/learning/knowledge-map', '/learning/review-dashboard', '/learning/review-items'],
   })
 }
 
@@ -415,6 +644,13 @@ export async function markLearningNotificationsRead(): Promise<void> {
 
 import type { LearningRepository } from '@/features/learning/domain/ports'
 export const apiLearningRepository: LearningRepository = {
+  getStudyPath,
+  startStudyPath,
+  getStudyPractices,
+  generateStudyPractice,
+  getPrivatePractice,
+  getPrivatePracticeHistory,
+  answerPrivatePractice,
   getKnowledgeCatalog,
   getKnowledgeMap,
   createExitQuiz,

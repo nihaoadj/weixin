@@ -68,6 +68,8 @@ python backend/scripts/check_boundaries.py
 
 ## 测试
 
+前端主要验收以 [微信开发者工具验收规范](wechat-validation.md) 为准。用户已授权 T25 先行退役 H5 E2E；任何未完成的小程序页面验收仍须保持待验收，不能由历史浏览器结果补足。`npm run test:mp:doctor` 只诊断环境，不执行页面验收。局部前端改动默认只验受影响流程；完整核心回归只在发布候选、共享/跨模块改动、局部影响外溢或用户明确要求时执行。
+
 前端：
 
 ```bash
@@ -141,11 +143,10 @@ project.private.config.json
 
 ## 微信开发者工具：源码与构建目录同步
 
-| 用途          | 命令                      | 开发者工具导入目录                     |
-| ------------- | ------------------------- | -------------------------------------- |
-| 持续开发      | `npm run dev:mp-weixin`   | `dist/dev/mp-weixin`                   |
-| 生产构建检查  | `npm run build:mp-weixin` | `dist/build/mp-weixin`                 |
-| H5 浏览器预览 | `npm run dev:h5`          | 使用终端给出的本地 URL，不导入微信工具 |
+| 用途         | 命令                      | 开发者工具导入目录     |
+| ------------ | ------------------------- | ---------------------- |
+| 持续开发     | `npm run dev:mp-weixin`   | `dist/dev/mp-weixin`   |
+| 生产构建检查 | `npm run build:mp-weixin` | `dist/build/mp-weixin` |
 
 2026-08-31 本工作区检查时，微信工具打开的是 `dist/dev/mp-weixin`。只运行生产构建不会更新这个目录。开发时保持 dev 命令运行，等待 `Build complete. Watching for changes...`；确认工具项目路径后再编译。
 

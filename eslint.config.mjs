@@ -71,7 +71,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['vite.config.ts', 'vitest.config.ts'],
+    files: ['vite.config.ts', 'vitest.config.ts', 'scripts/wechat/*.mjs'],
     languageOptions: {
       globals: globals.node,
     },

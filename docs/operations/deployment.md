@@ -1,10 +1,11 @@
 # 运行与部署
 
+微信小程序是唯一产品目标。用户已授权 T25 直接退役 H5 命令及浏览器回归；缺少的小程序验证保留为待验收，不由历史浏览器证据替代。前端交付遵循 [微信验收规范](wechat-validation.md)；本次用户要求暂不执行真机，不能据开发者工具结果声明生产/真机验证通过。
+
 ## 前端运行
 
 ```bash
 npm ci --legacy-peer-deps
-npm run dev:h5
 npm run dev:mp-weixin
 ```
 
@@ -58,7 +59,7 @@ WECHAT_TEACHER_OPENIDS=教师 openid，多个值用逗号分隔
 
 AI、JWT、数据库和微信配置可参考 `backend/.env.example`；其中 `AI_API_KEY`、`JWT_SECRET` 和 `WECHAT_APP_SECRET` 只能存在于后端环境。
 
-未配置微信凭据时，API 模式的小程序登录会明确返回配置错误，不会退回固定 Demo 身份。H5 开发仍可使用 Demo 登录。
+未配置微信凭据时，API 模式的小程序登录会明确返回配置错误，不会退回固定 Demo 身份。
 
 离线演示需明确设置 `VITE_APP_MODE=demo`。生产后端必须设置 `APP_ENV=production`、高强度 `JWT_SECRET` 和 `ENABLE_DEMO_AUTH=false`。
 
@@ -66,7 +67,6 @@ AI、JWT、数据库和微信配置可参考 `backend/.env.example`；其中 `AI
 
 ```bash
 npm run build:mp-weixin
-npm run build:h5
 ```
 
 ## 质量检查

@@ -12,8 +12,8 @@
       @secondary-action="back"
     />
     <template v-else>
-      <view class="card panel">
-        <text class="eyebrow-label">REFLECTION</text>
+      <view class="flow-section panel">
+        <text class="eyebrow-label">训练证据</text>
         <text class="title">训练复盘</text>
         <text class="muted">正式能力变化与练习掌握度分开显示。</text>
         <view
@@ -25,7 +25,7 @@
           <text>{{ item.score || 0 }}</text>
         </view>
       </view>
-      <view class="card panel">
+      <view class="flow-section panel mastery-section">
         <text class="section-title">微训练掌握度</text>
         <view
           v-for="(item, key) in profile.practiceMastery"
@@ -90,10 +90,17 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentLearning))
 }
 .panel {
   display: flex;
-  margin-bottom: 22rpx;
-  padding: 30rpx;
+  max-width: 920px;
+  margin: 0 auto;
   flex-direction: column;
   gap: 16rpx;
+}
+.flow-section {
+  padding: 30rpx 2rpx 36rpx;
+}
+.mastery-section {
+  padding-top: 36rpx;
+  border-top: 1rpx solid var(--med-border);
 }
 .title {
   color: var(--med-navy);
@@ -117,5 +124,6 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentLearning))
 .secondary {
   color: var(--med-brand);
   background: var(--med-brand-soft);
+  border-radius: var(--med-radius-sm);
 }
 </style>

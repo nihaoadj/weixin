@@ -11,7 +11,7 @@
       @secondary-action="back"
     /><view
       v-if="data.student"
-      class="card panel"
+      class="panel"
       ><text class="title">{{ data.student.nickname }}的学习档案</text
       ><text class="muted"
         >完成 {{ data.completed || 0 }} / {{ data.assigned || 0 }} 项完整病例 · 当前均分
@@ -39,7 +39,7 @@
       ></view
     ><view
       v-if="data.practiceMastery"
-      class="card panel"
+      class="panel"
       ><text class="section-title">练习掌握度</text
       ><view
         v-for="(item, key) in data.practiceMastery"
@@ -50,7 +50,7 @@
       ></view
     ><view
       v-if="data.cases"
-      class="card panel"
+      class="panel"
       ><text class="section-title">病例变化</text
       ><view
         v-for="item in data.cases"
@@ -64,7 +64,7 @@
       ></view
     ><view
       v-if="data.dimensions?.length"
-      class="card panel"
+      class="panel"
       ><text class="section-title">六维变化</text
       ><view
         v-for="item in data.dimensions"
@@ -80,7 +80,7 @@
       ></view
     ><view
       v-if="data.timeline?.length"
-      class="card panel"
+      class="panel"
       ><text class="section-title">最近评估</text
       ><view
         v-for="item in data.timeline"
@@ -135,7 +135,7 @@ async function load() {
   }
 }
 function back() {
-  backOrRoute(ROUTES.teacherAnalytics)
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'reports', section: 'analytics', classId })
 }
 function handleErrorAction() {
   if (routeInvalid.value) {
@@ -159,7 +159,9 @@ onLoad((query) => {
   }
   void load()
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherAnalytics))
+onBackPress(({ from }) =>
+  handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'reports', section: 'analytics', classId }),
+)
 </script>
 <style scoped>
 .page {
@@ -169,10 +171,16 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherAnalytics))
 }
 .panel {
   display: flex;
-  margin-bottom: 22rpx;
-  padding: 28rpx;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 34rpx 2rpx;
   flex-direction: column;
   gap: 14rpx;
+  border-top: 1rpx solid var(--med-border);
+}
+.page > .panel:first-of-type {
+  padding-top: 12rpx;
+  border-top: 0;
 }
 .title {
   font-size: 34rpx;

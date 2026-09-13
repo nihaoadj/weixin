@@ -22,12 +22,15 @@ from app.modules.learning.infrastructure.models import (
     ReviewState,
     StudentNotification,
 )
+from app.modules.learning.infrastructure.study_models import StudyPath, StudyPracticeAttempt, StudyPracticeGroup
 from app.modules.pbl.infrastructure.models import (
     PblDiagnosticSnapshot,
     PblMessage,
     PblParticipation,
     PblQuestionSuggestion,
     PblSession,
+    PblSubmission,
+    PblTeacherFeedback,
 )
 from app.modules.qa.infrastructure.models import (
     Conversation,
@@ -69,6 +72,8 @@ __all__ = [
     "PblParticipation",
     "PblQuestionSuggestion",
     "PblSession",
+    "PblSubmission",
+    "PblTeacherFeedback",
     "QuestionThread",
     "QuestionThreadMessage",
     "Report",
@@ -78,5 +83,8 @@ __all__ = [
     "ReviewState",
     "StageSubmission",
     "StudentNotification",
+    "StudyPath",
+    "StudyPracticeAttempt",
+    "StudyPracticeGroup",
     "User",
 ]

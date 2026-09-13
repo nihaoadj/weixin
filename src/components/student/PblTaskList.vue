@@ -3,6 +3,7 @@
     ><view class="head"
       ><text class="title">PBL 课后任务</text
       ><button
+        class="action"
         :disabled="loading || busy"
         @click="load"
       >
@@ -28,7 +29,7 @@
       :key="plan.id"
       class="plan"
       ><view class="plan-heading">
-        <view
+        <view class="heading-info"
           ><text class="subtitle"
             >{{ plan.source_context.class_name }} · 课堂 {{ plan.source_context.session_id }}</text
           >
@@ -41,7 +42,10 @@
       ><view
         class="plan-progress"
         :aria-label="`已完成 ${completedCount(plan)} / ${relevantCount(plan)} 项任务`"
-        ><view class="progress-track"><view :style="{ width: `${progressPercent(plan)}%` }" /></view
+        ><view class="progress-track"
+          ><view
+            class="progress-fill"
+            :style="{ width: `${progressPercent(plan)}%` }" /></view
         ><text class="muted">已完成 {{ completedCount(plan) }} / {{ relevantCount(plan) }}</text></view
       >
       <text class="muted"
@@ -87,6 +91,7 @@
         <template v-else-if="unlocked(plan, task)">
           <button
             v-if="task.task_type === 'focused_retry'"
+            class="action"
             :disabled="busy"
             @click="startCase(task)"
           >
@@ -95,10 +100,12 @@
           <template v-else
             ><radio-group
               v-if="task.public_definition.options"
+              class="options"
               @change="answers[task.id] = { selected_option: radioValue($event) }"
               ><label
                 v-for="(option, index) in task.public_definition.options"
                 :key="index"
+                class="option"
                 ><radio
                   :value="String(index)"
                   :checked="answers[task.id]?.selected_option === index"
@@ -108,6 +115,7 @@
             >
             <textarea
               v-else
+              class="answer-input"
               :value="answers[task.id]?.text || ''"
               :disabled="busy"
               :maxlength="4000"
@@ -116,7 +124,7 @@
               @input="answers[task.id] = { text: inputValue($event) }"
             />
             <button
-              class="primary"
+              class="primary action"
               :disabled="busy || !hasAnswer(task)"
               @click="submit(task)"
             >
@@ -231,9 +239,6 @@ defineExpose({ refresh: load })
   gap: 18rpx;
 }
 .tasks {
-  background: var(--med-surface);
-  padding: 24rpx;
-  border-radius: var(--med-radius-md);
   margin-bottom: 24rpx;
 }
 .head {
@@ -244,11 +249,16 @@ defineExpose({ refresh: load })
   gap: 16rpx;
 }
 .title {
-  font-size: 36rpx;
+  font-size: 30rpx;
   font-weight: 800;
 }
 .subtitle {
-  font-size: 29rpx;
+  font-size: 27rpx;
+  font-weight: 700;
+}
+.task-meta {
+  color: var(--med-text-secondary);
+  font-size: 24rpx;
   font-weight: 700;
 }
 .muted {
@@ -266,7 +276,7 @@ defineExpose({ refresh: load })
   justify-content: space-between;
   gap: 16rpx;
 }
-.plan-heading > view {
+.plan-heading > .heading-info {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -303,7 +313,7 @@ defineExpose({ refresh: load })
   background: var(--med-divider);
   border-radius: 99rpx;
 }
-.progress-track > view {
+.progress-track > .progress-fill {
   height: 100%;
   background: var(--med-clinical);
   border-radius: inherit;
@@ -327,17 +337,17 @@ defineExpose({ refresh: load })
   border: 1rpx solid var(--med-clinical);
   box-shadow: 0 8rpx 20rpx rgba(11, 79, 65, 0.08);
 }
-radio-group {
+.options {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
 }
-label {
+.option {
   min-height: 44px;
   display: flex;
   align-items: center;
 }
-textarea {
+.answer-input {
   width: 100%;
   box-sizing: border-box;
   min-height: 120px;
@@ -346,7 +356,7 @@ textarea {
   background: var(--med-primary);
   color: white;
 }
-button {
+.action {
   min-height: 44px;
   font-size: 27rpx;
 }

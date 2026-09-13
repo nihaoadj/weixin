@@ -3,10 +3,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import select
 
 from app.modules.content.domain.knowledge_catalog import CARDS, POINTS
+from app.modules.identity.infrastructure.models import User
 from app.modules.learning.application.knowledge_review import KnowledgeReviewApplication
 from app.modules.learning.application.review_records import ReviewItemRecord, ReviewStateRecord
+from app.modules.learning.infrastructure.models import ReviewState
 from app.shared.actor import Actor
 from app.shared.errors import AppError
 
@@ -146,8 +149,23 @@ def test_knowledge_map_uses_student_review_evidence_not_catalog_browsing() -> No
     assert captured["pathology.cell-injury.reversible"] == "weak"
 
 
-def test_review_http_contract_hides_answer_until_grade(client) -> None:
+def test_exit_quiz_requires_pbl_or_historical_formal_evidence_and_hides_answers(client, db) -> None:
     headers = {"Authorization": f"Bearer {_student_token(client)}"}
+    locked = client.post(
+        "/learning/exit-quiz", headers=headers, json={"topic_codes": ["pathology.cell-injury.reversible"]}
+    )
+    assert locked.status_code == 409
+    student = db.scalar(select(User).where(User.external_id == "t08-student"))
+    assert student is not None
+    db.add(
+        ReviewState(
+            student_id=student.id,
+            card_code="historical:reversible",
+            point_code="pathology.cell-injury.reversible",
+            due_at=NOW,
+        )
+    )
+    db.commit()
     response = client.post(
         "/learning/exit-quiz", headers=headers, json={"topic_codes": ["pathology.cell-injury.reversible"]}
     )
@@ -229,7 +247,7 @@ def test_conversation_summaries_filter_by_confirmed_topic_without_breaking_pagin
     assert page.json()["items"][0]["topic_codes"] == ["pathology.cell-injury.reversible"]
 
 
-def test_teacher_contribution_requires_medical_approval_before_student_visibility(client) -> None:
+def test_teacher_contribution_requires_medical_approval_before_student_visibility(client, db) -> None:
     teacher_headers = {"Authorization": f"Bearer {_teacher_token(client, 't08-card-author')}"}
     payload = {
         "point_code": "pathology.cell-injury.reversible",
@@ -262,6 +280,17 @@ def test_teacher_contribution_requires_medical_approval_before_student_visibilit
     visible = client.get("/knowledge/cards?point_code=pathology.cell-injury.reversible", headers=student_headers)
     assert visible.status_code == 200
     assert visible.json()[0]["correct_option"] is None and visible.json()[0]["explanation"] == ""
+    student = db.scalar(select(User).where(User.external_id == "t08-student"))
+    assert student is not None
+    db.add(
+        ReviewState(
+            student_id=student.id,
+            card_code="historical:teacher-card",
+            point_code="pathology.cell-injury.reversible",
+            due_at=NOW,
+        )
+    )
+    db.commit()
     quiz = client.post(
         "/learning/exit-quiz", headers=student_headers, json={"topic_codes": ["pathology.cell-injury.reversible"]}
     )

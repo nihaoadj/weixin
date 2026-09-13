@@ -1,5 +1,7 @@
 # 架构设计
 
+微信小程序是唯一产品目标。T25 已按用户授权退役 H5 构建、浏览器 E2E 和 H5 专属实现；小程序验证缺口仍按 [微信开发者工具验收](operations/wechat-validation.md) 单独记录，不能由历史浏览器证据补足。
+
 ## 技术栈
 
 ```text
@@ -12,7 +14,7 @@ AI：可选的服务端 gateway；测试禁用真实外部调用
 ## 总体架构
 
 ```text
-微信小程序 / H5
+微信小程序
         ↓
 feature public API → bootstrap wiring → platform HTTP
         ↓
@@ -23,7 +25,7 @@ FastAPI HTTP API
 SQLite（开发或 launcher-owned 临时测试库）
 ```
 
-微信小程序只是客户端入口，不再绑定微信云函数作为核心后端。H5 可接入同一套 FastAPI API。PostgreSQL、对象存储、生产 AI 网关和其他客户端接入是后续方向，不是当前运行调用链或发布承诺。
+微信小程序只是客户端入口，不再绑定微信云函数作为核心后端。PostgreSQL、对象存储、生产 AI 网关和其他客户端接入是后续方向，不是当前运行调用链或发布承诺。
 
 ## 前端目录职责
 
@@ -133,6 +135,24 @@ backend/
 
 # T09：`pbl` 是独立业务模块，拥有课堂会话、参与记录、诊断快照和教师建议题；前端只能通过 `features/pbl/public.ts`，并由 `src/bootstrap/wiring.ts` 选择 API/Demo adapter。建议题发布走 content 的公开桥接，PBL 不直接管理正式题生命周期。
 
+# T20：知识点 PBL 学习路径与私有练习
+
+`content` 提供稳定知识点编码对应的版本化学习材料；`learning` 拥有学习路径、阶段解锁、自主练习、作答和复习到期时间；`pbl` 仍拥有四阶段研讨证据和学生明确提交教师的完成快照。组合根通过窄 port 装配这些能力，页面只调用 `features/learning/public.ts` 与 `features/pbl/public.ts`。
+
+学生主动研讨默认私有，创建时不要求班级。只有完成四阶段且学生选择一个有效班级提交后，接收教师才能查看固定诊断快照；后续私有对话和练习不追加外发。课堂研讨继续遵循原有班级可见性。未审核 AI 练习是 `learning` 的个人记录，独立于正式题、正式评分、知识点稳定状态和 T14 自动达标；教师采用发布仍是正式教学资源的唯一入口。
+
+# T21：教师 PBL 工作区与反馈闭环
+
+`pbl` 继续拥有诊断快照、教师反馈和教师可见性。教师 PBL 页面经同一 public port 组织为“待处理、课堂、跟进”：待处理只汇总当前教师有权读取的课堂诊断及学生明确提交的固定快照；课堂只读取本人班级的课堂 session 和聚合看板；跟进只读取已发布正式任务的进度。教师反馈是不可覆盖的记录，`feedback_only`、`task_published`、`closed` 由 application 在一次事务中写入；发布动作复用 T14 的教师采用和两轮正式任务创建，不能由 AI 自动完成。
+
+学生提交后只读取面向本人的反馈摘要、状态和下一步。教师不能借此取得未提交自主研讨、完整聊天或未审核个人练习；课堂 session 仍按原班级授权。`learning` 通知仅以 `pbl_session` 标识 PBL 反馈入口，不成为师生实时聊天通道。
+
+# T22：教师工作区职责收敛
+
+T22 只重组 T21 能力的前端归属：`problems` 默认承载“诊断建议”，并以“教学资源”分区保留题目、结构化病例、知识补充卡和医学审核入口；`reports` 默认承载“PBL 跟进”，并以“学情总览”和“学习记录”分区组合 analytics 与 reports 公开能力；`pbl` 只组合课堂创建、运行、关闭和逐学生阶段看板。诊断与跟进虽然显示在其他工作区，领域所有权、公开 port、权限和隐私校验仍属于 `features/pbl`。
+
+教师工作台根组件加载一次负责班级范围，并把同一筛选上下文传给诊断、跟进、统计与课堂容器。各分区首次打开才挂载，已打开分区通过 `v-show` 保留筛选、分页、详情和错误状态；列表与详情请求使用独立请求令牌，过期响应不能覆盖新筛选。旧 PBL section 在入口统一规范化，旧 analytics 页面只校验教师身份并跳转到 `reports&section=analytics`，不再渲染第二份统计页面。T22 不改变 API/Demo 装配、后端路由、schema、迁移、OpenAPI、AI 合同或 T14/T20/T21 业务规则。
+
 # T14：PBL 参与级阶段与自动巩固
 
 每个 `PblParticipation` 独立维护明确问题、提出假设、讨论证据、总结解释和完成状态。AI schema v3 只提出当前阶段的 `continue/advance/complete`，PBL application 与 repository 共同校验当前阶段开始后的学生消息证据和相邻推进；完成后新消息被锁定，相同消息 ID 仍返回原结果。
@@ -147,7 +167,7 @@ backend/
 
 学生一级导航固定为课堂、学习、学情、答疑，对应 `StudentPrimaryRoute` 的四个根页面；病例训练、知识地图和练习题继续使用既有 `studentCases` 路径，但由 `view=cases|knowledge|questions` 在学习模块的二级资源页中切换。一级切换使用 `reLaunch`，一级进入详情使用 `navigateTo`，连续训练步骤使用 `redirectTo`；二级页通过明确的逻辑父页面处理直接打开和返回兜底。
 
-教师工作区仍使用 `overview|reports|problems|pbl` 内部 key 和 `?tab=` 深链接，并以 `v-show` 保留切换状态；展示标签收敛为待办、学情、内容、PBL。H5/微信原生导航栏是一级页面唯一可见标题，正文使用不可见页面标题和紧凑上下文条提供无障碍名称，不重复渲染同义 Hero。此变化只影响前端路由语义、页面组合和样式，不改变 feature API、API/Demo 装配、后端接口或数据合同。
+教师工作区仍使用 `overview|reports|problems|pbl` 内部 key 和 `?tab=` 深链接，并以 `v-show` 保留切换状态；展示标签收敛为待办、学情、内容、PBL。微信原生导航栏是一级页面唯一可见标题，正文使用不可见页面标题和紧凑上下文条提供无障碍名称，不重复渲染同义 Hero。此变化只影响前端路由语义、页面组合和样式，不改变 feature API、API/Demo 装配、后端接口或数据合同。
 
 # T17：统一学习研讨
 

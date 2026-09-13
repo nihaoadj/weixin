@@ -9,6 +9,7 @@
 
     <MedState
       v-if="loading"
+      centered
       variant="loading"
       icon="history"
       title="正在整理学情"
@@ -16,6 +17,7 @@
     />
     <MedState
       v-else-if="error"
+      centered
       variant="error"
       icon="retry"
       title="学情加载失败"
@@ -25,6 +27,7 @@
     />
     <MedState
       v-else-if="!page.items.length"
+      centered
       icon="report"
       title="还没有 PBL 学情记录"
       description="进入课堂提出你的疑问，四阶段讨论开始后，这里会逐步形成个人学习档案。"
@@ -33,7 +36,7 @@
     />
 
     <template v-else>
-      <view class="evidence-sheet next-sheet">
+      <view class="focus-section">
         <view
           class="sheet-mark"
           aria-hidden="true"
@@ -50,7 +53,7 @@
         </button>
       </view>
 
-      <view class="evidence-sheet">
+      <view class="insight-section distribution-section">
         <view class="section-head">
           <view><text class="section-kicker">累计轨迹</text><text class="section-title">学习闭环分布</text></view>
           <text class="total">{{ page.summary.totalReports }} 次 PBL</text>
@@ -60,7 +63,7 @@
 
       <view
         v-if="page.summary.recurringTargets.length"
-        class="evidence-sheet"
+        class="insight-section"
       >
         <view class="section-head">
           <view><text class="section-kicker">重复信号</text><text class="section-title">反复出现的学习重点</text></view>
@@ -72,7 +75,7 @@
         />
       </view>
 
-      <view class="evidence-sheet recent-sheet">
+      <view class="insight-section recent-section">
         <view class="section-head">
           <view><text class="section-kicker">最近记录</text><text class="section-title">逐次查看改善过程</text></view>
         </view>
@@ -216,21 +219,22 @@ onShow(() => {
   font-size: 24rpx;
   line-height: 1.6;
 }
-.evidence-sheet {
+.focus-section,
+.insight-section {
   display: flex;
   max-width: 920px;
-  margin: 0 auto 22rpx;
-  padding: 28rpx;
+  margin: 0 auto;
   flex-direction: column;
-  gap: 20rpx;
-  background: var(--med-surface);
-  border: 1rpx solid var(--med-border);
-  border-radius: var(--med-radius-md);
+  gap: 18rpx;
 }
-.next-sheet {
+.focus-section {
   position: relative;
   overflow: hidden;
-  padding-top: 38rpx;
+  padding: 44rpx 2rpx 38rpx;
+}
+.insight-section {
+  padding: 38rpx 2rpx;
+  border-top: 1rpx solid var(--med-border);
 }
 .sheet-mark {
   position: absolute;
@@ -258,8 +262,9 @@ onShow(() => {
 }
 .next-title {
   color: var(--med-ink);
-  font-size: 34rpx;
+  font-size: 38rpx;
   font-weight: 800;
+  line-height: 1.35;
 }
 .next-copy {
   color: var(--med-text-secondary);
@@ -291,19 +296,21 @@ onShow(() => {
 .report-list {
   display: flex;
   flex-direction: column;
+  gap: 16rpx;
 }
 .report-row {
   display: flex;
   width: 100%;
   min-height: 44px;
   margin: 0;
-  padding: 24rpx 0;
+  padding: 24rpx 22rpx;
   flex-direction: column;
   gap: 10rpx;
   color: inherit;
-  background: transparent;
-  border-bottom: 1rpx solid var(--med-divider);
-  border-radius: 0;
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-left: 5rpx solid var(--med-clinical);
+  border-radius: var(--med-radius-sm);
   text-align: left;
 }
 .report-row::after {
@@ -349,28 +356,34 @@ onShow(() => {
 .primary {
   color: white;
   background: var(--med-clinical);
+  border-radius: var(--med-radius-sm);
 }
 .secondary {
   color: var(--med-clinical);
-  background: var(--med-wash);
+  background: transparent;
+  border: 1rpx solid var(--med-border);
+  border-radius: var(--med-radius-sm);
 }
 @media (min-width: 768px) {
   .insight-page {
     padding: 32px 32px 128px;
   }
-  .evidence-sheet {
-    padding: 32px;
+  .focus-section {
+    padding: 44px 4px 40px;
   }
-  .next-sheet {
+  .insight-section {
+    padding: 40px 4px;
+  }
+  .focus-section {
     display: grid;
     grid-template-columns: 1fr auto;
   }
-  .next-sheet .section-kicker,
+  .focus-section .section-kicker,
   .next-title,
   .next-copy {
     grid-column: 1;
   }
-  .next-sheet .primary {
+  .focus-section .primary {
     width: 180px;
     grid-column: 2;
     grid-row: 2 / span 2;

@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiLearningRepository as learning } from '@/features/learning/infrastructure/apiLearningRepository'
 import { apiClassroomRepository } from '@/features/classroom/infrastructure/apiClassroomRepository'
 import { apiAnalyticsRepository } from '@/features/analytics/infrastructure/apiAnalyticsRepository'
-import { demoLearningRepository as demoLearning } from '@/features/learning/infrastructure/demoLearningRepository'
+import {
+  configureDemoTeacherFeedback,
+  demoLearningRepository as demoLearning,
+} from '@/features/learning/infrastructure/demoLearningRepository'
 import { demoClassroomRepository } from '@/features/classroom/infrastructure/demoClassroomRepository'
 import { demoAnalyticsRepository } from '@/features/analytics/infrastructure/demoAnalyticsRepository'
 import { clearApiCache } from '@/platform/http/apiClient'
 import { mockHttp, now, respond } from '@/test/http'
+import { saveSession } from '@/features/identity/public'
 
 const teacher = { ...apiClassroomRepository, ...apiAnalyticsRepository }
 const demoTeacher = { ...demoClassroomRepository, ...demoAnalyticsRepository }
@@ -110,6 +114,29 @@ describe('learning adapter boundaries', () => {
     expect((await learning.getLearningNotifications()).items[0].entityId).toBe(1)
     await learning.markLearningNotificationsRead()
     expect(uni.setStorageSync).not.toHaveBeenCalled()
+  })
+  it('accepts a PBL-session teacher-feedback notification without treating it as a learning plan', async () => {
+    mockHttp((path) =>
+      path === '/notifications'
+        ? {
+            items: [
+              {
+                id: 22,
+                type: 'pbl_teacher_feedback',
+                entity_type: 'pbl_session',
+                entity_id: 8,
+                title: '教师已回应',
+                body: '请补充证据。',
+                created_at: now,
+              },
+            ],
+            unread_count: 1,
+          }
+        : plan,
+    )
+    await expect(learning.getLearningNotifications()).resolves.toMatchObject({
+      items: [{ entityType: 'pbl_session', entityId: 8, type: 'pbl_teacher_feedback' }],
+    })
   })
   it('distinguishes missing current plans, denied access and invalid nested data', async () => {
     vi.mocked(uni.request).mockImplementation((options) => {
@@ -230,5 +257,41 @@ describe('Demo adapter capability boundary', () => {
     expect(await demoTeacher.getAnalyticsCase(1)).toMatchObject({ completedPairs: 0 })
     expect(await demoTeacher.getAnalyticsStudent(1)).toMatchObject({ completed: 0 })
     expect(uni.request).not.toHaveBeenCalled()
+  })
+
+  it("maps only the signed-in student's PBL feedback to a precise readable notification", async () => {
+    saveSession({
+      role: 'student',
+      openid: 'demo-notification-student',
+      nickName: '演示学生',
+      avatarUrl: '',
+      createdAt: now,
+      classIds: ['demo_class_1'],
+    })
+    configureDemoTeacherFeedback({
+      async teacherFeedbackNotifications() {
+        return [
+          {
+            id: 24,
+            sessionId: 'demo-dialogue-feedback-24',
+            actionType: 'feedback_only',
+            body: '请补充形态证据。',
+            createdAt: now,
+          },
+        ]
+      },
+    })
+    await expect(demoLearning.getLearningNotifications(true)).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          type: 'pbl_teacher_feedback',
+          entityType: 'pbl_session',
+          entityId: 'demo-dialogue-feedback-24',
+        }),
+      ],
+      unreadCount: 1,
+    })
+    await demoLearning.markLearningNotificationsRead()
+    await expect(demoLearning.getLearningNotifications(true)).resolves.toEqual({ items: [], unreadCount: 0 })
   })
 })

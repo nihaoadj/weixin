@@ -8,8 +8,26 @@ import type {
   ReviewGrade,
   ReviewItem,
 } from '@/types/knowledge'
+import type { PrivatePracticeFeedback, PrivatePracticeGroup, StudyPathState } from '@/types/study'
 
 export interface LearningRepository {
+  getStudyPath(pointCode: string): Promise<StudyPathState>
+  startStudyPath(input: {
+    pointCode: string
+    clientId: string
+    interactionStyle: 'guided' | 'direct'
+    newRound?: boolean
+  }): Promise<StudyPathState>
+  getStudyPractices(pathId: number): Promise<PrivatePracticeGroup[]>
+  generateStudyPractice(pathId: number, cycle: 1 | 2, clientId: string): Promise<PrivatePracticeGroup>
+  getPrivatePractice(id: number): Promise<PrivatePracticeGroup>
+  getPrivatePracticeHistory(): Promise<PrivatePracticeGroup[]>
+  answerPrivatePractice(input: {
+    groupId: number
+    clientId: string
+    questionIndex: number
+    selectedOption: number
+  }): Promise<PrivatePracticeFeedback>
   getKnowledgeCatalog(): Promise<KnowledgePoint[]>
   getKnowledgeMap(): Promise<KnowledgeMapPoint[]>
   createExitQuiz(topicCodes: string[]): Promise<ReviewCard[]>

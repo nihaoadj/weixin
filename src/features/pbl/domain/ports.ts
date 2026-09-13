@@ -4,7 +4,7 @@ export type PblSessionKind = 'classroom' | 'student_initiated'
 export type StudentClassSummary = { id: string; name: string; code: string }
 export type PblSession = {
   id: string
-  classId: string
+  classId?: string
   topicCode: string
   status: string
   createdAt?: string
@@ -78,8 +78,82 @@ export type PblParticipation = {
   styleSelectedAt?: string
 }
 export type LearningDialogue = { session: PblSession; participation?: PblParticipation }
+export type LearningDialogueSubmission = {
+  sessionId: string
+  snapshotId: string
+  knowledgeGaps: KnowledgeGap[]
+  reasoningIssues: ReasoningIssue[]
+  evidenceSummary: string
+  questions: Array<{ id: string; title: string; prompt: string }>
+  submission?: { sessionId: string; snapshotId: string; classId: string; source: string; submittedAt?: string }
+  teacherStatus?: 'pending' | 'responded' | 'task_published' | 'closed'
+  feedbacks?: Array<{ id: string; actionType: string; body: string; createdAt?: string; planId?: string }>
+  nextAction?: string
+}
 export type LearningDialoguePage = { items: PblSession[]; total: number; limit: number; offset: number }
 export type PblFilters = { classId?: string; sessionId?: string; studentId?: string; status?: string; offset?: number }
+export type PblWorkStatus = 'pending' | 'responded' | 'task_published' | 'closed'
+export type PblWorkItem = {
+  snapshotId: string
+  sessionId: string
+  source: 'student_submission' | 'classroom_diagnostic'
+  status: PblWorkStatus
+  student: { id: string; name: string }
+  class: { id: string; name: string }
+  topic: string
+  enteredAt?: string
+  lastActivityAt?: string
+  knowledgeGapCount: number
+  reasoningIssueCount: number
+  nextAction: string
+}
+export type PblTeacherFeedback = {
+  id: string
+  snapshotId: string
+  planId?: string
+  actionType: string
+  body: string
+  createdAt?: string
+}
+export type TeacherPblSession = {
+  id: string
+  classId: string
+  className: string
+  topicCode: string
+  status: string
+  createdAt?: string
+  closedAt?: string
+}
+export type PblFollowUpStatus = 'in_progress' | 'cycle_2' | 'support_needed' | 'improved'
+export type PblFollowUp = {
+  planId: number
+  studentId: number
+  studentName: string
+  classId: number
+  className: string
+  sessionId: number
+  sessionTopic: string
+  status: PblFollowUpStatus
+  currentCycle: number
+  verificationStatus: string
+  automationExhausted: boolean
+  failedTargets: Array<{ target_type: string; target_code: string; label?: string }>
+}
+export type TeacherPblDashboard = {
+  session: { id: string; classId: string; status: string }
+  summary: PblSummary
+  students: Array<{
+    studentId: string
+    studentName: string
+    currentPhase: string
+    phaseStatus: string
+    snapshotId?: string
+    workItemStatus?: PblWorkStatus
+    taskProgress: { completed: number; total: number }
+    currentCycle?: number
+    verificationStatus?: string
+  }>
+}
 export type PblTargets = { studentIds?: number[]; wholeClass?: boolean; includeCaseRetry?: boolean }
 export type PblTask = {
   id: number
@@ -138,7 +212,7 @@ export type PblPlan = {
     result?: string
     cycle?: number
     offline_support_required?: boolean
-    failed_targets?: Array<{ target_type: string; target_code: string }>
+    failed_targets?: Array<{ target_type: string; target_code: string; label?: string }>
     checks?: Array<{
       target_type: string
       target_code: string
@@ -302,11 +376,18 @@ export interface PblRepository {
   dialogue(id: string): Promise<LearningDialogue>
   createDialogue(input: {
     clientSessionId: string
-    classId: string
+    classId?: string
     interactionStyle: InteractionStyle
     goalPointCodes: string[]
   }): Promise<LearningDialogue>
   startDialogue(id: string, interactionStyle: InteractionStyle): Promise<LearningDialogue>
+  dialogueSubmission(id: string): Promise<LearningDialogueSubmission>
+  submitDialogue(input: {
+    id: string
+    snapshotId: string
+    classId: string
+    clientSubmissionId: string
+  }): Promise<LearningDialogueSubmission>
   active(): Promise<PblSession[]>
   sessions(classId: string): Promise<PblSession[]>
   createSession(classId: string, topicCode: string, caseId: string, goals: string[]): Promise<PblSession>
@@ -314,6 +395,35 @@ export interface PblRepository {
   participation(id: string): Promise<PblParticipation>
   message(id: string, content: string, clientMessageId: string): Promise<PblParticipation>
   diagnostics(filters?: PblFilters): Promise<{ items: PblDiagnostic[]; total: number }>
+  workItems(
+    filters?: PblFilters & { source?: PblWorkItem['source']; workStatus?: PblWorkStatus },
+  ): Promise<{ items: PblWorkItem[]; total: number; summary: Record<PblWorkStatus, number> }>
+  workItem(
+    snapshotId: string,
+  ): Promise<{ workItem?: PblWorkItem; diagnostic: PblDiagnostic; feedbacks: PblTeacherFeedback[] }>
+  feedback(input: {
+    snapshotId: string
+    clientFeedbackId: string
+    body: string
+    actionType: 'feedback_only' | 'task_published' | 'closed'
+    suggestion?: PblSuggestion
+    targets?: PblTargets
+  }): Promise<PblTeacherFeedback>
+  teacherSessions(filters?: {
+    classId?: string
+    status?: string
+    offset?: number
+  }): Promise<{ items: TeacherPblSession[]; total: number }>
+  dashboard(classId: string, sessionId: string): Promise<TeacherPblDashboard>
+  followUps(filters?: {
+    classId?: string
+    sessionId?: string
+    studentId?: string
+    status?: PblFollowUpStatus
+    offset?: number
+  }): Promise<{ items: PblFollowUp[]; total: number }>
+  followUp(planId: number): Promise<{ plan: PblPlan; feedbacks: PblTeacherFeedback[] }>
+  followUpFeedback(planId: number, clientFeedbackId: string, body: string): Promise<PblTeacherFeedback>
   diagnostic(id: string): Promise<PblDiagnostic>
   revisions(id: string): Promise<PblDiagnostic[]>
   editSuggestion(item: PblSuggestion, reject?: boolean): Promise<PblSuggestion>

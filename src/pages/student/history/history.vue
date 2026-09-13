@@ -6,9 +6,9 @@
         @click="openChat"
       >
         返回研讨</button
-      ><text class="eyebrow-label">LEARNING TIMELINE</text><text class="heading-title">学习记录</text></view
+      ><text class="eyebrow-label">旧答疑归档</text><text class="heading-title">学习记录</text></view
     >
-    <view class="topic-filter card">
+    <view class="topic-filter">
       <text class="filter-label">按学习主题筛选</text>
       <view class="filter-actions">
         <picker
@@ -226,7 +226,9 @@ function openReport(conversationId: string) {
   margin: 0 0 14rpx;
   padding: 0 14rpx;
   color: var(--med-clinical);
-  background: var(--med-wash);
+  background: transparent;
+  border-bottom: 1rpx solid var(--med-clinical);
+  border-radius: 0;
   font-size: 23rpx;
 }
 .history-card {
@@ -235,11 +237,12 @@ function openReport(conversationId: string) {
 }
 .topic-filter {
   display: flex;
-  margin-bottom: 22rpx;
-  padding: 18rpx 22rpx;
+  margin-bottom: 28rpx;
+  padding: 18rpx 2rpx 22rpx;
   align-items: center;
   justify-content: space-between;
   gap: 16rpx;
+  border-bottom: 1rpx solid var(--med-border);
 }
 .filter-label {
   color: var(--med-muted);

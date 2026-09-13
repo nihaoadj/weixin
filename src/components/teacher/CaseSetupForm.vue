@@ -1,8 +1,5 @@
 <template>
-  <view
-    ref="fieldRoot"
-    class="case-setup"
-  >
+  <view class="case-setup">
     <view class="setup-content">
       <view class="setup-main">
         <view class="setup-heading">
@@ -120,11 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { activateButtonOnKey } from '@/components/ui/keyboard'
-// #ifdef H5
-import { useNativeFieldA11y } from '@/components/ui/nativeFieldA11y'
-// #endif
 
 defineProps<{ topic: string; level: string; objectives: string; busy: boolean; error: string }>()
 
@@ -140,11 +133,6 @@ const reviewSteps = [
   { step: '04', title: '评价量表', copy: '检查评价语句与关键词。' },
   { step: '05', title: '预览核对', copy: '区分学生与教师内容。' },
 ]
-
-const fieldRoot = ref()
-// #ifdef H5
-useNativeFieldA11y(fieldRoot)
-// #endif
 
 function emitValue(eventName: 'update:topic' | 'update:level' | 'update:objectives', event: unknown) {
   const value =

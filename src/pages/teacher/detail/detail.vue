@@ -133,7 +133,7 @@ function toggleReviewTopic(code: string) {
 }
 
 function back() {
-  backOrRoute(ROUTES.teacherWorkspace, { tab: 'reports' })
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'reports', section: 'records' })
 }
 
 onLoad((options) => {
@@ -141,7 +141,7 @@ onLoad((options) => {
   const id = typeof options?.reportId === 'string' ? options.reportId : ''
   void loadReport(id)
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'reports' }))
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'reports', section: 'records' }))
 
 async function loadReport(id: string) {
   if (isLoading.value) return

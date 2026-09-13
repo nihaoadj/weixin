@@ -21,7 +21,6 @@ backend/**/__pycache__/
 *.local
 *.tsbuildinfo
 test-results/
-playwright-report/
 
 .env
 .env.*

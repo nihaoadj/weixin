@@ -9,6 +9,10 @@ from app.platform.database import Base
 class PblSession(Base):
     __tablename__ = "pbl_sessions"
     __table_args__ = (
+        CheckConstraint(
+            "session_kind != 'classroom' OR (class_id IS NOT NULL AND teacher_id IS NOT NULL)",
+            name="ck_pbl_classroom_scope",
+        ),
         Index("ix_pbl_sessions_class_status", "class_id", "status"),
         UniqueConstraint("created_by_student_id", "client_session_id", name="uq_pbl_session_student_client"),
         CheckConstraint("session_kind IN ('classroom', 'student_initiated')", name="ck_pbl_session_kind"),
@@ -20,8 +24,8 @@ class PblSession(Base):
         ),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"), index=True)
-    teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    class_id: Mapped[int | None] = mapped_column(ForeignKey("classes.id"), nullable=True, index=True)
+    teacher_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     session_kind: Mapped[str] = mapped_column(String(30), default="classroom", server_default="classroom")
     created_by_student_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", name="fk_pbl_session_created_student"), nullable=True, index=True
@@ -46,9 +50,7 @@ class PblParticipation(Base):
     __tablename__ = "pbl_participations"
     __table_args__ = (
         UniqueConstraint("session_id", "student_id", name="uq_pbl_participation_student"),
-        CheckConstraint(
-            "interaction_style IN ('guided', 'direct')", name="ck_pbl_participation_interaction_style"
-        ),
+        CheckConstraint("interaction_style IN ('guided', 'direct')", name="ck_pbl_participation_interaction_style"),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("pbl_sessions.id", ondelete="CASCADE"), index=True)
@@ -124,3 +126,44 @@ class PblQuestionSuggestion(Base):
     status: Mapped[str] = mapped_column(String(20), default="proposed")
     version: Mapped[int] = mapped_column(Integer, default=1)
     problem_id: Mapped[int | None] = mapped_column(ForeignKey("problems.id"), nullable=True, unique=True)
+
+
+class PblSubmission(Base):
+    __tablename__ = "pbl_submissions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("pbl_sessions.id"), unique=True)
+    snapshot_id: Mapped[int] = mapped_column(ForeignKey("pbl_diagnostic_snapshots.id"))
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"))
+    teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    client_submission_id: Mapped[str] = mapped_column(String(100))
+    source: Mapped[str] = mapped_column(String(30), default="student")
+    preview_payload: Mapped[dict[str, object]] = mapped_column(JSON, default=dict, nullable=False)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PblTeacherFeedback(Base):
+    """Immutable teacher communication attached to a visible PBL snapshot or plan."""
+
+    __tablename__ = "pbl_teacher_feedbacks"
+    __table_args__ = (
+        UniqueConstraint("teacher_id", "client_feedback_id", name="uq_pbl_teacher_feedback_client"),
+        CheckConstraint(
+            "action_type IN ('feedback_only', 'task_published', 'closed', 'follow_up')",
+            name="ck_pbl_teacher_feedback_action",
+        ),
+        Index("ix_pbl_teacher_feedback_snapshot_created", "snapshot_id", "created_at"),
+        Index("ix_pbl_teacher_feedback_student_created", "student_id", "created_at"),
+        Index("ix_pbl_teacher_feedback_class_action_created", "class_id", "action_type", "created_at"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    snapshot_id: Mapped[int] = mapped_column(ForeignKey("pbl_diagnostic_snapshots.id"), nullable=False)
+    plan_id: Mapped[int | None] = mapped_column(ForeignKey("learning_plans.id"), nullable=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"), nullable=False)
+    teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    suggestion_id: Mapped[int | None] = mapped_column(ForeignKey("pbl_question_suggestions.id"), nullable=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    client_feedback_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

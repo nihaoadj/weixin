@@ -96,7 +96,7 @@ describe('teacher report review document', () => {
     await wrapper.get('.submit-button').trigger('click')
     await flushPromises()
     expect(reviewReport).toHaveBeenLastCalledWith('report-review-test', 88, '请补充推理依据。', [])
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'reports' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'reports', section: 'records' })
   })
 
   it('keeps reviewed reports editable and disables duplicate submissions', async () => {
@@ -140,7 +140,7 @@ describe('teacher report review document', () => {
     expect(wrapper.text()).toContain('报告暂不可批阅')
     expect(backOrRoute).not.toHaveBeenCalled()
     await wrapper.get('.med-state__action').trigger('click')
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'reports' })
+    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'reports', section: 'records' })
     expect(reviewReport).not.toHaveBeenCalled()
   })
 

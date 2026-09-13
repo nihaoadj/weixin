@@ -10,13 +10,7 @@
     "src/features/content/infrastructure/pathologyCatalog.generated.json"
   ],
   "aliases": { "@/": "src/" },
-  "frameworkModules": [
-    "vue",
-    "@dcloudio/uni-app",
-    "@dcloudio/uni-components",
-    "@dcloudio/uni-h5",
-    "@dcloudio/uni-mp-weixin"
-  ],
+  "frameworkModules": ["vue", "@dcloudio/uni-app", "@dcloudio/uni-components", "@dcloudio/uni-mp-weixin"],
   "platformIoMembers": [
     "request",
     "getStorage",

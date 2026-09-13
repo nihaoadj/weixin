@@ -1,8 +1,5 @@
 <template>
-  <view
-    ref="authoringRoot"
-    class="safe-page case-authoring-page page-enter"
-  >
+  <view class="safe-page case-authoring-page page-enter">
     <view class="page-container case-authoring-shell">
       <view class="authoring-header">
         <view class="title-block">
@@ -110,7 +107,6 @@
             <view>
               <text class="step-count">第 {{ step }} 步，共 {{ authoringSteps.length }} 步</text>
               <text
-                ref="stepTitleRef"
                 role="heading"
                 aria-level="2"
                 tabindex="-1"
@@ -713,9 +709,6 @@ import { computed, nextTick, ref } from 'vue'
 import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import CaseSetupForm from '@/components/teacher/CaseSetupForm.vue'
 import { activateButtonOnKey } from '@/components/ui/keyboard'
-// #ifdef H5
-import { useNativeFieldA11y } from '@/components/ui/nativeFieldA11y'
-// #endif
 import { requireRole } from '@/features/identity/public'
 import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
 import {
@@ -764,16 +757,6 @@ const referenceText = ref('')
 const currentStatus = ref<Problem['status']>('待审核')
 const reviewStatus = ref<NonNullable<Problem['medicalReviewStatus']>>('not_submitted')
 const savedSnapshot = ref(caseSnapshot())
-const authoringRoot = ref()
-type StepTitleTarget = {
-  focus?: (options?: { preventScroll?: boolean }) => void
-  $el?: { focus?: (options?: { preventScroll?: boolean }) => void }
-}
-const stepTitleRef = ref<StepTitleTarget>()
-// #ifdef H5
-useNativeFieldA11y(authoringRoot)
-// #endif
-
 function back() {
   if (saving.value || publishing.value || submittingReview.value || loading.value || hydrating.value) {
     uni.showToast({ title: '正在处理病例，请稍候', icon: 'none' })
@@ -794,7 +777,7 @@ function back() {
 }
 
 function leaveEditor() {
-  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems' })
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
 }
 
 function caseSnapshot() {
@@ -878,11 +861,6 @@ function next() {
 async function alignStepContext() {
   await nextTick()
   uni.pageScrollTo({ selector: '.step-overview', duration: 0 })
-  // #ifdef H5
-  const target = stepTitleRef.value
-  const element = target?.$el ?? target
-  element?.focus?.({ preventScroll: true })
-  // #endif
 }
 
 function addFact() {
@@ -1043,7 +1021,7 @@ onBackPress(({ from }) => {
     back()
     return true
   }
-  return handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems' })
+  return handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
 })
 </script>
 

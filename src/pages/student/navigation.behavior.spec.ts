@@ -13,6 +13,7 @@ describe('student page navigation contracts', () => {
       ['./learning/plan.vue', 'studentLearning'],
       ['./learning/drill.vue', 'backTarget'],
       ['./learning/review.vue', 'studentLearning'],
+      ['./learning/knowledge-node.vue', 'studentCases'],
     ]
 
     for (const [relativePath, fallback] of expectedFallbacks) {
@@ -62,5 +63,11 @@ describe('student page navigation contracts', () => {
     expect(history).toContain('ROUTES.studentReport')
     expect(chat).not.toContain("'/pages/report/report'")
     expect(history).not.toContain("'/pages/report/report'")
+  })
+
+  it('opens a teacher PBL-feedback notification at its submitted dialogue', async () => {
+    const learning = await pageSource('./learning/index.vue')
+    expect(learning).toContain("item.entityType === 'pbl_session'")
+    expect(learning).toContain('relaunchTo(ROUTES.studentPbl, { dialogueId: item.entityId })')
   })
 })

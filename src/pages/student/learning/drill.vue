@@ -9,12 +9,12 @@
       @action="back"
     />
     <template v-else>
-      <view class="card panel"
-        ><text class="eyebrow-label">MICRO DRILL</text><text class="title">{{ definition.title || '微训练' }}</text
+      <view class="flow-section panel"
+        ><text class="eyebrow-label">微训练</text><text class="title">{{ definition.title || '微训练' }}</text
         ><text class="muted">{{ definition.context }}</text
         ><text class="instruction">{{ definition.instruction }}</text></view
       >
-      <view class="card panel">
+      <view class="flow-section panel answer-section">
         <textarea
           v-model="answer"
           :maxlength="1200"
@@ -30,7 +30,7 @@
       >
       <view
         v-if="result"
-        class="card panel result"
+        class="result-panel panel result"
         ><text class="score">{{ result.score }} 分</text><text>{{ result.feedback }}</text
         ><text class="muted">下一步：{{ result.nextStep }}</text
         ><text
@@ -154,10 +154,25 @@ onBackPress(({ from }) => {
 }
 .panel {
   display: flex;
-  margin-bottom: 22rpx;
-  padding: 30rpx;
+  max-width: 920px;
+  margin: 0 auto;
   flex-direction: column;
   gap: 16rpx;
+}
+.flow-section {
+  padding: 30rpx 2rpx 36rpx;
+}
+.answer-section {
+  padding-top: 36rpx;
+  border-top: 1rpx solid var(--med-border);
+}
+.result-panel {
+  margin-top: 24rpx;
+  padding: 28rpx;
+  background: var(--med-surface);
+  border: 1rpx solid var(--med-border);
+  border-left: 5rpx solid var(--med-clinical);
+  border-radius: var(--med-radius-sm);
 }
 .title {
   color: var(--med-navy);
@@ -184,10 +199,12 @@ textarea {
 .primary {
   color: #fff;
   background: var(--med-brand);
+  border-radius: var(--med-radius-sm);
 }
 .secondary {
   color: var(--med-brand);
   background: var(--med-brand-soft);
+  border-radius: var(--med-radius-sm);
 }
 .result {
   align-items: flex-start;

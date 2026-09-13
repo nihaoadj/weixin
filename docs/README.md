@@ -27,4 +27,4 @@
 - [前端阶段记录](records/frontend/README.md)：已完成的动效设计与视觉验收。
 - [架构迁移路线](records/architecture/cloud-demo-to-fastapi-migration.md)：从云函数和本地 Demo 到 FastAPI 的历史路线。
 - [初始版本比较](audit/initial-version-comparison.md)：初始版本的功能、安全与迁移差异。
-- [T01–T07 工程治理记录](update_plan/01-07-engineering-governance/README.md)：任务书、执行状态和交付证据。
+- [T01–T25 阶段概述](update_plan/01-25-summary.md)：已归档阶段、当前边界与待验收项。

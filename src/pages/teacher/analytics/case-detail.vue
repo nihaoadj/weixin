@@ -11,13 +11,13 @@
       @secondary-action="back"
     /><view
       v-if="data.problem"
-      class="card panel"
+      class="panel"
       ><text class="title">{{ data.problem.title }}</text
       ><text class="muted"
         >完成 {{ data.completedPairs || 0 }} / {{ data.eligiblePairs || 0 }} · 当前均分
         {{ data.currentAverageScore ?? '—' }} · 平均用时 {{ data.averageDurationMinutes ?? '—' }} 分钟</text
       ></view
-    ><view class="card panel filters"
+    ><view class="panel filters"
       ><text class="section-title">统计范围</text
       ><view class="dates"
         ><input
@@ -35,7 +35,7 @@
       </button></view
     ><view
       v-if="data.dimensions?.length"
-      class="card panel"
+      class="panel"
       ><text class="section-title">六维变化</text
       ><view
         v-for="item in data.dimensions"
@@ -51,7 +51,7 @@
       ></view
     ><view
       v-if="data.distribution"
-      class="card panel"
+      class="panel"
       ><text class="section-title">成绩分布</text
       ><view
         v-for="(value, key) in data.distribution"
@@ -62,7 +62,7 @@
       ></view
     ><view
       v-if="data.students"
-      class="card panel"
+      class="panel"
       ><text class="section-title">学生下钻</text
       ><view
         v-for="item in data.students"
@@ -120,7 +120,7 @@ function openStudent(id: number) {
   goDetail(ROUTES.teacherAnalyticsStudentDetail, { studentId: id, classId: classId })
 }
 function back() {
-  backOrRoute(ROUTES.teacherAnalytics)
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'reports', section: 'analytics', classId })
 }
 function handleErrorAction() {
   if (routeInvalid.value) {
@@ -144,7 +144,9 @@ onLoad((query) => {
   }
   void load()
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherAnalytics))
+onBackPress(({ from }) =>
+  handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'reports', section: 'analytics', classId }),
+)
 </script>
 <style scoped>
 .page {
@@ -154,10 +156,16 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherAnalytics))
 }
 .panel {
   display: flex;
-  margin-bottom: 22rpx;
-  padding: 28rpx;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 34rpx 2rpx;
   flex-direction: column;
   gap: 14rpx;
+  border-top: 1rpx solid var(--med-border);
+}
+.page > .panel:first-of-type {
+  padding-top: 12rpx;
+  border-top: 0;
 }
 .title {
   font-size: 34rpx;

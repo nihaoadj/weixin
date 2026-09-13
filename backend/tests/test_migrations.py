@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
 from sqlalchemy import create_engine, inspect, text
 
 
@@ -92,6 +93,23 @@ def test_actual_head_0020_upgrades_empty_and_0008_databases() -> None:
             assert {"interaction_style", "style_selected_at"} <= {
                 column["name"] for column in inspector.get_columns("pbl_participations")
             }
+            assert {"snapshot_id", "student_id", "class_id", "teacher_id", "preview_payload"} <= {
+                column["name"] for column in inspector.get_columns("pbl_submissions")
+            }
+            assert {"study_paths", "study_practice_groups", "study_practice_attempts"} <= set(
+                inspector.get_table_names()
+            )
+            assert "pbl_teacher_feedbacks" in set(inspector.get_table_names())
+            feedback_columns = {column["name"] for column in inspector.get_columns("pbl_teacher_feedbacks")}
+            assert {
+                "snapshot_id",
+                "plan_id",
+                "student_id",
+                "class_id",
+                "teacher_id",
+                "action_type",
+                "body",
+            } <= feedback_columns
             assert "uq_pbl_session_student_client" in {
                 constraint["name"] for constraint in inspector.get_unique_constraints("pbl_sessions")
             }
@@ -141,6 +159,29 @@ def test_actual_head_0020_upgrades_empty_and_0008_databases() -> None:
             engine.dispose()
 
 
+def test_0023_rejects_downgrade_when_teacher_feedback_exists() -> None:
+    cwd = Path(__file__).parents[1]
+    with TemporaryDirectory(prefix="medical-qa-t21-migration-") as directory:
+        db_path = Path(directory) / "teacher-feedback.db"
+        database_url = f"sqlite:///{db_path.as_posix()}"
+        run_alembic(cwd, database_url, "upgrade", "head")
+        engine = create_engine(database_url)
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO pbl_teacher_feedbacks "
+                        "(snapshot_id, student_id, class_id, teacher_id, action_type, body, client_feedback_id) "
+                        "VALUES (1, 1, 1, 1, 'feedback_only', '保留反馈历史', 't21-downgrade')"
+                    )
+                )
+            with pytest.raises(AssertionError, match="teacher feedback exists"):
+                run_alembic(cwd, database_url, "downgrade", "20260908_0022")
+            assert "pbl_teacher_feedbacks" in set(inspect(engine).get_table_names())
+        finally:
+            engine.dispose()
+
+
 def test_0020_backfills_history_and_enforces_student_creation_idempotency() -> None:
     cwd = Path(__file__).parents[1]
     with TemporaryDirectory(prefix="medical-qa-t17-from-0019-") as directory:
@@ -159,8 +200,7 @@ def test_0020_backfills_history_and_enforces_student_creation_idempotency() -> N
                 )
                 connection.execute(
                     text(
-                        "INSERT INTO classes (id, name, code, teacher_id, status) "
-                        "VALUES (1, 'T17', 't17', 1, 'active')"
+                        "INSERT INTO classes (id, name, code, teacher_id, status) VALUES (1, 'T17', 't17', 1, 'active')"
                     )
                 )
                 connection.execute(
@@ -170,18 +210,20 @@ def test_0020_backfills_history_and_enforces_student_creation_idempotency() -> N
                     )
                 )
                 connection.execute(
-                    text(
-                        "INSERT INTO pbl_participations (id, session_id, student_id, revision) VALUES (1, 1, 2, 0)"
-                    )
+                    text("INSERT INTO pbl_participations (id, session_id, student_id, revision) VALUES (1, 1, 2, 0)")
                 )
             run_alembic(cwd, database_url, "upgrade", "head")
             with engine.begin() as connection:
-                assert connection.execute(
-                    text("SELECT session_kind FROM pbl_sessions WHERE id = 1")
-                ).scalar_one() == "classroom"
-                assert connection.execute(
-                    text("SELECT interaction_style FROM pbl_participations WHERE id = 1")
-                ).scalar_one() == "guided"
+                assert (
+                    connection.execute(text("SELECT session_kind FROM pbl_sessions WHERE id = 1")).scalar_one()
+                    == "classroom"
+                )
+                assert (
+                    connection.execute(
+                        text("SELECT interaction_style FROM pbl_participations WHERE id = 1")
+                    ).scalar_one()
+                    == "guided"
+                )
                 connection.execute(
                     text(
                         "INSERT INTO pbl_sessions "
@@ -214,7 +256,7 @@ def test_0020_downgrade_refuses_unified_dialogue_business_data() -> None:
     with TemporaryDirectory(prefix="medical-qa-t17-downgrade-") as directory:
         db_path = Path(directory) / "t17.db"
         database_url = f"sqlite:///{db_path.as_posix()}"
-        run_alembic(cwd, database_url, "upgrade", "head")
+        run_alembic(cwd, database_url, "upgrade", "20260907_0020")
         engine = create_engine(database_url)
         try:
             with engine.begin() as connection:
@@ -227,8 +269,7 @@ def test_0020_downgrade_refuses_unified_dialogue_business_data() -> None:
                 )
                 connection.execute(
                     text(
-                        "INSERT INTO classes (id, name, code, teacher_id, status) "
-                        "VALUES (1, 'T17', 't17', 1, 'active')"
+                        "INSERT INTO classes (id, name, code, teacher_id, status) VALUES (1, 'T17', 't17', 1, 'active')"
                     )
                 )
                 connection.execute(
@@ -254,8 +295,7 @@ def test_0020_downgrade_refuses_unified_dialogue_business_data() -> None:
             assert "pre-T17 backup" in attempted.stdout + attempted.stderr
             with engine.connect() as connection:
                 assert (
-                    connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-                    == "20260907_0020"
+                    connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20260907_0020"
                 )
         finally:
             engine.dispose()
@@ -330,8 +370,7 @@ def test_0018_downgrade_refuses_schema_v3_business_data() -> None:
                 )
                 connection.execute(
                     text(
-                        "INSERT INTO classes (id, name, code, teacher_id, status) "
-                        "VALUES (1, 'T14', 't14', 1, 'active')"
+                        "INSERT INTO classes (id, name, code, teacher_id, status) VALUES (1, 'T14', 't14', 1, 'active')"
                     )
                 )
                 connection.execute(
@@ -341,9 +380,7 @@ def test_0018_downgrade_refuses_schema_v3_business_data() -> None:
                     )
                 )
                 connection.execute(
-                    text(
-                        "INSERT INTO pbl_participations (id, session_id, student_id, revision) VALUES (1, 1, 2, 1)"
-                    )
+                    text("INSERT INTO pbl_participations (id, session_id, student_id, revision) VALUES (1, 1, 2, 1)")
                 )
                 connection.execute(
                     text(

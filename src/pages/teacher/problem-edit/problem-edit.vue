@@ -1,8 +1,5 @@
 <template>
-  <view
-    ref="fieldRoot"
-    class="safe-page edit-page page-enter"
-  >
+  <view class="safe-page edit-page page-enter">
     <view
       v-if="isLoading"
       class="editor-state"
@@ -339,18 +336,10 @@
 import { computed, nextTick, ref } from 'vue'
 import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import { activateButtonOnKey } from '@/components/ui/keyboard'
-// #ifdef H5
-import { useNativeFieldA11y } from '@/components/ui/nativeFieldA11y'
-// #endif
 import { requireRole } from '@/features/identity/public'
 import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
 import { findProblemAsync, upsertProblemAsync } from '@/features/content/public'
 import type { ProblemTarget, ProblemType } from '@/types/domain'
-
-const fieldRoot = ref(null)
-// #ifdef H5
-useNativeFieldA11y(fieldRoot)
-// #endif
 
 const knownTypes: ProblemType[] = ['医学常识', '模拟诊疗', '病例分析']
 const targetOptions: Array<{ value: ProblemTarget; label: string; description: string }> = [
@@ -397,7 +386,7 @@ function back() {
 }
 
 function leaveEditor() {
-  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems' })
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
 }
 
 function problemSnapshot() {
@@ -442,7 +431,7 @@ onBackPress(({ from }) => {
     back()
     return true
   }
-  return handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems' })
+  return handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
 })
 
 async function loadProblem(id: string) {

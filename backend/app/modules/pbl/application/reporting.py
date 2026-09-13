@@ -4,7 +4,12 @@ from collections import Counter
 from datetime import UTC, datetime
 
 from app.modules.content.public import knowledge_point_view
-from app.modules.pbl.application.records import PblReportParticipationRecord, PblSessionRecord, PblSnapshotRecord
+from app.modules.pbl.application.records import (
+    PblReportParticipationRecord,
+    PblSessionRecord,
+    PblSnapshotRecord,
+    PblTeacherFeedbackRecord,
+)
 from app.modules.pbl.domain.catalog import PATHOLOGY_POINTS
 
 PHASES = ("problem_framing", "hypothesis", "evidence", "synthesis")
@@ -57,9 +62,7 @@ def _report_status(participation, plans: list[dict]) -> str:
     active = [plan for plan in plans if plan.get("status") == "active"]
     if active:
         return (
-            "learning_cycle_2"
-            if any(int(plan.get("current_cycle", 1)) >= 2 for plan in active)
-            else "learning_cycle_1"
+            "learning_cycle_2" if any(int(plan.get("current_cycle", 1)) >= 2 for plan in active) else "learning_cycle_1"
         )
     if plans and any(plan.get("verification_status") == "needs_reinforcement" for plan in plans):
         return "support_needed"
@@ -197,9 +200,7 @@ def _plan_view(plan: dict, personal_snapshot_ids: set[int]) -> dict:
                 {
                     "target_type": str(target.get("target_type", "")),
                     "target_code": str(target.get("target_code", "")),
-                    "label": _target_label(
-                        str(target.get("target_type", "")), str(target.get("target_code", ""))
-                    ),
+                    "label": _target_label(str(target.get("target_type", "")), str(target.get("target_code", ""))),
                 }
                 for target in item.get("failed_targets", [])
             ],
@@ -251,6 +252,8 @@ def build_report(
     session: PblSessionRecord,
     source: PblReportParticipationRecord | None,
     plans: list[dict],
+    submission: dict | None = None,
+    teacher_feedbacks: tuple[PblTeacherFeedbackRecord, ...] = (),
 ) -> dict:
     participation = source.participation if source else None
     personal_snapshot_ids = {item.id for item in source.snapshots} if source else set()
@@ -289,6 +292,19 @@ def build_report(
         events.append(
             {"type": "discussion_completed", "label": "完成四阶段讨论", "occurred_at": participation.phase_completed_at}
         )
+    if submission and submission.get("submitted_at"):
+        events.append(
+            {"type": "submitted_to_teacher", "label": "已提交教师审阅", "occurred_at": submission["submitted_at"]}
+        )
+    feedback_labels = {
+        "feedback_only": ("teacher_feedback", "收到教师反馈"),
+        "task_published": ("task_published", "教师已发布正式任务"),
+        "closed": ("teacher_feedback", "教师已结束本轮研讨"),
+        "follow_up": ("follow_up_feedback", "收到教师补充支持"),
+    }
+    for feedback in teacher_feedbacks:
+        event_type, label = feedback_labels.get(feedback.action_type, ("teacher_feedback", "收到教师反馈"))
+        events.append({"type": event_type, "label": label, "occurred_at": feedback.created_at})
     for plan in safe_plans:
         if plan["created_at"]:
             events.append({"type": "tasks_published", "label": "课后学习任务已发布", "occurred_at": plan["created_at"]})

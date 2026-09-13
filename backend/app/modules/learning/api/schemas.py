@@ -94,8 +94,9 @@ class NotificationRead(BaseModel):
         "pbl_mastery_improved",
         "pbl_reinforcement_activated",
         "pbl_automation_exhausted",
+        "pbl_teacher_feedback",
     ]
-    entity_type: Literal["learning_plan"]
+    entity_type: Literal["learning_plan", "pbl_session"]
     entity_id: int
     title: str
     body: str

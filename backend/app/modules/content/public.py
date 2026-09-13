@@ -171,3 +171,9 @@ def review_record_view(review: ReviewRecord) -> dict[str, object]:
         "case_digest": review.case_digest,
         "created_at": review.created_at,
     }
+
+def study_material_view(point_code: str) -> dict | None:
+    """Public, versioned reading material for a single stable knowledge code."""
+    from app.modules.content.domain.study_materials import study_material
+
+    return study_material(point_code)

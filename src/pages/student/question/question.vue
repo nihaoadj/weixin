@@ -112,7 +112,10 @@
       </view>
     </template>
 
-    <PathologyKnowledgeMap v-else-if="activeView === 'knowledge'" />
+    <PathologyKnowledgeMap
+      v-else-if="activeView === 'knowledge'"
+      ref="knowledgeMap"
+    />
 
     <template v-else>
       <view class="resource-section">
@@ -192,6 +195,7 @@ const viewOptions: Array<{ key: ResourceView; label: string }> = [
   { key: 'questions', label: '练习' },
 ]
 const activeView = ref<ResourceView>('cases')
+const knowledgeMap = ref<{ refresh: () => Promise<void> }>()
 const cases = ref<Problem[]>([])
 const pblQuestions = ref<Problem[]>([])
 const questions = ref<StudentQuestion[]>([])
@@ -263,7 +267,10 @@ function openQuestion(id: string) {
 }
 
 onShow(() => {
-  if (requireRole('student')) void load()
+  if (requireRole('student')) {
+    void load()
+    void knowledgeMap.value?.refresh()
+  }
 })
 
 onBackPress(({ from }) => handleBackPress(from, ROUTES.studentLearning))

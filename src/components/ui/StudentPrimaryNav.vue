@@ -14,22 +14,21 @@ defineProps<{ active: StudentTab }>()
 .student-primary-nav {
   position: fixed;
   z-index: 20;
-  right: 24rpx;
-  bottom: calc(18rpx + env(safe-area-inset-bottom));
-  left: 24rpx;
-  padding: 8rpx;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 0 16rpx calc(12rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
   background: var(--med-surface);
-  border: 1rpx solid var(--med-border);
-  border-radius: 24rpx;
-  box-shadow: 0 14rpx 40rpx rgba(11, 34, 57, 0.12);
+  border-top: 1rpx solid var(--med-border);
 }
 
 @media screen and (min-width: 900px) {
   .student-primary-nav {
     right: auto;
     left: 50%;
-    width: calc(1080px - 48rpx);
-    max-width: calc(100% - 48rpx);
+    width: 1080px;
+    max-width: 100%;
     transform: translateX(-50%);
   }
 }

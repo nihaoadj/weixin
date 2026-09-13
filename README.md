@@ -1,6 +1,8 @@
 # 临床思维学习助手
 
-这是一个基于 **uni-app + Vue 3 + TypeScript + FastAPI** 的医学教学助手，可构建为微信小程序和 H5。试点版包含学生问答、形成性报告、教师批阅、练习题管理和显式 Demo/API 双运行模式。
+微信小程序是唯一产品目标。T01–T25 阶段已收缩为 [简要概述](docs/update_plan/01-25-summary.md)；未完成的小程序验证明确保留为待验收，不能由历史浏览器结果替代。前端验收遵循 [微信开发者工具验收规范](docs/operations/wechat-validation.md)，本次暂不执行真机验证。
+
+这是一个基于 **uni-app + Vue 3 + TypeScript + FastAPI** 的微信小程序医学教学助手。试点版包含学生问答、形成性报告、教师批阅、练习题管理和显式 Demo/API 双运行模式。
 
 ## 快速运行
 
@@ -17,12 +19,6 @@ npm run dev:mp-weixin
 
 ```text
 dist/dev/mp-weixin/
-```
-
-H5 本地预览：
-
-```bash
-npm run dev:h5
 ```
 
 ## 运行模式
@@ -46,11 +42,9 @@ API 模式不会静默回退到本地数据，登录或请求失败会明确提�
 npm run type-check
 npm run lint
 npm run test
-npm run test:e2e
 npm run backend:check
 npm run contract:check
 npm run build:mp-weixin
-npm run build:h5
 ```
 
 ## 项目结构
@@ -69,9 +63,9 @@ npm run build:h5
 
 - 学生端：医学问答、历史记录、练习题、多轮回答、学习报告、提交批阅，以及五阶段结构化病例训练、六维报告和针对性重练。
 - 教师端：报告批阅、评分反馈、题目新建/编辑/审核/发布、班级成员管理、病例与学生学情下钻；病例草稿可由确定性 AI 兜底生成。
-- 工程侧：OpenAPI 契约生成、API/Demo Repository adapter、运行时数据校验、内存请求缓存、AI 服务边界和 uni-app 双端构建。
+- 工程侧：OpenAPI 契约生成、API/Demo Repository adapter、运行时数据校验、内存请求缓存、AI 服务边界和微信小程序构建。
 
-运行前先执行 `npm run backend:migrate` 应用 Alembic 数据库迁移。当前试点身份入口可通过 `ENABLE_DEMO_AUTH=false` 关闭；生产环境默认不应启用 Demo 登录。API 模式下微信小程序通过服务端 `code2Session` 登录，H5 开发仍可使用 Demo 登录。接入真实用户和医学数据前，仍需完成账号授权、隐私合规和医学安全审核。
+运行前先执行 `npm run backend:migrate` 应用 Alembic 数据库迁移。当前试点身份入口可通过 `ENABLE_DEMO_AUTH=false` 关闭；生产环境默认不应启用 Demo 登录。API 模式下微信小程序通过服务端 `code2Session` 登录。接入真实用户和医学数据前，仍需完成账号授权、隐私合规和医学安全审核。
 
 ## 结构化病例训练
 

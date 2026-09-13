@@ -65,6 +65,15 @@ describe('shared UI behavior', () => {
     expect(wrapper.get('button').text()).toBe('退出')
   })
 
+  it('supports a reduced-height context bar when the workspace content is already self-explanatory', () => {
+    const wrapper = mount(PageContextBar, {
+      props: { label: '内容管理', compact: true },
+      slots: { actions: '<button>退出</button>' },
+    })
+    expect(wrapper.classes()).toContain('compact')
+    expect(wrapper.find('.context-description').exists()).toBe(false)
+  })
+
   it('navigates every student tab and marks the active tab', async () => {
     const wrapper = mount(StudentNav, { props: { active: 'learning' } })
     expect(wrapper.findAll('.active')).toHaveLength(1)

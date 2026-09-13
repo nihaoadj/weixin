@@ -1,7 +1,7 @@
 <template>
   <view
     class="med-state card"
-    :class="`med-state--${variant}`"
+    :class="[`med-state--${variant}`, { 'med-state--centered': centered }]"
     :role="variant === 'error' ? 'alert' : 'status'"
     :aria-live="variant === 'error' ? 'assertive' : 'polite'"
     :aria-busy="variant === 'loading' ? 'true' : undefined"
@@ -58,8 +58,9 @@ withDefaults(
     description: string
     actionLabel?: string
     secondaryActionLabel?: string
+    centered?: boolean
   }>(),
-  { variant: 'empty', actionLabel: '', secondaryActionLabel: '' },
+  { variant: 'empty', actionLabel: '', secondaryActionLabel: '', centered: false },
 )
 
 defineEmits<{ action: []; secondaryAction: [] }>()
@@ -72,6 +73,21 @@ defineEmits<{ action: []; secondaryAction: [] }>()
   align-items: center;
   flex-direction: column;
   text-align: center;
+}
+.med-state--centered {
+  position: fixed;
+  top: var(--window-top, 0px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 0 34rpx calc(180rpx + env(safe-area-inset-bottom));
+  justify-content: center;
+  background: var(--med-page);
+  border: 0;
+  border-radius: 0;
+  box-sizing: border-box;
 }
 .med-state__icon {
   display: flex;

@@ -9893,6 +9893,836 @@
         }
       }
     },
+    "/learning/knowledge-points/{point_code}/study": {
+      "get": {
+        "tags": ["study-paths"],
+        "summary": "Read Study",
+        "operationId": "read_study_learning_knowledge_points__point_code__study_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "point_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Point Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyRead"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/learning/knowledge-points/{point_code}/study/start": {
+      "post": {
+        "tags": ["study-paths"],
+        "summary": "Start Study",
+        "operationId": "start_study_learning_knowledge_points__point_code__study_start_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "point_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Point Code"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudyStart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyRead"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/learning/study-paths/{path_id}/practices": {
+      "get": {
+        "tags": ["study-paths"],
+        "summary": "Practices",
+        "operationId": "practices_learning_study_paths__path_id__practices_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "path_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Path Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PracticeGroupRead"
+                  },
+                  "title": "Response Practices Learning Study Paths  Path Id  Practices Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "post": {
+        "tags": ["study-paths"],
+        "summary": "Start Practice",
+        "operationId": "start_practice_learning_study_paths__path_id__practices_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "path_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Path Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeStart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeGroupRead"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/learning/self-practices/history": {
+      "get": {
+        "tags": ["study-paths"],
+        "summary": "History",
+        "operationId": "history_learning_self_practices_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PracticeGroupRead"
+                  },
+                  "type": "array",
+                  "title": "Response History Learning Self Practices History Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/learning/self-practices/{group_id}": {
+      "get": {
+        "tags": ["study-paths"],
+        "summary": "Practice",
+        "operationId": "practice_learning_self_practices__group_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeGroupRead"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/learning/self-practices/{group_id}/answers": {
+      "post": {
+        "tags": ["study-paths"],
+        "summary": "Answer",
+        "operationId": "answer_learning_self_practices__group_id__answers_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeAnswer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeFeedback"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/classes/{class_id}/pbl-sessions": {
       "post": {
         "tags": ["pbl"],
@@ -11636,6 +12466,1183 @@
         }
       }
     },
+    "/teacher/pbl-work-items": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Work Items",
+        "operationId": "work_items_teacher_pbl_work_items_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": ["student_submission", "classroom_diagnostic"],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": ["pending", "responded", "task_published", "closed"],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "student_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkItemPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/teacher/pbl-work-items/{snapshot_id}": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Work Item",
+        "operationId": "work_item_teacher_pbl_work_items__snapshot_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkItemDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/teacher/pbl-work-items/{snapshot_id}/feedback": {
+      "post": {
+        "tags": ["pbl"],
+        "summary": "Work Item Feedback",
+        "operationId": "work_item_feedback_teacher_pbl_work_items__snapshot_id__feedback_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeacherFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherFeedbackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/teacher/pbl-follow-ups": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Follow Ups",
+        "operationId": "follow_ups_teacher_pbl_follow_ups_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "student_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": ["in_progress", "cycle_2", "support_needed", "improved"],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/teacher/pbl-follow-ups/{plan_id}": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Follow Up",
+        "operationId": "follow_up_teacher_pbl_follow_ups__plan_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/teacher/pbl-follow-ups/{plan_id}/feedback": {
+      "post": {
+        "tags": ["pbl"],
+        "summary": "Follow Up Feedback",
+        "operationId": "follow_up_feedback_teacher_pbl_follow_ups__plan_id__feedback_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowUpFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherFeedbackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/teacher/pbl-sessions": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Teacher Sessions",
+        "operationId": "teacher_sessions_teacher_pbl_sessions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherSessionPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/classes/{class_id}/pbl-sessions/{session_id}/dashboard": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Session Dashboard",
+        "operationId": "session_dashboard_classes__class_id__pbl_sessions__session_id__dashboard_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/teacher/pbl-question-suggestions/{suggestion_id}": {
       "patch": {
         "tags": ["pbl"],
@@ -12906,6 +14913,244 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Summary"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/student/learning-dialogues/{session_id}/submission": {
+      "get": {
+        "tags": ["pbl"],
+        "summary": "Submission Preview",
+        "operationId": "submission_preview_student_learning_dialogues__session_id__submission_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "post": {
+        "tags": ["pbl"],
+        "summary": "Submit Dialogue",
+        "operationId": "submit_dialogue_student_learning_dialogues__session_id__submission_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionPreview"
                 }
               }
             }
@@ -14423,6 +16668,221 @@
         "required": ["topic_code", "case_id", "goal_point_codes"],
         "title": "Create"
       },
+      "DashboardResponse": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/DashboardSessionResponse"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/DashboardSummaryResponse"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardStudentRow"
+            },
+            "type": "array",
+            "title": "Students"
+          }
+        },
+        "type": "object",
+        "required": ["session", "summary", "students"],
+        "title": "DashboardResponse"
+      },
+      "DashboardSessionResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": ["id", "class_id", "status"],
+        "title": "DashboardSessionResponse"
+      },
+      "DashboardStudentRow": {
+        "properties": {
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "student_name": {
+            "type": "string",
+            "title": "Student Name"
+          },
+          "current_phase": {
+            "type": "string",
+            "title": "Current Phase"
+          },
+          "phase_status": {
+            "type": "string",
+            "title": "Phase Status"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "work_item_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Item Status"
+          },
+          "task_progress": {
+            "$ref": "#/components/schemas/TaskProgressResponse"
+          },
+          "current_cycle": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Cycle"
+          },
+          "verification_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "student_name",
+          "current_phase",
+          "phase_status",
+          "last_activity_at",
+          "snapshot_id",
+          "work_item_status",
+          "task_progress",
+          "current_cycle",
+          "verification_status"
+        ],
+        "title": "DashboardStudentRow"
+      },
+      "DashboardSummaryResponse": {
+        "properties": {
+          "participants": {
+            "type": "integer",
+            "title": "Participants"
+          },
+          "diagnoses": {
+            "type": "integer",
+            "title": "Diagnoses"
+          },
+          "published_suggestions": {
+            "type": "integer",
+            "title": "Published Suggestions"
+          },
+          "plans": {
+            "type": "integer",
+            "title": "Plans"
+          },
+          "tasks": {
+            "type": "integer",
+            "title": "Tasks"
+          },
+          "completed_tasks": {
+            "type": "integer",
+            "title": "Completed Tasks"
+          },
+          "pending_verification": {
+            "type": "integer",
+            "title": "Pending Verification"
+          },
+          "improved": {
+            "type": "integer",
+            "title": "Improved"
+          },
+          "needs_reinforcement": {
+            "type": "integer",
+            "title": "Needs Reinforcement"
+          },
+          "objective_retest_count": {
+            "type": "integer",
+            "title": "Objective Retest Count"
+          },
+          "objective_retest_average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective Retest Average"
+          },
+          "phase_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Phase Counts"
+          },
+          "automation_exhausted": {
+            "type": "integer",
+            "title": "Automation Exhausted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "participants",
+          "diagnoses",
+          "published_suggestions",
+          "plans",
+          "tasks",
+          "completed_tasks",
+          "pending_verification",
+          "improved",
+          "needs_reinforcement",
+          "objective_retest_count",
+          "objective_retest_average",
+          "phase_counts",
+          "automation_exhausted"
+        ],
+        "title": "DashboardSummaryResponse"
+      },
       "DiagnosticPageResponse": {
         "properties": {
           "items": {
@@ -14458,8 +16918,15 @@
             "title": "Client Session Id"
           },
           "class_id": {
-            "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Class Id"
           },
           "interaction_style": {
@@ -14478,7 +16945,7 @@
           }
         },
         "type": "object",
-        "required": ["client_session_id", "class_id", "interaction_style", "goal_point_codes"],
+        "required": ["client_session_id", "interaction_style", "goal_point_codes"],
         "title": "DialogueCreate"
       },
       "DialogueDetailResponse": {
@@ -14684,6 +17151,650 @@
         "type": "object",
         "required": ["topic_codes"],
         "title": "ExitQuizRequest"
+      },
+      "FailedTargetResponse": {
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": ["target_type", "target_code"],
+        "title": "FailedTargetResponse"
+      },
+      "FollowUpCheckResponse": {
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "evidence_present": {
+            "type": "boolean",
+            "title": "Evidence Present"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": ["target_type", "target_code", "threshold", "score", "evidence_present", "passed"],
+        "title": "FollowUpCheckResponse"
+      },
+      "FollowUpDecisionBasis": {
+        "properties": {
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "cycle": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle"
+          },
+          "offline_support_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offline Support Required"
+          },
+          "failed_targets": {
+            "items": {
+              "$ref": "#/components/schemas/FailedTargetResponse"
+            },
+            "type": "array",
+            "title": "Failed Targets"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpCheckResponse"
+            },
+            "type": "array",
+            "title": "Checks"
+          }
+        },
+        "type": "object",
+        "title": "FollowUpDecisionBasis"
+      },
+      "FollowUpDetailResponse": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/FollowUpPlanResponse"
+          },
+          "feedbacks": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherFeedbackResponse"
+            },
+            "type": "array",
+            "title": "Feedbacks"
+          }
+        },
+        "type": "object",
+        "required": ["plan", "feedbacks"],
+        "title": "FollowUpDetailResponse"
+      },
+      "FollowUpEvaluationResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "cycle_number": {
+            "type": "integer",
+            "title": "Cycle Number"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "result": {
+            "type": "string",
+            "title": "Result"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpCheckResponse"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "failed_targets": {
+            "items": {
+              "$ref": "#/components/schemas/FailedTargetResponse"
+            },
+            "type": "array",
+            "title": "Failed Targets"
+          },
+          "automation_exhausted": {
+            "type": "boolean",
+            "title": "Automation Exhausted"
+          },
+          "record_source": {
+            "type": "string",
+            "title": "Record Source"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "cycle_number",
+          "policy_version",
+          "result",
+          "checks",
+          "failed_targets",
+          "automation_exhausted",
+          "record_source",
+          "evaluated_at"
+        ],
+        "title": "FollowUpEvaluationResponse"
+      },
+      "FollowUpFeedbackRequest": {
+        "properties": {
+          "client_feedback_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Client Feedback Id"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": ["client_feedback_id", "body"],
+        "title": "FollowUpFeedbackRequest"
+      },
+      "FollowUpListItem": {
+        "properties": {
+          "plan_id": {
+            "type": "integer",
+            "title": "Plan Id"
+          },
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "student_name": {
+            "type": "string",
+            "title": "Student Name"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "session_topic": {
+            "type": "string",
+            "title": "Session Topic"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["in_progress", "cycle_2", "support_needed", "improved"],
+            "title": "Status"
+          },
+          "current_cycle": {
+            "type": "integer",
+            "title": "Current Cycle"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "automation_exhausted": {
+            "type": "boolean",
+            "title": "Automation Exhausted"
+          },
+          "failed_targets": {
+            "items": {
+              "$ref": "#/components/schemas/FailedTargetResponse"
+            },
+            "type": "array",
+            "title": "Failed Targets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "student_id",
+          "student_name",
+          "class_id",
+          "class_name",
+          "session_id",
+          "session_topic",
+          "status",
+          "current_cycle",
+          "verification_status",
+          "automation_exhausted",
+          "failed_targets"
+        ],
+        "title": "FollowUpListItem"
+      },
+      "FollowUpPageResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": ["items", "total", "limit", "offset"],
+        "title": "FollowUpPageResponse"
+      },
+      "FollowUpPlanResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "source_context": {
+            "$ref": "#/components/schemas/FollowUpSourceContext"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "current_cycle": {
+            "type": "integer",
+            "title": "Current Cycle"
+          },
+          "max_cycles": {
+            "type": "integer",
+            "title": "Max Cycles"
+          },
+          "automation_exhausted": {
+            "type": "boolean",
+            "title": "Automation Exhausted"
+          },
+          "decision_basis": {
+            "$ref": "#/components/schemas/FollowUpDecisionBasis"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpTaskResponse"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpEvaluationResponse"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "student_id",
+          "source_context",
+          "status",
+          "verification_status",
+          "current_cycle",
+          "max_cycles",
+          "automation_exhausted",
+          "decision_basis",
+          "tasks",
+          "evaluations"
+        ],
+        "title": "FollowUpPlanResponse"
+      },
+      "FollowUpPublicDefinition": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "point_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Point Code"
+          },
+          "card_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Code"
+          },
+          "target_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Label"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "type": "object",
+        "required": ["prompt"],
+        "title": "FollowUpPublicDefinition"
+      },
+      "FollowUpSourceContext": {
+        "properties": {
+          "teacher_id": {
+            "type": "integer",
+            "title": "Teacher Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "snapshot_id": {
+            "type": "integer",
+            "title": "Snapshot Id"
+          },
+          "suggestion_id": {
+            "type": "integer",
+            "title": "Suggestion Id"
+          },
+          "point_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Point Codes"
+          },
+          "dimension_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dimension Ids"
+          },
+          "topic_code": {
+            "type": "string",
+            "title": "Topic Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "teacher_id",
+          "class_id",
+          "class_name",
+          "session_id",
+          "snapshot_id",
+          "suggestion_id",
+          "point_codes",
+          "dimension_ids",
+          "topic_code"
+        ],
+        "title": "FollowUpSourceContext"
+      },
+      "FollowUpTaskResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "task_type": {
+            "type": "string",
+            "title": "Task Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "problem_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Id"
+          },
+          "public_definition": {
+            "$ref": "#/components/schemas/FollowUpPublicDefinition"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowUpTaskResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cycle_number": {
+            "type": "integer",
+            "title": "Cycle Number"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_code": {
+            "type": "string",
+            "title": "Target Code"
+          },
+          "variant_code": {
+            "type": "string",
+            "title": "Variant Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "position",
+          "task_type",
+          "status",
+          "problem_id",
+          "public_definition",
+          "result",
+          "cycle_number",
+          "target_type",
+          "target_code",
+          "variant_code"
+        ],
+        "title": "FollowUpTaskResponse"
+      },
+      "FollowUpTaskResult": {
+        "properties": {
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "feedback": {
+            "type": "string",
+            "title": "Feedback"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "answer": {
+            "type": "object",
+            "title": "Answer"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": ["score", "feedback", "evidence", "answer", "submitted_at"],
+        "title": "FollowUpTaskResult"
       },
       "GradeReviewCardRead": {
         "properties": {
@@ -15605,6 +18716,21 @@
         "required": ["action", "rationale"],
         "title": "ManagementItem"
       },
+      "MaterialSection": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": ["title", "text"],
+        "title": "MaterialSection"
+      },
       "MedicalChatRequest": {
         "properties": {
           "prompt": {
@@ -16107,14 +19233,14 @@
               "learning_plan_completed",
               "pbl_mastery_improved",
               "pbl_reinforcement_activated",
-              "pbl_automation_exhausted"
+              "pbl_automation_exhausted",
+              "pbl_teacher_feedback"
             ],
             "title": "Type"
           },
           "entity_type": {
             "type": "string",
-            "enum": ["learning_plan"],
-            "const": "learning_plan",
+            "enum": ["learning_plan", "pbl_session"],
             "title": "Entity Type"
           },
           "entity_id": {
@@ -16437,6 +19563,29 @@
         ],
         "title": "PlanResponse"
       },
+      "PracticeAnswer": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Client Id"
+          },
+          "question_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Question Index"
+          },
+          "selected_option": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Selected Option"
+          }
+        },
+        "type": "object",
+        "required": ["client_id", "question_index", "selected_option"],
+        "title": "PracticeAnswer"
+      },
       "PracticeBlueprint": {
         "properties": {
           "id": {
@@ -16540,6 +19689,196 @@
           "criteria"
         ],
         "title": "PracticeBlueprint"
+      },
+      "PracticeFeedback": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "question_index": {
+            "type": "integer",
+            "title": "Question Index"
+          },
+          "selected_option": {
+            "type": "integer",
+            "title": "Selected Option"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "reference_option": {
+            "type": "integer",
+            "title": "Reference Option"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "question_index",
+          "selected_option",
+          "correct",
+          "explanation",
+          "reference_option",
+          "due_at",
+          "created_at"
+        ],
+        "title": "PracticeFeedback"
+      },
+      "PracticeGroupRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "path_id": {
+            "type": "integer",
+            "title": "Path Id"
+          },
+          "cycle": {
+            "type": "integer",
+            "enum": [1, 2],
+            "title": "Cycle"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["generating", "ready", "failed"],
+            "title": "Status"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/PracticeQuestionRead"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "attempts": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Attempts"
+          },
+          "due_indexes": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Due Indexes"
+          },
+          "can_retest": {
+            "type": "boolean",
+            "title": "Can Retest"
+          },
+          "exhausted": {
+            "type": "boolean",
+            "title": "Exhausted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path_id",
+          "cycle",
+          "status",
+          "failure",
+          "questions",
+          "attempts",
+          "due_indexes",
+          "can_retest",
+          "exhausted"
+        ],
+        "title": "PracticeGroupRead"
+      },
+      "PracticeQuestionRead": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "point_code": {
+            "type": "string",
+            "title": "Point Code"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": ["index", "point_code", "prompt", "options"],
+        "title": "PracticeQuestionRead"
+      },
+      "PracticeStart": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Client Id"
+          },
+          "cycle": {
+            "type": "integer",
+            "enum": [1, 2],
+            "title": "Cycle",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": ["client_id"],
+        "title": "PracticeStart"
+      },
+      "PreviewQuestion": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          }
+        },
+        "type": "object",
+        "required": ["id", "title", "prompt"],
+        "title": "PreviewQuestion"
       },
       "ProblemAuthoringRead": {
         "properties": {
@@ -18928,7 +22267,14 @@
             "title": "Id"
           },
           "class_id": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Class Id"
           },
           "topic_code": {
@@ -19087,6 +22433,41 @@
           "version"
         ],
         "title": "SessionResponse"
+      },
+      "SharedSubmission": {
+        "properties": {
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "snapshot_id": {
+            "type": "integer",
+            "title": "Snapshot Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": ["session_id", "snapshot_id", "class_id", "source", "submitted_at"],
+        "title": "SharedSubmission"
       },
       "StageSubmissionCreate": {
         "properties": {
@@ -19356,6 +22737,327 @@
         "required": ["id", "type", "title", "published_at", "status"],
         "title": "StudentQuestionRead"
       },
+      "StudentTeacherFeedback": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "action_type": {
+            "type": "string",
+            "enum": ["feedback_only", "task_published", "closed", "follow_up"],
+            "title": "Action Type"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          }
+        },
+        "type": "object",
+        "required": ["id", "action_type", "body", "created_at", "plan_id"],
+        "title": "StudentTeacherFeedback"
+      },
+      "StudyMaterialRead": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "point_code": {
+            "type": "string",
+            "title": "Point Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "objective": {
+            "type": "string",
+            "title": "Objective"
+          },
+          "scenario": {
+            "type": "string",
+            "title": "Scenario"
+          },
+          "background": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialSection"
+            },
+            "type": "array",
+            "title": "Background"
+          },
+          "example": {
+            "$ref": "#/components/schemas/MaterialSection"
+          },
+          "remediation": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialSection"
+            },
+            "type": "array",
+            "title": "Remediation"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "review_status": {
+            "type": "string",
+            "enum": ["unreviewed"],
+            "const": "unreviewed",
+            "title": "Review Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "point_code",
+          "title",
+          "objective",
+          "scenario",
+          "background",
+          "example",
+          "remediation",
+          "reference",
+          "review_status"
+        ],
+        "title": "StudyMaterialRead"
+      },
+      "StudyPathRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "point_code": {
+            "type": "string",
+            "title": "Point Code"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "material_version": {
+            "type": "string",
+            "title": "Material Version"
+          }
+        },
+        "type": "object",
+        "required": ["id", "point_code", "session_id", "material_version"],
+        "title": "StudyPathRead"
+      },
+      "StudyRead": {
+        "properties": {
+          "material": {
+            "$ref": "#/components/schemas/StudyMaterialRead"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudyPathRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phase": {
+            "type": "string",
+            "title": "Phase"
+          },
+          "practice_unlocked": {
+            "type": "boolean",
+            "title": "Practice Unlocked"
+          },
+          "review_unlocked": {
+            "type": "boolean",
+            "title": "Review Unlocked"
+          },
+          "legacy_access": {
+            "type": "boolean",
+            "title": "Legacy Access"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "lock_reason": {
+            "type": "string",
+            "title": "Lock Reason"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/StudyPathRead"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material",
+          "path",
+          "phase",
+          "practice_unlocked",
+          "review_unlocked",
+          "legacy_access",
+          "summary",
+          "lock_reason",
+          "history"
+        ],
+        "title": "StudyRead"
+      },
+      "StudyStart": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Client Id"
+          },
+          "interaction_style": {
+            "type": "string",
+            "enum": ["guided", "direct"],
+            "title": "Interaction Style",
+            "default": "guided"
+          },
+          "new_round": {
+            "type": "boolean",
+            "title": "New Round",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["client_id"],
+        "title": "StudyStart"
+      },
+      "SubmissionPreview": {
+        "properties": {
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "snapshot_id": {
+            "type": "integer",
+            "title": "Snapshot Id"
+          },
+          "knowledge_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeGap"
+            },
+            "type": "array",
+            "title": "Knowledge Gaps"
+          },
+          "reasoning_issues": {
+            "items": {
+              "$ref": "#/components/schemas/ReasoningIssue"
+            },
+            "type": "array",
+            "title": "Reasoning Issues"
+          },
+          "evidence_summary": {
+            "type": "string",
+            "title": "Evidence Summary"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewQuestion"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "submission": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SharedSubmission"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "teacher_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["pending", "responded", "task_published", "closed"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Status"
+          },
+          "feedbacks": {
+            "items": {
+              "$ref": "#/components/schemas/StudentTeacherFeedback"
+            },
+            "type": "array",
+            "title": "Feedbacks"
+          },
+          "next_action": {
+            "type": "string",
+            "title": "Next Action",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "snapshot_id",
+          "knowledge_gaps",
+          "reasoning_issues",
+          "evidence_summary",
+          "questions",
+          "submission"
+        ],
+        "title": "SubmissionPreview"
+      },
+      "SubmissionRequest": {
+        "properties": {
+          "snapshot_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Snapshot Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Class Id"
+          },
+          "client_submission_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Client Submission Id"
+          }
+        },
+        "type": "object",
+        "required": ["snapshot_id", "class_id", "client_submission_id"],
+        "title": "SubmissionRequest"
+      },
       "SubmitTask": {
         "properties": {
           "client_submission_id": {
@@ -19500,6 +23202,21 @@
           "automation_exhausted"
         ],
         "title": "Summary"
+      },
+      "TaskProgressResponse": {
+        "properties": {
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": ["completed", "total"],
+        "title": "TaskProgressResponse"
       },
       "TaskResponse": {
         "properties": {
@@ -19814,6 +23531,200 @@
         ],
         "title": "TeacherDiagnosticResponse"
       },
+      "TeacherFeedbackRequest": {
+        "properties": {
+          "client_feedback_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Client Feedback Id"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "action_type": {
+            "type": "string",
+            "enum": ["feedback_only", "task_published", "closed"],
+            "title": "Action Type"
+          },
+          "suggestion_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Id"
+          },
+          "suggestion_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Version"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Prompt",
+            "default": ""
+          },
+          "target_student_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Target Student Ids"
+          },
+          "whole_class": {
+            "type": "boolean",
+            "title": "Whole Class",
+            "default": false
+          },
+          "include_case_retry": {
+            "type": "boolean",
+            "title": "Include Case Retry",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": ["client_feedback_id", "body", "action_type"],
+        "title": "TeacherFeedbackRequest"
+      },
+      "TeacherFeedbackResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "snapshot_id": {
+            "type": "integer",
+            "title": "Snapshot Id"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "action_type": {
+            "type": "string",
+            "title": "Action Type"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "snapshot_id", "plan_id", "action_type", "body", "created_at"],
+        "title": "TeacherFeedbackResponse"
+      },
+      "TeacherSessionListItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "topic_code": {
+            "type": "string",
+            "title": "Topic Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          }
+        },
+        "type": "object",
+        "required": ["id", "class_id", "class_name", "topic_code", "status", "created_at", "closed_at"],
+        "title": "TeacherSessionListItem"
+      },
+      "TeacherSessionPageResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherSessionListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": ["items", "total", "limit", "offset"],
+        "title": "TeacherSessionPageResponse"
+      },
       "TestItem": {
         "properties": {
           "test_name": {
@@ -19962,6 +23873,165 @@
         "type": "object",
         "required": ["code"],
         "title": "WechatLoginRequest"
+      },
+      "WorkItemActor": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": ["id", "name"],
+        "title": "WorkItemActor"
+      },
+      "WorkItemDetailResponse": {
+        "properties": {
+          "work_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkItemResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "diagnostic": {
+            "$ref": "#/components/schemas/TeacherDiagnosticResponse"
+          },
+          "feedbacks": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherFeedbackResponse"
+            },
+            "type": "array",
+            "title": "Feedbacks"
+          }
+        },
+        "type": "object",
+        "required": ["work_item", "diagnostic", "feedbacks"],
+        "title": "WorkItemDetailResponse"
+      },
+      "WorkItemPageResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkItemResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": ["items", "total", "limit", "offset", "summary"],
+        "title": "WorkItemPageResponse"
+      },
+      "WorkItemResponse": {
+        "properties": {
+          "snapshot_id": {
+            "type": "integer",
+            "title": "Snapshot Id"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["student_submission", "classroom_diagnostic"],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "responded", "task_published", "closed"],
+            "title": "Status"
+          },
+          "student": {
+            "$ref": "#/components/schemas/WorkItemActor"
+          },
+          "class": {
+            "$ref": "#/components/schemas/WorkItemActor"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "entered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entered At"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
+          "knowledge_gap_count": {
+            "type": "integer",
+            "title": "Knowledge Gap Count"
+          },
+          "reasoning_issue_count": {
+            "type": "integer",
+            "title": "Reasoning Issue Count"
+          },
+          "next_action": {
+            "type": "string",
+            "title": "Next Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "session_id",
+          "source",
+          "status",
+          "student",
+          "class",
+          "topic",
+          "entered_at",
+          "last_activity_at",
+          "knowledge_gap_count",
+          "reasoning_issue_count",
+          "next_action"
+        ],
+        "title": "WorkItemResponse"
       }
     },
     "securitySchemes": {

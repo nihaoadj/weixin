@@ -69,6 +69,10 @@
       "style": { "navigationBarTitleText": "知识巩固" }
     },
     {
+      "path": "pages/student/learning/knowledge-node",
+      "style": { "navigationBarTitleText": "知识学习" }
+    },
+    {
       "path": "pages/report/report",
       "style": { "navigationBarTitleText": "问答报告" }
     },

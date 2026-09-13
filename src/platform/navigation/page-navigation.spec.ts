@@ -12,6 +12,7 @@ const secondaryPages = [
   '../../pages/student/learning/plan.vue',
   '../../pages/student/learning/drill.vue',
   '../../pages/student/learning/review.vue',
+  '../../pages/student/learning/knowledge-node.vue',
   '../../pages/teacher/detail/detail.vue',
   '../../pages/teacher/problem-edit/problem-edit.vue',
   '../../pages/teacher/case-edit/case-edit.vue',
@@ -22,6 +23,7 @@ const secondaryPages = [
   '../../pages/teacher/analytics/student-detail.vue',
   '../../pages/teacher/medical-review/review-list.vue',
   '../../pages/teacher/medical-review/review-detail.vue',
+  '../../pages/teacher/knowledge-cards/knowledge-cards.vue',
   '../../pages/teacher/classes/classes.vue',
 ]
 
@@ -41,6 +43,26 @@ describe('page navigation boundaries', () => {
     for (const [relativePath, source] of sourceEntries) {
       expect(source, relativePath).not.toMatch(/\buni\.(?:navigateTo|navigateBack|redirectTo|reLaunch|switchTab)\s*\(/)
       expect(source, relativePath).not.toMatch(/(?:goDetail|goReplace|relaunchTo)\(\s*['"]\/pages\//)
+    }
+  })
+
+  it('keeps teacher detail fallbacks aligned with the owning workspaces', async () => {
+    for (const relativePath of [
+      '../../pages/teacher/detail/detail.vue',
+      '../../pages/teacher/analytics/case-detail.vue',
+      '../../pages/teacher/analytics/student-detail.vue',
+      '../../pages/teacher/problem-detail/problem-detail.vue',
+      '../../pages/teacher/problem-edit/problem-edit.vue',
+      '../../pages/teacher/problem-stats/problem-stats.vue',
+      '../../pages/teacher/case-edit/case-edit.vue',
+    ]) {
+      const source = await pageSource(relativePath)
+      const section = relativePath.includes('/analytics/')
+        ? 'analytics'
+        : relativePath.endsWith('/detail/detail.vue')
+          ? 'records'
+          : 'resources'
+      expect(source, relativePath).toContain(`section: '${section}'`)
     }
   })
 })

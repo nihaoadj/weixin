@@ -6,6 +6,8 @@
 
 ## 基线与结果
 
+以下表格是历史升级证据，不代表实时审计。T01–T25 的阶段背景见 [概述](../update_plan/01-25-summary.md)。微信是唯一产品目标；后续工具链验收必须包含 [开发者工具实际渲染](wechat-validation.md)，不能以历史构建替代。
+
 | 范围         |                                    升级前 |                                    升级后 |
 | ------------ | ----------------------------------------: | ----------------------------------------: |
 | npm 全树     |                       15 high、2 critical |                        0 high、0 critical |
@@ -16,7 +18,7 @@
 
 - 所有直接 `@dcloudio/*` 包统一采用 `3.0.0-alpha-5020520260824002`，避免跨批次混用。
 - DCloud 插件的发布元数据把 Vite peer 固定为 5.2.8；Vite 5 含未修复的 high 漏洞，因此项目采用 Vite 7.3.6，并以 `npm ci --legacy-peer-deps` 安装。
-- 已在该组合下完成 TypeScript、H5 构建和微信小程序构建。后续任一 DCloud 或 Vite 升级必须重跑 API/Demo 端到端测试和双端构建。
+- 历史上曾完成 TypeScript、H5 构建和微信小程序构建。H5 已由 T25 退役；后续任一 DCloud 或 Vite 升级必须重跑适用的 API/Demo 测试和微信小程序构建。
 - Python 依赖源文件为 `requirements.in` 与 `requirements-dev.in`；生成的 txt 文件为带哈希的可复现锁文件，禁止手工编辑。
 - JWT 实现从 `python-jose` 迁移到 `PyJWT[crypto]`，移除了 `ecdsa` 的无修复漏洞依赖链；令牌算法、过期时间与接口响应保持不变。
 

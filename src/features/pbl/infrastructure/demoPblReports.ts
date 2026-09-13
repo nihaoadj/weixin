@@ -7,6 +7,7 @@ import type {
   PblReportSession,
   PblReportStatus,
   PblSession,
+  PblTeacherFeedback,
 } from '../domain/ports'
 
 const phaseOrder = ['problem_framing', 'hypothesis', 'evidence', 'synthesis'] as const
@@ -70,6 +71,8 @@ export function demoReportDetail(
   participation: PblParticipation | undefined,
   plans: PblPlan[],
   _studentId: number,
+  teacherFeedbacks: PblTeacherFeedback[] = [],
+  submittedAt?: string,
 ): PblLearningReport {
   const status = statusOf(participation, plans)
   const diagnostic =
@@ -146,6 +149,16 @@ export function demoReportDetail(
   ]
   if (participation?.phaseCompletedAt)
     timeline.push({ type: 'discussion_completed', label: '完成四阶段讨论', occurredAt: participation.phaseCompletedAt })
+  if (submittedAt) timeline.push({ type: 'submitted_to_teacher', label: '已提交教师审阅', occurredAt: submittedAt })
+  for (const feedback of teacherFeedbacks) {
+    const item = {
+      feedback_only: { type: 'teacher_feedback', label: '收到教师反馈' },
+      task_published: { type: 'task_published', label: '教师已发布正式任务' },
+      closed: { type: 'teacher_feedback', label: '教师已结束本轮研讨' },
+      follow_up: { type: 'follow_up_feedback', label: '收到教师补充支持' },
+    }[feedback.actionType] || { type: 'teacher_feedback', label: '收到教师反馈' }
+    timeline.push({ ...item, occurredAt: feedback.createdAt || createdAt })
+  }
   for (const plan of safePlans) {
     timeline.push({ type: 'tasks_published', label: '课后学习任务已发布', occurredAt: plan.createdAt })
     for (const evaluation of plan.evaluations)

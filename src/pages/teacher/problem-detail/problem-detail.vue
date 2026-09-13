@@ -98,7 +98,7 @@ const targetText = computed(() => {
   return '全体学生'
 })
 function back() {
-  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems' })
+  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
 }
 onLoad((options) => {
   if (!requireRole('teacher')) return
@@ -106,7 +106,7 @@ onLoad((options) => {
   problemId = id
   void loadProblem(id)
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems' }))
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' }))
 
 async function loadProblem(id: string) {
   if (loading.value) return

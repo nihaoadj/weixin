@@ -31,7 +31,7 @@
 
 HTTP/cache、底层 storage、runtime、导航、日志和 Zod/OpenAPI conformance 收敛到 `src/platform`；页面仅依赖各 feature 的 `public.ts`。身份迁移和会话格式位于 identity infrastructure，应用只依赖窄 `SessionStoragePort`。由于 T02 已冻结现有生成命令，本轮保留 `src/data/contracts/openapi.generated.ts` 作为唯一生成输出，`src/platform/contracts` 仅持有运行时 schema 与 conformance 引用；没有手改生成物或升级 storage schema version。
 
-边界规则由 `config/frontend-boundaries.json` 声明、`scripts/frontend-boundaries.mjs` 执行，并以 TypeScript AST/SFC script 解析 alias/相对/type-only/re-export/dynamic import、平台 I/O 别名/解构和全图循环；合法/违规 fixture 自测逐项断言。覆盖率不再整包排除 `services/data`，其中只剩生成物和测试；具体证据见 [T03 交付记录](../update_plan/03-frontend-modularization/deliveries/T03.md)。
+边界规则由 `config/frontend-boundaries.json` 声明、`scripts/frontend-boundaries.mjs` 执行，并以 TypeScript AST/SFC script 解析 alias/相对/type-only/re-export/dynamic import、平台 I/O 别名/解构和全图循环；合法/违规 fixture 自测逐项断言。覆盖率不再整包排除 `services/data`，其中只剩生成物和测试；历史阶段证据已收缩至 [T01–T25 概述](../update_plan/01-25-summary.md)。
 
 ## T03 增量修复（2026-08-30）
 

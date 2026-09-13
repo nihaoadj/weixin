@@ -1,6 +1,7 @@
 <template>
   <view
     class="context-bar"
+    :class="{ compact }"
     :aria-label="ariaLabel || label"
   >
     <view class="context-copy">
@@ -26,6 +27,7 @@ defineProps<{
   label: string
   description?: string
   ariaLabel?: string
+  compact?: boolean
 }>()
 </script>
 
@@ -64,6 +66,14 @@ defineProps<{
   flex: none;
   align-items: center;
   gap: 4rpx;
+}
+.context-bar.compact {
+  min-height: 68rpx;
+  padding-top: 6rpx;
+  padding-bottom: 6rpx;
+}
+.compact .context-label {
+  font-size: 26rpx;
 }
 @media screen and (max-width: 360px) {
   .context-label {

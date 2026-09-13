@@ -20,6 +20,52 @@ export interface KnowledgeMapPoint extends KnowledgePoint {
   status: KnowledgeStatus
 }
 
+export type KnowledgeGraphNodeKind = 'root' | 'module' | 'point'
+export type KnowledgeGraphEdgeKind = 'contains' | 'prerequisite'
+
+export interface KnowledgeGraphNode {
+  id: string
+  kind: KnowledgeGraphNodeKind
+  title: string
+  order: number
+  depth: number
+  moduleCode?: string
+  point?: KnowledgeMapPoint
+}
+
+export interface KnowledgeGraphEdge {
+  id: string
+  from: string
+  to: string
+  kind: KnowledgeGraphEdgeKind
+  crossModule: boolean
+}
+
+export interface KnowledgeGraphModule {
+  code: string
+  title: string
+  order: number
+  pointCodes: string[]
+  stableCount: number
+  attentionCount: number
+}
+
+export interface KnowledgeGraphIssue {
+  type: 'duplicate_point' | 'missing_prerequisite' | 'cyclic_prerequisite'
+  pointCode: string
+  relatedCode?: string
+}
+
+export interface KnowledgeGraph {
+  rootId: string
+  nodes: KnowledgeGraphNode[]
+  edges: KnowledgeGraphEdge[]
+  modules: KnowledgeGraphModule[]
+  issues: KnowledgeGraphIssue[]
+  recommendedPointCode?: string
+  recommendedModuleCode?: string
+}
+
 export interface ReviewCard {
   cardCode: string
   pointCode: string

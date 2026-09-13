@@ -161,6 +161,20 @@ def test_both_styles_enter_the_same_teacher_and_learning_loop(client, monkeypatc
 
     queue = client.get("/teacher/pbl-diagnostics", headers=_headers(teacher))
     assert queue.status_code == 200
+    assert all(item["session_id"] != session_id for item in queue.json()["items"])
+    preview = client.get(f"/student/learning-dialogues/{session_id}/submission", headers=_headers(student))
+    assert preview.status_code == 200
+    submitted = client.post(
+        f"/student/learning-dialogues/{session_id}/submission",
+        headers=_headers(student),
+        json={
+            "snapshot_id": preview.json()["snapshot_id"],
+            "class_id": class_id,
+            "client_submission_id": f"loop-share-{style}",
+        },
+    )
+    assert submitted.status_code == 200
+    queue = client.get("/teacher/pbl-diagnostics", headers=_headers(teacher))
     diagnostic = next(item for item in queue.json()["items"] if item["session_id"] == session_id)
     assert diagnostic["schema_version"] == 4
     assert diagnostic["session_kind"] == "student_initiated"

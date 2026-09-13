@@ -100,7 +100,7 @@ class PblApplication:
         self,
         student_id: int,
         client_session_id: str,
-        class_id: int,
+        class_id: int | None,
         interaction_style: str,
         goals: tuple[str, ...],
     ) -> tuple[PblSessionRecord, PblParticipationRecord]:
@@ -112,7 +112,7 @@ class PblApplication:
             (item for item in self._classroom_scope.active_classes_for_student(student_id) if item.id == class_id),
             None,
         )
-        if classroom is None:
+        if class_id is not None and classroom is None:
             raise AppError("RESOURCE_NOT_FOUND", "班级不存在", 404)
         unique_goals = tuple(dict.fromkeys(goals))
         views = tuple(knowledge_point_view(code) for code in unique_goals)
@@ -136,7 +136,7 @@ class PblApplication:
         try:
             session = self._repository.create_session(
                 class_id,
-                classroom.teacher_id,
+                classroom.teacher_id if classroom else None,
                 topic_code,
                 self._provider,
                 self._mode,
@@ -308,6 +308,10 @@ class PblApplication:
         self, teacher_id: int, suggestion_id: int, version: int, title: str, prompt: str, reject: bool
     ) -> PblSuggestionRecord:
         suggestion = self._require_suggestion(teacher_id, suggestion_id)
+        if any(
+            item.action_type == "closed" for item in self._repository.feedbacks_for_snapshot(suggestion.snapshot_id)
+        ):
+            raise AppError("STATE_CONFLICT", "该工作项已关闭", 409)
         if suggestion.version != version:
             raise AppError("STATE_CONFLICT", "建议已被更新", 409)
         if suggestion.status in {"published", "superseded"}:
@@ -332,8 +336,13 @@ class PblApplication:
         target_student_ids: tuple[int, ...],
         whole_class: bool,
         include_case_retry: bool,
+        _commit: bool = True,
     ):
         suggestion = self._require_suggestion(teacher_id, suggestion_id)
+        if any(
+            item.action_type == "closed" for item in self._repository.feedbacks_for_snapshot(suggestion.snapshot_id)
+        ):
+            raise AppError("STATE_CONFLICT", "该工作项已关闭", 409)
         if suggestion.problem_id is not None:
             return suggestion
         if suggestion.status not in {"proposed", "edited"} or suggestion.version != version:
@@ -431,14 +440,362 @@ class PblApplication:
             tuple(resources),
         )
         value = self._repository.attach_problem(suggestion.id, publication.problem_id, version + 2)
-        self._uow.commit()
+        if _commit:
+            self._uow.commit()
         return value
+
+    def _work_status(self, value: PblDiagnosticRecord, feedbacks) -> str:
+        return self._work_status_from_suggestion_statuses(
+            tuple(item.status for item in value.suggestions), feedbacks
+        )
+
+    def _work_status_from_suggestion_statuses(self, suggestion_statuses: tuple[str, ...], feedbacks) -> str:
+        if any(status == "published" for status in suggestion_statuses):
+            return "task_published"
+        closed_suggestions = suggestion_statuses and all(
+            status in {"rejected", "superseded"} for status in suggestion_statuses
+        )
+        if any(item.action_type == "closed" for item in feedbacks) or closed_suggestions:
+            return "closed"
+        return "responded" if feedbacks else "pending"
+
+    def _work_item_view(self, value: PblDiagnosticRecord, feedbacks) -> dict:
+        state = self._work_status(value, feedbacks)
+        return {
+            "snapshot_id": value.snapshot.id,
+            "session_id": value.session_id,
+            "source": "student_submission" if value.session_kind == "student_initiated" else "classroom_diagnostic",
+            "status": state,
+            "student": {"id": value.student_id, "name": value.student_name},
+            "class": {"id": value.class_id, "name": value.class_name},
+            "topic": value.topic_code,
+            "entered_at": value.snapshot.created_at,
+            "last_activity_at": feedbacks[-1].created_at if feedbacks else value.snapshot.created_at,
+            "knowledge_gap_count": len(value.snapshot.knowledge_gaps),
+            "reasoning_issue_count": len(value.snapshot.reasoning_issues),
+            "next_action": {
+                "pending": "审阅并反馈",
+                "responded": "发送补充反馈",
+                "task_published": "查看学习进展",
+                "closed": "已关闭",
+            }[state],
+        }
+
+    def work_items(self, teacher_id: int, limit: int, offset: int, filters: dict):
+        # Status is derived from append-only feedback and published suggestions, so it must be
+        # applied before pagination.  Source/class filtering remains in the repository query.
+        diagnostic_filters = {key: value for key, value in filters.items() if key != "work_status"}
+        values, _ = self.diagnostics(teacher_id, 10000, 0, diagnostic_filters)
+        feedbacks_by_snapshot = self._repository.feedbacks_for_snapshots(
+            tuple(value.snapshot.id for value in values)
+        )
+        all_items = []
+        for value in values:
+            item = self._work_item_view(value, feedbacks_by_snapshot.get(value.snapshot.id, ()))
+            if filters.get("work_status") and item["status"] != filters["work_status"]:
+                continue
+            all_items.append(item)
+        states = ("pending", "responded", "task_published", "closed")
+        summary = {key: sum(item["status"] == key for item in all_items) for key in states}
+        pending = sorted(
+            (item for item in all_items if item["status"] == "pending"),
+            key=lambda item: (item["entered_at"].timestamp() if item["entered_at"] else 0, item["snapshot_id"]),
+        )
+        handled = sorted(
+            (item for item in all_items if item["status"] != "pending"),
+            key=lambda item: (
+                item["last_activity_at"].timestamp() if item["last_activity_at"] else 0,
+                item["snapshot_id"],
+            ),
+            reverse=True,
+        )
+        matching = pending + handled
+        return {
+            "items": matching[offset : offset + limit],
+            "total": len(matching),
+            "limit": limit,
+            "offset": offset,
+            "summary": summary,
+        }
+
+    def work_item(self, teacher_id: int, snapshot_id: int):
+        diagnostic = self.diagnostic(teacher_id, snapshot_id)
+        feedbacks = self._repository.feedbacks_for_snapshot(snapshot_id)
+        return {
+            "work_item": self._work_item_view(diagnostic, feedbacks),
+            "diagnostic": diagnostic,
+            "feedbacks": feedbacks,
+        }
+
+    def feedback(
+        self,
+        teacher_id: int,
+        snapshot_id: int,
+        client_feedback_id: str,
+        body: str,
+        action_type: str,
+        suggestion_id: int | None = None,
+        version: int | None = None,
+        title: str = "",
+        prompt: str = "",
+        target_student_ids: tuple[int, ...] = (),
+        whole_class: bool = False,
+        include_case_retry: bool = False,
+    ):
+        body = body.strip()
+        if not 1 <= len(body) <= 1000 or not 1 <= len(client_feedback_id.strip()) <= 100:
+            raise AppError("VALIDATION_ERROR", "反馈正文或幂等键无效", 422)
+        diagnostic = self.diagnostic(teacher_id, snapshot_id)
+        existing = self._repository.feedbacks_for_snapshot(snapshot_id)
+        retry = next(
+            (
+                item
+                for item in existing
+                if item.teacher_id == teacher_id and item.client_feedback_id == client_feedback_id.strip()
+            ),
+            None,
+        )
+        if retry is not None:
+            if retry.action_type != action_type or retry.body != body or retry.suggestion_id != suggestion_id:
+                raise AppError("STATE_CONFLICT", "反馈幂等键已用于不同内容", 409)
+            return retry
+        if any(item.action_type == "closed" for item in existing):
+            raise AppError("STATE_CONFLICT", "该工作项已关闭", 409)
+        if any(item.action_type == "task_published" for item in existing):
+            raise AppError("STATE_CONFLICT", "正式任务已发布，请在学习跟进中继续反馈", 409)
+        if action_type not in {"feedback_only", "task_published", "closed"}:
+            raise AppError("VALIDATION_ERROR", "反馈动作无效", 422)
+        plan_id = None
+        try:
+            if action_type == "task_published":
+                if suggestion_id is None or version is None:
+                    raise AppError("VALIDATION_ERROR", "发布任务需要建议版本", 422)
+                # Publication, both-cycle plan resources, feedback and notification share this Session.
+                self.adopt(
+                    teacher_id,
+                    suggestion_id,
+                    version,
+                    title,
+                    prompt,
+                    target_student_ids,
+                    whole_class,
+                    include_case_retry,
+                    _commit=False,
+                )
+                plan_id = next(
+                    (
+                        plan["id"]
+                        for plan in self._learning.list(student_id=diagnostic.student_id)
+                        if int((plan.get("source_context") or {}).get("snapshot_id") or 0) == snapshot_id
+                    ),
+                    None,
+                )
+            elif action_type == "closed":
+                for suggestion in diagnostic.suggestions:
+                    if suggestion.status in {"proposed", "edited"}:
+                        self._repository.update_suggestion(
+                            suggestion.id, suggestion.title, suggestion.prompt, "rejected", suggestion.version + 1
+                        )
+            row = self._repository.append_feedback(
+                snapshot_id=snapshot_id,
+                plan_id=plan_id,
+                student_id=diagnostic.student_id,
+                class_id=diagnostic.class_id,
+                teacher_id=teacher_id,
+                action_type=action_type,
+                suggestion_id=suggestion_id,
+                body=body,
+                client_feedback_id=client_feedback_id.strip(),
+            )
+            self._learning.notify(
+                diagnostic.student_id, diagnostic.session_id, "教师已回应你的 PBL 研讨", body, f"pbl-feedback:{row.id}"
+            )
+            self._uow.commit()
+            return row
+        except Exception:
+            self._uow.rollback()
+            raise
+
+    def follow_ups(self, teacher_id: int, limit: int, offset: int, filters: dict):
+        plans = list(self.learning_results(teacher_id, filters.get("session_id")))
+        if filters.get("class_id"):
+            plans = [item for item in plans if item["source_context"]["class_id"] == filters["class_id"]]
+        if filters.get("student_id"):
+            plans = [item for item in plans if item["student_id"] == filters["student_id"]]
+
+        def status(plan):
+            if plan["verification_status"] == "improved":
+                return "improved"
+            if plan["verification_status"] == "needs_reinforcement":
+                return "support_needed"
+            return "cycle_2" if plan["current_cycle"] == 2 else "in_progress"
+
+        if filters.get("status"):
+            plans = [item for item in plans if status(item) == filters["status"]]
+        plans.sort(key=lambda item: (item.get("evaluated_at") or item.get("due_at"), item["id"]), reverse=True)
+        class_scopes = {
+            int(item["source_context"]["class_id"]): self._classroom_scope.owned_active(
+                teacher_id, int(item["source_context"]["class_id"])
+            )
+            for item in plans
+        }
+        student_names = {
+            class_id: {student.id: student.nickname for student in self._classroom_scope.students(teacher_id, class_id)}
+            for class_id in class_scopes
+        }
+        sessions = {
+            item["source_context"]["session_id"]: self._repository.get_session(item["source_context"]["session_id"])
+            for item in plans
+        }
+        return {
+            "items": [
+                {
+                    "plan_id": item["id"],
+                    "student_id": item["student_id"],
+                    "student_name": student_names.get(item["source_context"]["class_id"], {}).get(
+                        item["student_id"], "学生"
+                    ),
+                    "class_id": item["source_context"]["class_id"],
+                    "class_name": class_scopes[item["source_context"]["class_id"]].name,
+                    "session_id": item["source_context"]["session_id"],
+                    "session_topic": (
+                        sessions[item["source_context"]["session_id"]].topic_code
+                        if sessions[item["source_context"]["session_id"]]
+                        else "PBL 课堂"
+                    ),
+                    "status": status(item),
+                    "current_cycle": item["current_cycle"],
+                    "verification_status": item["verification_status"],
+                    "automation_exhausted": item["automation_exhausted"],
+                    "failed_targets": item.get("decision_basis", {}).get("failed_targets", []),
+                }
+                for item in plans[offset : offset + limit]
+            ],
+            "total": len(plans),
+            "limit": limit,
+            "offset": offset,
+        }
+
+    def follow_up(self, teacher_id: int, plan_id: int):
+        plan = next((item for item in self.learning_results(teacher_id) if item["id"] == plan_id), None)
+        if plan is None:
+            raise AppError("RESOURCE_NOT_FOUND", "学习跟进不存在", 404)
+        return {"plan": plan, "feedbacks": self._repository.feedbacks_for_plan(plan_id)}
+
+    def follow_up_feedback(self, teacher_id: int, plan_id: int, client_feedback_id: str, body: str):
+        body = body.strip()
+        client_feedback_id = client_feedback_id.strip()
+        if not 1 <= len(body) <= 1000 or not 1 <= len(client_feedback_id) <= 100:
+            raise AppError("VALIDATION_ERROR", "反馈正文或幂等键无效", 422)
+        plan = self.follow_up(teacher_id, plan_id)["plan"]
+        if plan["verification_status"] != "needs_reinforcement" or not plan["automation_exhausted"]:
+            raise AppError("STATE_CONFLICT", "当前计划不需要补充反馈", 409)
+        context = plan["source_context"]
+        try:
+            row = self._repository.append_feedback(
+                snapshot_id=int(context["snapshot_id"]),
+                plan_id=plan_id,
+                student_id=int(plan["student_id"]),
+                class_id=int(context["class_id"]),
+                teacher_id=teacher_id,
+                action_type="follow_up",
+                suggestion_id=None,
+                body=body,
+                client_feedback_id=client_feedback_id,
+            )
+            self._learning.notify(
+                int(plan["student_id"]),
+                int(context["session_id"]),
+                "教师补充了 PBL 学习建议",
+                body,
+                f"pbl-follow-up:{row.id}",
+            )
+            self._uow.commit()
+            return row
+        except Exception:
+            self._uow.rollback()
+            raise
+
+    def teacher_sessions(
+        self, teacher_id: int, limit: int, offset: int, class_id: int | None = None, status: str | None = None
+    ):
+        rows = list(self._repository.list_sessions_owned_by_teacher(teacher_id))
+        if class_id:
+            rows = [item for item in rows if item.class_id == class_id]
+        if status:
+            rows = [item for item in rows if item.status == status]
+        return {
+            "items": [
+                {
+                    "id": item.id,
+                    "class_id": item.class_id,
+                    "class_name": self._classroom_scope.owned_active(teacher_id, item.class_id).name,
+                    "topic_code": item.topic_code,
+                    "status": item.status,
+                    "created_at": item.created_at,
+                    "closed_at": item.closed_at,
+                }
+                for item in rows[offset : offset + limit]
+            ],
+            "total": len(rows),
+            "limit": limit,
+            "offset": offset,
+        }
+
+    def session_dashboard(self, teacher_id: int, class_id: int, session_id: int):
+        session = self._require_owned_session(teacher_id, class_id, session_id)
+        plans = self.learning_results(teacher_id, session_id)
+        plan_by_student = {}
+        for plan in plans:
+            plan_by_student.setdefault(plan["student_id"], plan)
+        students = {item.id: item for item in self._classroom_scope.students(teacher_id, class_id)}
+        dashboard_items = self._repository.session_dashboard_rows(session.id)
+        snapshot_ids = tuple(item["snapshot_id"] for item in dashboard_items if item["snapshot_id"])
+        feedbacks_by_snapshot = self._repository.feedbacks_for_snapshots(snapshot_ids)
+        suggestion_statuses_by_snapshot = self._repository.suggestion_statuses_for_snapshots(snapshot_ids)
+        rows = []
+        for item in dashboard_items:
+            student = students.get(item["student_id"])
+            if not student:
+                continue
+            plan = plan_by_student.get(item["student_id"])
+            work_item_status = None
+            if item["snapshot_id"]:
+                work_item_status = self._work_status_from_suggestion_statuses(
+                    suggestion_statuses_by_snapshot.get(item["snapshot_id"], ()),
+                    feedbacks_by_snapshot.get(item["snapshot_id"], ()),
+                )
+            rows.append(
+                {
+                    **item,
+                    "student_name": student.nickname,
+                    "work_item_status": work_item_status,
+                    "task_progress": {
+                        "completed": sum(task["status"] == "completed" for task in plan["tasks"]) if plan else 0,
+                        "total": len(plan["tasks"]) if plan else 0,
+                    },
+                    "current_cycle": plan["current_cycle"] if plan else None,
+                    "verification_status": plan["verification_status"] if plan else None,
+                }
+            )
+        return {
+            "session": {"id": session.id, "class_id": session.class_id, "status": session.status},
+            "summary": self.summary(teacher_id, class_id, session_id),
+            "students": rows,
+        }
 
     def learning_plans(self, student_id: int):
         return self._learning.list(student_id=student_id)
 
     def learning_report_page(self, student_id: int, limit: int, offset: int):
         sources = {item.session.id: item for item in self._repository.report_participations(student_id)}
+        snapshot_ids = tuple(snapshot.id for source in sources.values() for snapshot in source.snapshots)
+        feedbacks_by_snapshot = self._repository.feedbacks_for_snapshots(snapshot_ids)
+        submissions = {
+            session_id: self._repository.submission(session_id)
+            for session_id, source in sources.items()
+            if source.session.session_kind == "student_initiated"
+        }
         plans_by_session: dict[int, list[dict]] = {}
         for plan in self._learning.list(student_id=student_id):
             session_id = int((plan.get("source_context") or {}).get("session_id") or 0)
@@ -448,7 +805,21 @@ class PblApplication:
         for session_id in set(sources) | set(plans_by_session):
             session = sources[session_id].session if session_id in sources else self._repository.get_session(session_id)
             if session is not None:
-                reports.append(build_report(session, sources.get(session_id), plans_by_session.get(session_id, [])))
+                source = sources.get(session_id)
+                feedbacks = tuple(
+                    feedback
+                    for snapshot in (source.snapshots if source else ())
+                    for feedback in feedbacks_by_snapshot.get(snapshot.id, ())
+                )
+                reports.append(
+                    build_report(
+                        session,
+                        source,
+                        plans_by_session.get(session_id, []),
+                        submissions.get(session_id),
+                        feedbacks,
+                    )
+                )
         return build_report_page(reports, limit, offset)
 
     def learning_report(self, student_id: int, session_id: int):
@@ -463,7 +834,16 @@ class PblApplication:
         session = source.session if source else self._repository.get_session(session_id)
         if session is None or (source is None and not plans):
             raise AppError("RESOURCE_NOT_FOUND", "学情报告不存在", 404)
-        return build_report(session, source, plans)
+        feedbacks = self._repository.feedbacks_for_snapshots(
+            tuple(snapshot.id for snapshot in (source.snapshots if source else ()))
+        )
+        return build_report(
+            session,
+            source,
+            plans,
+            self._repository.submission(session_id) if session.session_kind == "student_initiated" else None,
+            tuple(feedback for values in feedbacks.values() for feedback in values),
+        )
 
     def submit_task(self, student_id: int, task_id: int, submission_id: str, answer: dict):
         result = self._learning.submit(student_id, task_id, submission_id, answer)
@@ -508,7 +888,13 @@ class PblApplication:
 
     def _require_owned_session(self, teacher_id: int, class_id: int, session_id: int) -> PblSessionRecord:
         value = self._repository.get_session(session_id)
-        if value is None or value.class_id != class_id or value.teacher_id != teacher_id:
+        if (
+            value is None
+            or value.session_kind != "classroom"
+            or value.class_id != class_id
+            or value.teacher_id != teacher_id
+            or self._classroom_scope.owned_active(teacher_id, class_id) is None
+        ):
             raise AppError("RESOURCE_NOT_FOUND", "课堂不存在", 404)
         return value
 
@@ -517,7 +903,10 @@ class PblApplication:
         if (
             value is None
             or value.status != "active"
-            or not self._classroom_scope.active_member(student_id, value.class_id)
+            or (
+                value.session_kind == "classroom"
+                and not self._classroom_scope.active_member(student_id, value.class_id)
+            )
             or (value.session_kind == "student_initiated" and value.created_by_student_id != student_id)
         ):
             raise AppError("RESOURCE_NOT_FOUND", "课堂不存在", 404)
@@ -527,7 +916,11 @@ class PblApplication:
         value = self._repository.get_session(session_id)
         if (
             value is None
-            or not self._classroom_scope.active_member(student_id, value.class_id)
+            or (
+                value.session_kind == "classroom"
+                and not self._classroom_scope.active_member(student_id, value.class_id)
+                and self._repository.find_participation(session_id, student_id) is None
+            )
             or (value.session_kind == "student_initiated" and value.created_by_student_id != student_id)
         ):
             raise AppError("RESOURCE_NOT_FOUND", "研讨不存在", 404)
@@ -538,3 +931,95 @@ class PblApplication:
         if value is None:
             raise AppError("RESOURCE_NOT_FOUND", "建议不存在", 404)
         return value
+
+    def submission_preview(self, student_id: int, session_id: int) -> dict:
+        session, participation, snapshot = self.dialogue(student_id, session_id)
+        if session.session_kind != "student_initiated" or participation is None:
+            raise AppError("STATE_CONFLICT", "课堂研讨按课堂规则提供教师学情", 409)
+        if participation.current_phase != "completed" or snapshot is None or snapshot.status != "ready":
+            raise AppError("STATE_CONFLICT", "完成四阶段研讨后可提交", 409)
+        shared = self._repository.submission(session_id)
+        if shared and shared.get("preview_payload"):
+            feedbacks = self._repository.feedbacks_for_snapshot(shared["snapshot_id"])
+            suggestions = self._repository.suggestions_for_snapshot(shared["snapshot_id"])
+            teacher_status = (
+                "task_published"
+                if any(item.status == "published" for item in suggestions)
+                else "closed"
+                if any(item.action_type == "closed" for item in feedbacks)
+                else "responded"
+                if feedbacks
+                else "pending"
+            )
+            return {
+                **shared["preview_payload"],
+                "submission": self._submission_view(shared),
+                "teacher_status": teacher_status,
+                "feedbacks": [
+                    {
+                        "id": item.id,
+                        "action_type": item.action_type,
+                        "body": item.body,
+                        "created_at": item.created_at,
+                        "plan_id": item.plan_id,
+                    }
+                    for item in feedbacks
+                ],
+                "next_action": "进入正式任务"
+                if teacher_status == "task_published"
+                else "按反馈开启新一轮研讨"
+                if teacher_status == "responded"
+                else "查看教师结论"
+                if teacher_status == "closed"
+                else "等待教师审阅",
+            }
+        return {
+            "session_id": session_id,
+            "snapshot_id": snapshot.id,
+            "knowledge_gaps": snapshot.knowledge_gaps,
+            "reasoning_issues": snapshot.reasoning_issues,
+            "evidence_summary": snapshot.phase_evidence_summary,
+            "questions": [
+                {"id": x.id, "title": x.title, "prompt": x.prompt}
+                for x in self._repository.suggestions_for_snapshot(snapshot.id)
+            ],
+            "submission": self._submission_view(shared) if shared else None,
+            "teacher_status": None,
+            "feedbacks": [],
+            "next_action": "完成后可提交给教师",
+        }
+
+    @staticmethod
+    def _submission_view(shared: dict) -> dict:
+        return {
+            key: value
+            for key, value in shared.items()
+            if key not in {"teacher_id", "client_submission_id", "preview_payload"}
+        }
+
+    def submit_to_teacher(
+        self, student_id: int, session_id: int, snapshot_id: int, class_id: int, client_id: str
+    ) -> dict:
+        preview = self.submission_preview(student_id, session_id)
+        if preview["snapshot_id"] != snapshot_id:
+            raise AppError("STATE_CONFLICT", "诊断版本已经改变，请重新预览", 409)
+        classroom = next((c for c in self.classes_for_student(student_id) if c.id == class_id), None)
+        if classroom is None:
+            raise AppError("RESOURCE_NOT_FOUND", "请选择本人有效班级", 404)
+        shared = self._repository.submission(session_id)
+        if shared:
+            if shared["snapshot_id"] != snapshot_id or shared["class_id"] != class_id:
+                raise AppError("STATE_CONFLICT", "本轮已提交，不能改投", 409)
+            return preview
+        try:
+            payload = {key: value for key, value in preview.items() if key != "submission"}
+            self._repository.save_submission(
+                session_id, snapshot_id, student_id, class_id, classroom.teacher_id, client_id, payload
+            )
+            self._uow.commit()
+        except PersistenceConflict:
+            self._uow.rollback()
+            shared = self._repository.submission(session_id)
+            if not shared or shared["snapshot_id"] != snapshot_id or shared["class_id"] != class_id:
+                raise AppError("STATE_CONFLICT", "提交发生冲突，请重新加载", 409) from None
+        return self.submission_preview(student_id, session_id)

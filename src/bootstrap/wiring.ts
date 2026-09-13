@@ -10,7 +10,11 @@ import { ensureDemoData } from '@/bootstrap/demoData'
 import { ApiTrainingRepository } from '@/features/training/infrastructure/apiTrainingRepository'
 import { DemoTrainingRepository } from '@/features/training/infrastructure/demoTrainingRepository'
 import { apiLearningRepository } from '@/features/learning/infrastructure/apiLearningRepository'
-import { demoLearningRepository } from '@/features/learning/infrastructure/demoLearningRepository'
+import {
+  configureDemoStudyDialogues,
+  configureDemoTeacherFeedback,
+  demoLearningRepository,
+} from '@/features/learning/infrastructure/demoLearningRepository'
 import { apiClassroomRepository } from '@/features/classroom/infrastructure/apiClassroomRepository'
 import { demoClassroomRepository } from '@/features/classroom/infrastructure/demoClassroomRepository'
 import { apiAnalyticsRepository } from '@/features/analytics/infrastructure/apiAnalyticsRepository'
@@ -79,10 +83,19 @@ export function getApplicationServices(): ApplicationServices {
   }
   const training: CaseRepository =
     mode === 'api' ? new ApiTrainingRepository() : new DemoTrainingRepository({ findCaseDraft: demoCaseCatalog })
-  const learning: LearningRepository = mode === 'api' ? apiLearningRepository : demoLearningRepository
   const classroom: ClassroomRepository = mode === 'api' ? apiClassroomRepository : demoClassroomRepository
   const analytics: AnalyticsRepository = mode === 'api' ? apiAnalyticsRepository : demoAnalyticsRepository
-  const pbl: PblRepository = mode === 'api' ? new ApiPblRepository() : new DemoPblRepository(content)
+  const demoPbl = mode === 'demo' ? new DemoPblRepository(content) : undefined
+  const pbl: PblRepository = mode === 'api' ? new ApiPblRepository() : demoPbl!
+  // 微信开发者工具热更新时可能暂时保留旧的 Demo 学习模块。此时仍应让应用启动，
+  // 而不是因新 wiring 与旧模块的短暂版本不一致卡在启动页。重新完整编译后会正常装配。
+  if (mode === 'demo' && typeof configureDemoStudyDialogues === 'function') {
+    configureDemoStudyDialogues(pbl)
+  }
+  if (mode === 'demo' && demoPbl && typeof configureDemoTeacherFeedback === 'function') {
+    configureDemoTeacherFeedback(demoPbl)
+  }
+  const learning: LearningRepository = mode === 'api' ? apiLearningRepository : demoLearningRepository
 
   services = {
     mode,
