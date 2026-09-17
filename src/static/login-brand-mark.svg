@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <defs>
+    <linearGradient id="pages" x1="10" y1="8" x2="78" y2="82" gradientUnits="userSpaceOnUse"><stop stop-color="#B7F7FF"/><stop offset=".54" stop-color="#3BACE9"/><stop offset="1" stop-color="#1167D4"/></linearGradient>
+    <linearGradient id="cover" x1="15" y1="28" x2="84" y2="77" gradientUnits="userSpaceOnUse"><stop stop-color="#41BFF0"/><stop offset="1" stop-color="#1457C5"/></linearGradient>
+    <linearGradient id="cross" x1="32" y1="18" x2="60" y2="50" gradientUnits="userSpaceOnUse"><stop stop-color="#85D9FF"/><stop offset=".55" stop-color="#287FD9"/><stop offset="1" stop-color="#1260C4"/></linearGradient>
+  </defs>
+  <path d="M48 76c-10-9-21-12-37-11V25c14 0 28 5 37 15 9-10 23-15 37-15v40C69 64 58 67 48 76Z" fill="url(#pages)"/>
+  <path d="M48 76c-9-13-20-19-37-19V18c17 0 29 7 37 19v39Z" fill="url(#cover)"/>
+  <path d="M48 76c9-13 20-19 37-19V18c-17 0-29 7-37 19v39Z" fill="#83D3F7"/>
+  <path d="M48 76c-10-9-21-12-37-11m37 11c10-9 21-12 37-11" stroke="#1369CA" stroke-width="3" stroke-linecap="round"/>
+  <path d="M15 29c13 0 23 5 29 14M81 29c-13 0-23 5-29 14" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".62"/>
+  <path d="M42 19h12v11h11v12H54v11H42V42H31V30h11V19Z" fill="url(#cross)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M44 23h8v10h10" stroke="#D8F7FF" stroke-width="2" stroke-linecap="round" opacity=".88"/>
+</svg>
