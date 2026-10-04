@@ -20,47 +20,32 @@ def headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def create_conversation_and_report(
-    student: str, client_id: str, content: str = "private medical answer"
-) -> tuple[int, int]:
+def create_conversation(student: str, client_id: str, content: str = "private medical answer") -> int:
     conversation = client.post(
         "/conversations",
         headers=headers(student),
         json={"client_id": client_id, "messages": [{"role": "user", "content": content}]},
     )
     assert conversation.status_code == 200
-    report = client.post(
-        "/reports",
-        headers=headers(student),
-        json={"conversation_id": conversation.json()["id"], "ai_score": 80, "ai_summary": "summary"},
-    )
-    assert report.status_code == 200
-    return conversation.json()["id"], report.json()["id"]
+    return conversation.json()["id"]
 
 
 def create_question(teacher: str, title: str) -> int:
-    created = client.post(
-        "/problems",
-        headers=headers(teacher),
-        json={
-            "type": "医学常识",
-            "title": title,
-            "description": "description",
-            "target": "all",
-            "target_label": "全体学生",
-            "target_ids": [],
-        },
-    )
-    assert created.status_code == 200
-    problem_id = created.json()["id"]
-    assert client.post(f"/problems/{problem_id}/publish", headers=headers(teacher)).status_code == 200
-    return problem_id
+    # Retained history is seeded directly; the retired authoring API cannot create it.
+    from app.db import SessionLocal
+    from app.modules.content.infrastructure.models import Problem
+
+    with SessionLocal() as db:
+        problem = Problem(type="医学常识", title=title, description="description", status="published")
+        db.add(problem)
+        db.commit()
+        return problem.id
 
 
 def test_summary_and_direct_lookup_endpoints_do_not_return_full_messages() -> None:
     student = login("student", "summary-student")
     teacher = login("teacher", "summary-teacher")
-    conversation_id, report_id = create_conversation_and_report(student, "client-summary")
+    conversation_id = create_conversation(student, "client-summary")
 
     conversation_page = client.get("/conversations/summaries?limit=1&offset=0", headers=headers(student))
     assert conversation_page.status_code == 200
@@ -68,53 +53,37 @@ def test_summary_and_direct_lookup_endpoints_do_not_return_full_messages() -> No
     summary = conversation_page.json()["items"][0]
     assert "messages" not in summary
     assert summary["message_count"] == 1
-    assert summary["report_status"] == "draft"
+    assert summary["report_status"] is None
 
     by_client = client.get("/conversations/by-client/client-summary", headers=headers(student))
     assert by_client.status_code == 200
     assert by_client.json()["id"] == conversation_id
 
-    assert client.post(f"/reports/{report_id}/submit", headers=headers(student)).status_code == 200
     report_page = client.get("/reports/summaries?limit=20&offset=0", headers=headers(teacher))
-    assert report_page.status_code == 200
-    assert "messages" not in report_page.json()["items"][0]
-    assert report_page.json()["pending_count"] == 1
-    direct = client.get(f"/reports/{report_id}", headers=headers(teacher))
-    assert direct.status_code == 200
-    assert direct.json()["messages"][0]["content"] == "private medical answer"
+    assert report_page.status_code == 404
+    create = client.post(
+        "/reports",
+        headers=headers(student),
+        json={"conversation_id": conversation_id, "ai_score": 80, "ai_summary": "不应新建"},
+    )
+    assert create.status_code == 409
     by_conversation = client.get("/reports/by-conversation/client-summary", headers=headers(student))
-    assert by_conversation.status_code == 200
-    assert by_conversation.json()["id"] == report_id
+    assert by_conversation.status_code == 404
 
 
-def test_student_question_feed_reports_answer_state() -> None:
+def test_student_question_feed_hides_retained_discussion_history() -> None:
     student = login("student", "feed-student")
     teacher = login("teacher", "feed-teacher")
     problem_id = create_question(teacher, "Question one")
-
-    initial = client.get("/student/questions", headers=headers(student))
-    assert initial.status_code == 200
-    assert initial.json() == [
-        {
-            "id": problem_id,
-            "type": "医学常识",
-            "title": "Question one",
-            "description": "description",
-            "published_at": initial.json()[0]["published_at"],
-            "status": "unanswered",
-            "topic_codes": [],
-        }
-    ]
-    assert (
-        client.post(
-            f"/problems/{problem_id}/thread",
-            headers=headers(student),
-            json={"messages": [{"role": "user", "content": "answer"}]},
-        ).status_code
-        == 200
+    assert client.get("/student/questions", headers=headers(student)).json() == []
+    assert client.get(f"/student/questions/{problem_id}", headers=headers(student)).status_code == 404
+    response = client.post(
+        f"/problems/{problem_id}/thread",
+        headers=headers(student),
+        json={"messages": [{"role": "user", "content": "answer"}]},
     )
-    answered = client.get("/student/questions", headers=headers(student))
-    assert answered.json()[0]["status"] == "answered"
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "RETIRED_FLOW"
 
 
 def test_student_question_feed_query_count_is_constant() -> None:
@@ -156,13 +125,13 @@ def test_errors_use_stable_structured_contract() -> None:
 
 def test_encoded_client_identifiers_are_resolved_without_path_confusion() -> None:
     student = login("student", "encoded-student")
-    _, report_id = create_conversation_and_report(student, "client/with space")
+    conversation_id = create_conversation(student, "client/with space")
     response = client.get("/conversations/by-client/client%2Fwith%20space", headers=headers(student))
     assert response.status_code == 200
     assert response.json()["client_id"] == "client/with space"
     report = client.get("/reports/by-conversation/client%2Fwith%20space", headers=headers(student))
-    assert report.status_code == 200
-    assert report.json()["id"] == report_id
+    assert report.status_code == 404
+    assert client.get(f"/conversations/{conversation_id}", headers=headers(student)).status_code == 200
 
 
 def test_unexpected_error_does_not_leak_medical_content(monkeypatch, caplog) -> None:
@@ -185,63 +154,53 @@ def test_summary_pagination_is_stable_and_role_scoped() -> None:
     student = login("student", "student-a")
     other = login("student", "student-b")
     teacher = login("teacher", "teacher")
-    _, first = create_conversation_and_report(student, "shared-client", "x" * 500)
-    _, second = create_conversation_and_report(other, "shared-client")
+
+    class_response = client.post("/classes", headers=headers(teacher), json={"name": "分页班", "code": "pager-class"})
+    assert class_response.status_code == 200
+    class_id = class_response.json()["id"]
+    for external in ("student-a", "student-b"):
+        assert (
+            client.post(
+                f"/classes/{class_id}/members", headers=headers(teacher), json={"student_external_id": external}
+            ).status_code
+            == 204
+        )
+
+    first = create_conversation(student, "shared-client", "x" * 500)
+    create_conversation(other, "shared-client")
     assert client.get(f"/reports/{first}", headers=headers(other)).status_code == 404
     assert client.get(f"/reports/{first}", headers=headers(teacher)).status_code == 404
-    assert client.get("/reports/summaries", headers=headers(teacher)).json()["total"] == 0
+    assert client.get("/reports/summaries", headers=headers(teacher)).status_code == 404
     assert client.get("/conversations/summaries", headers=headers(teacher)).status_code == 403
     assert client.get("/conversations/by-client/missing", headers=headers(student)).status_code == 404
     assert client.get("/reports/by-conversation/missing", headers=headers(student)).status_code == 404
     assert client.get("/conversations/summaries?limit=101", headers=headers(student)).status_code == 422
     assert client.get("/reports/summaries?offset=-1", headers=headers(student)).status_code == 422
-    for token, report_id in [(student, first), (other, second)]:
-        assert client.post(f"/reports/{report_id}/submit", headers=headers(token)).status_code == 200
-    assert client.get("/reports/by-conversation/shared-client", headers=headers(teacher)).status_code == 409
-    assert client.get("/reports/by-conversation/shared-client", headers=headers(student)).json()["id"] == first
-    pages = [
-        client.get(f"/reports/summaries?limit=1&offset={offset}", headers=headers(teacher)).json()
-        for offset in range(3)
-    ]
-    assert all(page["total"] == 2 for page in pages)
-    assert pages[0]["items"][0]["id"] != pages[1]["items"][0]["id"]
-    assert pages[2]["items"] == []
+    assert (
+        client.post(f"/reports/{first}/submit", headers=headers(student), json={"class_id": class_id}).status_code
+        == 409
+    )
+    assert client.get("/reports/by-conversation/shared-client", headers=headers(teacher)).status_code == 404
+    assert client.get("/reports/by-conversation/shared-client", headers=headers(student)).status_code == 404
     own = client.get("/conversations/summaries", headers=headers(student)).json()
     assert own["total"] == 1
     assert len(own["items"][0]["message_preview"]) == 160
 
 
-def test_question_visibility_applies_before_pagination_and_direct_lookup() -> None:
+def test_retired_question_lookup_keeps_student_role_boundary() -> None:
     student = login("student", "visible-student")
     teacher = login("teacher", "question-teacher")
-    question_id = create_question(teacher, "visible")
-    hidden = client.post(
-        "/problems",
-        headers=headers(teacher),
-        json={
-            "type": "医学常识",
-            "title": "private",
-            "target": "individual",
-            "target_label": "其他学生",
-            "target_ids": ["other"],
-        },
-    ).json()["id"]
-    assert client.post(f"/problems/{hidden}/publish", headers=headers(teacher)).status_code == 200
-    page = client.get("/student/questions", headers=headers(student)).json()
-    assert len(page) == 1
-    assert page[0]["id"] == question_id
-    assert client.get(f"/student/questions/{question_id}", headers=headers(student)).json()["status"] == "unanswered"
-    assert client.get(f"/student/questions/{hidden}", headers=headers(student)).status_code == 404
+    question_id = create_question(teacher, "retained")
+    assert client.get("/student/questions", headers=headers(student)).json() == []
+    assert client.get(f"/student/questions/{question_id}", headers=headers(student)).status_code == 404
     assert client.get("/student/questions", headers=headers(teacher)).status_code == 403
 
 
 def test_summary_query_count_does_not_scale_with_messages_or_reports() -> None:
     student = login("student", "summary-performance-student")
-    teacher = login("teacher", "summary-performance-teacher")
 
     def seed(index: int) -> None:
-        _, report_id = create_conversation_and_report(student, f"client-{index}")
-        assert client.post(f"/reports/{report_id}/submit", headers=headers(student)).status_code == 200
+        create_conversation(student, f"client-{index}")
 
     def measure(path: str, token: str) -> int:
         statements: list[str] = []
@@ -258,8 +217,8 @@ def test_summary_query_count_does_not_scale_with_messages_or_reports() -> None:
         return len(statements)
 
     seed(0)
-    small = [measure("/conversations/summaries", student), measure("/reports/summaries", teacher)]
+    small = [measure("/conversations/summaries", student)]
     for index in range(1, 25):
         seed(index)
-    large = [measure("/conversations/summaries", student), measure("/reports/summaries", teacher)]
+    large = [measure("/conversations/summaries", student)]
     assert small == large

@@ -9,16 +9,60 @@ import type {
 
 const ROOT_ID = 'pathology'
 
-function recommendationRank(point: KnowledgeMapPoint, pointsByCode: Map<string, KnowledgeMapPoint>): number {
+export interface KnowledgeCrossModuleRelation {
+  dependency: KnowledgeMapPoint['dependencies'][number]
+  prerequisite: KnowledgeMapPoint
+  dependent: KnowledgeMapPoint
+}
+
+export function crossModuleDependenciesForModule(
+  points: KnowledgeMapPoint[],
+  moduleCode: string,
+): KnowledgeCrossModuleRelation[] {
+  if (!moduleCode) return []
+  const byCode = new Map(points.map((point) => [point.code, point]))
+  return points.flatMap((dependent) =>
+    dependent.dependencies.flatMap((dependency) => {
+      const prerequisite = byCode.get(dependency.prerequisiteCode)
+      if (
+        !prerequisite ||
+        prerequisite.systemCode === dependent.systemCode ||
+        (prerequisite.systemCode !== moduleCode && dependent.systemCode !== moduleCode)
+      )
+        return []
+      return [{ dependency, prerequisite, dependent }]
+    }),
+  )
+}
+
+function recommendationRank(
+  point: KnowledgeMapPoint,
+  pointsByCode: Map<string, KnowledgeMapPoint>,
+  prerequisitesByCode: Map<string, string[]>,
+): number {
   if (point.status === 'weak') return 0
   if (point.status === 'due') return 1
   if (point.status === 'learning') return 2
   if (point.status === 'not_started') {
-    const prerequisites = point.prerequisiteCodes || []
+    const prerequisites = prerequisitesByCode.get(point.code) || []
     const ready = prerequisites.every((code) => pointsByCode.get(code)?.status === 'stable')
     return ready ? 3 : 4
   }
   return 5
+}
+
+function dependencyCodes(point: KnowledgeMapPoint): string[] {
+  if (point.dependencies.some((dependency) => dependency.dependentCode !== point.code)) {
+    throw new Error(`知识点 ${point.code} 的依赖目标与节点不一致`)
+  }
+  const codes = point.dependencies.map((dependency) => dependency.prerequisiteCode)
+  if (new Set(codes).size !== codes.length) {
+    throw new Error(`知识点 ${point.code} 存在重复依赖记录`)
+  }
+  if (point.prerequisiteCodes && point.prerequisiteCodes.join('\0') !== codes.join('\0')) {
+    throw new Error(`知识点 ${point.code} 的前置投影与依赖记录不一致`)
+  }
+  return codes
 }
 
 export function buildKnowledgeGraph(input: KnowledgeMapPoint[]): KnowledgeGraph {
@@ -61,9 +105,8 @@ export function buildKnowledgeGraph(input: KnowledgeMapPoint[]): KnowledgeGraph 
   const indegree = new Map(points.map((point) => [point.code, 0]))
 
   for (const point of points) {
-    const unique = [...new Set(point.prerequisiteCodes || [])]
     const valid: string[] = []
-    for (const code of unique) {
+    for (const code of dependencyCodes(point)) {
       if (!pointsByCode.has(code)) {
         issues.push({ type: 'missing_prerequisite', pointCode: point.code, relatedCode: code })
         continue
@@ -154,7 +197,7 @@ export function buildKnowledgeGraph(input: KnowledgeMapPoint[]): KnowledgeGraph 
   }
 
   const recommended = [...points]
-    .map((point, order) => ({ point, order, rank: recommendationRank(point, pointsByCode) }))
+    .map((point, order) => ({ point, order, rank: recommendationRank(point, pointsByCode, validPrerequisites) }))
     .sort((a, b) => a.rank - b.rank || a.order - b.order)[0]?.point
 
   return {

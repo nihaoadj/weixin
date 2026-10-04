@@ -1,0 +1,45 @@
+# 06 AI 合同与审核
+
+状态：计划目标。生产仍固定 Coze bot/workflow 显式模式；真实提供方联调属于外部验收。
+
+## v7 诊断合同
+
+新诊断 schema_version=7，保留 interaction_style、learning_response、phase_assessment、safety_status/notice。增加 diagnosis_outcome=identified_gaps/no_clear_gaps/null：只有证据充分且 synthesis complete/ready 时非null。identified_gaps 必须有合法finding；no_clear_gaps 要求finding为空，不能把不确定或缺证据当掌握。
+
+recommended_questions 升级为 candidate_tasks，每项包含 candidate_key、purpose=remediation/goal_verification、task_type、point_codes、dimension_ids、linked_findings、两轮 variants。candidate_key只在本次结果内唯一，不是数据库身份；服务端以完成snapshot ID与candidate_key幂等分配持久化stable_key，教师和AI都不能改既有stable_key。variants 含 cycle_number、title、prompt、objective、options/answer/explanation（客观题）、resource_ref（评分蓝图或病例）。AI候选先经 schema、安全、目标范围校验，尚不具有正式评分权。
+
+remediation 必须关联存在的finding；goal_verification 允许 linked_findings=[]但必须关联课堂目标。无薄弱点时每个目标都有验证候选。目标只有课堂goal_point_codes允许值；不把provider输出的新编码直接写入目录。
+
+recommended_knowledge_cards 在 identified_gaps 时沿用T40来源/医学审核流程；no_clear_gaps 为空，不为满足旧v6约束虚构补充卡。非ready不得含已确认finding或正式候选；needs_human_help不能complete。私人续问保持独立v1合同，不接入新任务生成。
+
+历史v3–v6按原schema读取；新调用只接受v7。provider不支持v7时明确unavailable，不偷偷回退v6或伪造成功。完成证据仍只来自当前阶段学生消息，AI讲解不得作为学生证据。
+
+v7请求由服务端明确提供session_kind。课堂ready结果必须有覆盖全部课堂目标的candidate_tasks，每个candidate恰有cycle1/2两个variant；非ready为零候选。自主研讨仍使用v7的四阶段/回复/诊断字段，其candidate_tasks与recommended_knowledge_cards必须为空，ready只要求合法完成证据和diagnosis_outcome，不要求存在课堂目标或教师任务。其原有个人练习另走learning自主练习合同；任何自主结果都不调用包构建或content教师草稿port。CheckedGateway依服务端session_kind验证，模型不能自行切换来源。
+
+合同数量上限：知识/推理finding各10项，candidate_tasks最多30组，variants固定两项，补充卡最多3张。超限整个响应拒绝，不截断后伪称覆盖齐全。枚举复用第04册五种task_type；knowledge_review/retest必须options及answer，discussion不能带数值评分规则，micro_drill必须引用服务端允许的蓝图，focused_retry必须引用课堂绑定病例。资源ID与版本来自服务端提供的允许值，模型不得发明数据库ID。课堂goal_verification覆盖所有目标，remediation覆盖合法finding；未落在课堂目标内的个人困惑只作学生后续学习建议，不扩大正式包范围。
+
+## 草稿资源构建与正式评分
+
+采用有界题型，不实现任意代码评分。客观题包含2–6选项、唯一正确索引与解释。discussion只评完成证据；micro_drill引用既有审核蓝图及确定性规则；focused_retry引用可用、已审核且摘要匹配的病例版本。
+
+每个目标必须具备完整两轮资源。可优先采用既有审核资源生成草稿；AI新客观候选若无有效医学审核凭据，作为待审核草稿进入content审核资源流程。新增最小 question 资源审核适配，复用医学审核身份、摘要、记录和状态机；教师教学确认不能设置medical approved。
+
+micro_drill 的私有规则不能由AI或普通教师自由修改；教师可编辑题面，但改变医学内容/题干、选项、答案、解释或评分关联后，必须使旧医学批准失效并重新审核。措辞修改也不自动豁免摘要校验。focused_retry 的隐藏病例不能在整包DTO中返回；教师通过有权限 authoring/review 页面审阅，诊断详情仅展示其合法公开摘要和审核状态。病例本体的医学批准与任务题面批准是两个独立事实：每轮 focused_retry 须同时通过当前病例引用的版本/摘要校验，以及由该轮实际公开题面、目标映射和私有评分字段形成的独立题目审核摘要。病例引用本身由资源绑定门禁独立校验，不包含在题目审核摘要内。病例获批不自动批准任务题面；任一轮题面或目标修改后，该轮旧题目审核摘要失效，必须由有权限的医学审核者重新批准，普通教师不能自批。两轮必须分别满足这一条件才能整包发布。Demo 仅能用合成预批准展示原始固定题面；编辑后的题面应转为待审核并阻止发布，不模拟专家批准。
+
+草稿整包应展示每个实际执行资源和两轮变式；禁止教师只看到开放讨论题，而发布后自动附加未经预览的再测/微训练。本期不允许教师额外增加未生成的任意题型；可编辑候选及选择合法审核资源，保证目标覆盖后才能发布。
+
+教师可把非必要候选整组从发布草稿排除，并可在发布前恢复。UI 对每个 candidate/stable_key 一次操作同时切换两轮；服务端保存时校验两轮状态一致、included 集合仍覆盖每个课堂目标/推理目标。不能移除目标最后一组双轮验证题。被排除题目仍显示在“已从本次任务包排除”区，保留其原文、审核状态、来源引用和入库动作；它不属于实际待发布集合，也不触发本次新医学提交。教师确认发布前查看的是所有 included 项及其医学状态；排除/恢复改变版本与摘要，旧审阅确认失效。发布后 inclusion 固定，不支持追加或修改必做题。数据库保留 excluded 来源记录是题库外键和审计幂等所需，不等于发布或学生可见。
+
+## 题库入库与维护
+
+教师在保存后的题目版本点“加入我的题库”，先打开可编辑的去标识化副本预览。仅允许题干、选项、答案、解析、目标、维度和必要公开资料；不复制学生姓名、内部学生/班级ID、原始回答、诊断摘要、私人续问或隐藏病例。
+
+教师确认去标识化后服务端按白名单重建对象，结构化引用与来源digest仅用于内部审计；输入长度和已知身份字段检查不能声称能识别所有自由文本隐私。教师必须审阅内容，自动检查不能代替该动作。
+
+同一来源题版本重复入库返回同一项；修改后的来源版本可作为新题，已存在题库副本不被覆盖。题库编辑保留不可变版本，归档只隐藏默认列表。未经医学审核的题可入库并清楚标记，本期不支持发布，所以不能借入库绕过审核。
+
+## 失败处理和测试
+
+provider JSON不合法、越级、目标越界、选项不合法、虚构finding引用、缺第二轮、private scope、资源审核不足分别有负向测试。AI请求只带必要去标识化证据和目录允许值；日志只保存模型/版本/耗时/错误类别/关联ID，不输出prompt和学生答案。
+
+最终报告由确定性持久化评价生成，本期不增加报告总结AI调用，避免外部网络影响完成、幂等或统计。

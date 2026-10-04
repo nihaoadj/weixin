@@ -1,0 +1,52 @@
+import type { KnowledgePoint } from '@/types/knowledge'
+import catalog from './pathologyCatalog.generated.json'
+
+export const readDemoKnowledgeCatalog = (): KnowledgePoint[] =>
+  catalog.map((point) => ({
+    code: point.code,
+    systemCode: point.system_code,
+    systemLabel: point.system_label,
+    topic: point.topic,
+    title: point.title,
+    objective: point.objective,
+    learningObjectives: point.learning_objectives,
+    reference: point.reference,
+    cardCount: point.card_count,
+    catalogVersion: point.catalog_version,
+    description: point.description,
+    prerequisiteCodes: point.prerequisite_codes,
+    relatedCodes: point.related_codes,
+    caseSlug: point.case_slug,
+    catalogEvidenceStatus: point.catalog_evidence_status,
+    catalogMedicalReviewStatus: point.catalog_medical_review_status,
+    evidenceStatus: point.evidence_status,
+    medicalReviewStatus: point.medical_review_status,
+    relationshipNote: point.relationship_note,
+    sources: point.sources.map((source) => ({
+      sourceKey: source.source_key,
+      title: source.title,
+      publisher: source.publisher,
+      url: source.url,
+      sourceType: source.source_type,
+      accessedOn: source.accessed_on,
+    })),
+    dependencies: point.dependencies.map((dependency) => ({
+      id: dependency.id,
+      prerequisiteCode: dependency.prerequisite_code,
+      dependentCode: dependency.dependent_code,
+      relationKind: dependency.relation_kind,
+      rationale: dependency.rationale,
+      limitation: dependency.limitation,
+      confidence: dependency.confidence,
+      evidenceStatus: dependency.evidence_status,
+      medicalReviewStatus: dependency.medical_review_status,
+      sources: dependency.sources.map((source) => ({
+        sourceKey: source.source_key,
+        title: source.title,
+        publisher: source.publisher,
+        url: source.url,
+        sourceType: source.source_type,
+        accessedOn: source.accessed_on,
+      })),
+    })),
+  }))

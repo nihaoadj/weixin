@@ -1,11 +1,8 @@
 import * as conversations from './demoConversationStore'
-import * as questions from './demoQuestionStore'
-import { fromQuestionView } from '@/shared/mappers/presentation'
 import { AppError } from '@/types/errors'
 import { getSessionContext } from '@/platform/session/context'
 import type { QaRepository } from '@/features/qa/domain/ports'
 import type { ProblemRepository } from '@/features/content/domain/ports'
-import type { ReportRepository } from '@/features/reports/domain/ports'
 import type { Conversation, ConversationSummary, Page, QuestionThread, StudentQuestion } from '@/types/records'
 import type { UserRole } from '@/types/domain'
 
@@ -27,10 +24,7 @@ function newest<T extends { updatedAt: string; id: string }>(items: T[]): T[] {
 }
 
 export class DemoQaRepository implements QaRepository {
-  constructor(
-    private readonly problems: Pick<ProblemRepository, 'getProblems'>,
-    private readonly reports: Pick<ReportRepository, 'getReports'>,
-  ) {}
+  constructor(_problems: Pick<ProblemRepository, 'getProblems'>) {}
 
   async getConversations(): Promise<Conversation[]> {
     requireUser('student')
@@ -45,18 +39,14 @@ export class DemoQaRepository implements QaRepository {
     const conversations = (await this.getConversations()).filter(
       (conversation) => !topicCode || conversation.topicCodes?.includes(topicCode),
     )
-    const reports = new Map((await this.reports.getReports()).map((report) => [report.conversationId, report]))
     return paginate(
       newest(
         conversations.map((conversation) => {
-          const report = reports.get(conversation.conversationId)
           return {
             id: conversation.conversationId,
             conversationId: conversation.conversationId,
             messagePreview: conversation.messages[0]?.content.slice(0, 160) || '',
             messageCount: conversation.messages.length,
-            reportId: report?.id,
-            reportStatus: report?.status,
             createdAt: conversation.createdAt,
             updatedAt: conversation.updatedAt,
             topicCodes: conversation.topicCodes || [],
@@ -80,37 +70,21 @@ export class DemoQaRepository implements QaRepository {
 
   async getStudentQuestions(): Promise<StudentQuestion[]> {
     requireUser('student')
-    const available = await this.problems.getProblems()
-    const visibleQuestionIds = new Set(
-      available.filter((problem) => problem.contentType !== 'guided_case').map((problem) => problem.id),
-    )
-    return questions
-      .getStudentQuestions(
-        available.map((problem) => ({
-          ...problem,
-          status: problem.status === 'published' ? '已发布' : problem.status === 'draft' ? '待审核' : '已拒绝',
-        })),
-      )
-      .filter((question) => visibleQuestionIds.has(question.id))
-      .map((question) => ({
-        ...fromQuestionView(question),
-        status: questions.getQuestionThread(question.id) ? ('answered' as const) : fromQuestionView(question).status,
-      }))
+    return []
   }
 
-  async findStudentQuestion(id: string): Promise<StudentQuestion | undefined> {
-    return (await this.getStudentQuestions()).find((question) => question.id === id)
-  }
-
-  async getQuestionThread(id: string): Promise<QuestionThread | undefined> {
+  async findStudentQuestion(_id: string): Promise<StudentQuestion | undefined> {
     requireUser('student')
-    return (await this.findStudentQuestion(id)) ? questions.getQuestionThread(id) : undefined
+    return undefined
   }
 
-  async saveQuestionThread(thread: QuestionThread): Promise<void> {
+  async getQuestionThread(_id: string): Promise<QuestionThread | undefined> {
     requireUser('student')
-    if (!(await this.findStudentQuestion(thread.questionId)))
-      throw new AppError('题目不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
-    questions.saveQuestionThread(thread)
+    return undefined
+  }
+
+  async saveQuestionThread(_thread: QuestionThread): Promise<void> {
+    requireUser('student')
+    throw new AppError('开放讨论题流程已退役', { code: 'RETIRED_FLOW', statusCode: 409 })
   }
 }

@@ -15,9 +15,7 @@ class UserRepository(Protocol):
 
     def update_demo(self, user_id: int, command: DemoLoginCommand, permissions: tuple[str, ...]) -> UserRecord: ...
 
-    def adopt_wechat(
-        self, external_id: str, nickname: str, avatar_url: str, role: str
-    ) -> UserRecord: ...
+    def adopt_wechat(self, external_id: str, nickname: str, avatar_url: str, role: str) -> UserRecord: ...
 
 
 class WechatGateway(Protocol):
@@ -26,4 +24,3 @@ class WechatGateway(Protocol):
 
 class TokenIssuer(Protocol):
     def issue(self, user_id: int) -> str: ...
-

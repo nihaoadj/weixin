@@ -1,0 +1,1 @@
+npx prettier --write updated test files | exit 0

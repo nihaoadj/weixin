@@ -6,14 +6,17 @@ const pageSource = (relativePath: string) => readFile(new URL(relativePath, impo
 describe('student page navigation contracts', () => {
   it('registers native-back fallbacks for every student secondary page', async () => {
     const expectedFallbacks = [
-      ['./question-detail/question-detail.vue', 'studentCases'],
       ['./question/question.vue', 'studentLearning'],
       ['./case-training/case-training.vue', 'studentCases'],
       ['./case-report/case-report.vue', 'studentCases'],
-      ['./learning/plan.vue', 'studentLearning'],
-      ['./learning/drill.vue', 'backTarget'],
-      ['./learning/review.vue', 'studentLearning'],
       ['./learning/knowledge-node.vue', 'studentCases'],
+      ['./learning/source-view.vue', 'studentKnowledgeNode'],
+      ['./learning/plans.vue', 'studentLearning'],
+      ['./learning/plan-detail.vue', 'studentLearningPlans'],
+      ['./learning/route-reading.vue', 'studentLearningPlanDetail'],
+      ['./learning/route-case.vue', 'studentLearningPlanDetail'],
+      ['./learning/final-test.vue', 'studentLearningPlanDetail'],
+      ['./learning/learning-result.vue', 'studentLearningPlanDetail'],
     ]
 
     for (const [relativePath, fallback] of expectedFallbacks) {
@@ -29,30 +32,31 @@ describe('student page navigation contracts', () => {
     expect(reportSource).toContain('ROUTES.studentChat')
   })
 
-  it('treats training resources as a learning detail with three URL-addressable views', async () => {
+  it('treats training resources as a learning detail with two current URL-addressable views', async () => {
     const [learning, resources] = await Promise.all([
       pageSource('./learning/index.vue'),
       pageSource('./question/question.vue'),
     ])
 
     expect(learning).toContain('goDetail(ROUTES.studentCases')
-    expect(resources).toContain("type ResourceView = 'cases' | 'knowledge' | 'questions'")
+    expect(resources).toContain("type ResourceView = 'cases' | 'knowledge'")
     expect(resources).toContain('<StudentPrimaryNav active="learning" />')
     expect(resources).toContain('handleBackPress(from, ROUTES.studentLearning)')
   })
 
-  it('keeps completed-case replacements while preserving the micro-drill return route', async () => {
-    const [caseTraining, caseReport, plan] = await Promise.all([
+  it('keeps case report return actions and T44 route steps tied to their route identity', async () => {
+    const [caseTraining, caseReport, planDetail] = await Promise.all([
       pageSource('./case-training/case-training.vue'),
       pageSource('./case-report/case-report.vue'),
-      pageSource('./learning/plan.vue'),
+      pageSource('./learning/plan-detail.vue'),
     ])
 
     expect(caseTraining).toContain('goReplace(ROUTES.studentCaseReport')
     expect(caseReport).toContain('goReplace(ROUTES.studentCaseTraining')
-    expect(plan).toContain('goReplace(ROUTES.studentCaseTraining')
-    expect(plan).toContain('goDetail(ROUTES.studentLearningDrill')
-    expect(plan).toContain('planId,')
+    expect(planDetail).toContain("step.kind === 'reading' ? ROUTES.studentRouteReading : ROUTES.studentRouteCase")
+    expect(planDetail).toContain("step.kind === 'reading' ? { routeId, stepId: step.id }")
+    expect(planDetail).toContain('goDetail(ROUTES.studentFinalTest, { routeId, testId: detail.value.testSummary.id })')
+    expect(planDetail).toContain('goDetail(ROUTES.studentLearningResult, { routeId })')
   })
 
   it('keeps old chat as read-only history and routes continuation into the unified dialogue', async () => {
@@ -65,9 +69,12 @@ describe('student page navigation contracts', () => {
     expect(history).not.toContain("'/pages/report/report'")
   })
 
-  it('opens a teacher PBL-feedback notification at its submitted dialogue', async () => {
+  it('opens current learning plans by route identity from the learning home', async () => {
     const learning = await pageSource('./learning/index.vue')
-    expect(learning).toContain("item.entityType === 'pbl_session'")
-    expect(learning).toContain('relaunchTo(ROUTES.studentPbl, { dialogueId: item.entityId })')
+    expect(learning).toContain("getLearningRoutes('active', 4, 0)")
+    expect(learning).toContain('goDetail(ROUTES.studentLearningPlans)')
+    expect(learning).toContain('goDetail(ROUTES.studentLearningPlanDetail, { routeId: id })')
+    expect(learning).not.toContain('studentClassroomPackage')
+    expect(learning).not.toContain('legacy-plan:')
   })
 })

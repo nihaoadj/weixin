@@ -1,96 +1,58 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import TeacherProblemList from '@/components/TeacherProblemList.vue'
 import ProblemDetail from '@/pages/teacher/problem-detail/problem-detail.vue'
 
-const { findProblem, getProblems, goDetail, backOrRoute, handleBackPress } = vi.hoisted(() => ({
+const { findProblem, goDetail, backOrRoute, handleBackPress, query } = vi.hoisted(() => ({
   findProblem: vi.fn(),
-  getProblems: vi.fn(),
   goDetail: vi.fn(),
   backOrRoute: vi.fn(),
   handleBackPress: vi.fn(),
+  query: { id: 'test-problem' } as Record<string, string>,
 }))
 vi.mock('@/features/content/public', () => ({
   findProblemAsync: findProblem,
-  getProblemsAsync: getProblems,
-  getGuidedCasesAsync: async () => [],
-  publishProblemAsync: vi.fn(),
-  rejectProblemAsync: vi.fn(),
-  resetProblemsAsync: vi.fn(),
-  publishGuidedCaseAsync: vi.fn(),
-  submitGuidedCaseForReviewAsync: vi.fn(),
 }))
-vi.mock('@/features/identity/public', () => ({ requireRole: () => true, isDemoRuntime: () => false }))
+vi.mock('@/features/identity/public', () => ({
+  requireRole: () => true,
+  getSession: () => ({ openid: 'teacher-1', role: 'teacher' }),
+  isDemoRuntime: () => false,
+}))
 vi.mock('@/platform/navigation', () => ({
   goDetail,
   backOrRoute,
   handleBackPress,
   ROUTES: {
-    teacherWorkspace: '/workspace',
+    teacherContent: '/content',
     teacherProblemDetail: '/problem-detail',
     teacherProblemEdit: '/problem-edit',
+    teacherCaseEdit: '/case-edit',
   },
 }))
 vi.mock('@dcloudio/uni-app', () => ({
-  onLoad: (hook: (query: object) => void) => hook({ id: 'test-problem' }),
+  onShow: vi.fn(),
+  onLoad: (hook: (query: object) => void) => hook(query),
   onBackPress: vi.fn(),
 }))
 
 const problem = {
   id: 'test-problem',
   type: '医学常识',
+  contentType: 'guided_case',
   title: '教学练习',
   description: '完整题目说明',
   target: 'all',
   status: '待审核',
+  allowedActions: ['edit'],
   time: '2026-08-31T08:30:00.000Z',
 }
 beforeEach(() => {
-  getProblems.mockResolvedValue([problem])
+  vi.resetAllMocks()
+  Object.keys(query).forEach((key) => delete query[key])
+  query.id = 'test-problem'
   findProblem.mockResolvedValue(problem)
 })
 
 describe('content navigation continuity', () => {
-  it('makes the whole reading area a button without nesting edit or publish buttons', async () => {
-    const wrapper = mount(TeacherProblemList)
-    await (wrapper.vm as unknown as { refresh: () => Promise<void> }).refresh()
-    const open = wrapper.get('.problem-open')
-    expect(open.text()).toContain('完整题目说明')
-    expect(open.text()).toContain('2026-08-31')
-    expect(open.text()).not.toContain('T08:30')
-    expect(open.find('button').exists()).toBe(false)
-    expect(open.attributes('hover-start-time')).toBe('0')
-    await open.trigger('click')
-    expect(goDetail).toHaveBeenCalledWith('/problem-detail', { id: 'test-problem' })
-    goDetail.mockClear()
-    await wrapper.get('.action.edit').trigger('click')
-    expect(goDetail).toHaveBeenCalledTimes(1)
-    expect(goDetail).toHaveBeenCalledWith('/problem-edit', { id: 'test-problem' })
-  })
-
-  it('keeps status and creation tools compact while exposing secondary content entries', async () => {
-    const wrapper = mount(TeacherProblemList, {
-      props: { showKnowledgeCards: true, showMedicalReview: true },
-    })
-    await (wrapper.vm as unknown as { refresh: () => Promise<void> }).refresh()
-
-    expect(
-      wrapper
-        .get('.toolbar')
-        .findAll('.small-button')
-        .map((button) => button.text()),
-    ).toEqual(['审核', '补充卡', '＋问题', '＋病例'])
-    expect(wrapper.get('.tabs').attributes('role')).toBe('tablist')
-    expect(wrapper.findAll('.tab')).toHaveLength(2)
-    expect(wrapper.findAll('.tab[aria-selected="true"]')).toHaveLength(1)
-
-    expect(wrapper.find('.toolbar-status .status-utility').text()).toBe('审核')
-    await wrapper.findAll('.small-button')[1].trigger('click')
-    await wrapper.findAll('.small-button')[0].trigger('click')
-    expect(wrapper.emitted('knowledge-cards')).toEqual([[]])
-    expect(wrapper.emitted('medical-review')).toEqual([[]])
-  })
-
   it('shows a readable loading structure then the detail, rather than a blank page', async () => {
     let resolve!: (value: typeof problem) => void
     findProblem.mockReturnValueOnce(
@@ -99,7 +61,7 @@ describe('content navigation continuity', () => {
       }),
     )
     const wrapper = mount(ProblemDetail)
-    expect(wrapper.get('[aria-busy="true"]').attributes('aria-label')).toBe('正在加载问题…')
+    expect(wrapper.get('[aria-busy="true"]').attributes('aria-label')).toBe('正在加载病例…')
     resolve(problem)
     await flushPromises()
     expect(wrapper.get('[aria-level="1"]').text()).toBe('教学练习')
@@ -122,6 +84,30 @@ describe('content navigation continuity', () => {
     const wrapper = mount(ProblemDetail)
     await flushPromises()
     await wrapper.get('.med-state__secondary').trigger('click')
-    expect(backOrRoute).toHaveBeenCalledWith('/workspace', { tab: 'problems', section: 'resources' })
+    expect(backOrRoute).toHaveBeenCalledWith('/content', { resource: 'cases' })
+  })
+
+  it('does not expose an editor without projected permission and gives cases their own editor', async () => {
+    findProblem.mockResolvedValueOnce({ ...problem, allowedActions: [] })
+    const readonly = mount(ProblemDetail)
+    await flushPromises()
+    expect(readonly.find('.edit').exists()).toBe(false)
+    findProblem.mockResolvedValueOnce({ ...problem, contentType: 'guided_case' })
+    const caseDetail = mount(ProblemDetail)
+    await flushPromises()
+    await caseDetail.get('.edit').trigger('click')
+    expect(goDetail).toHaveBeenCalledWith('/case-edit', { id: 'test-problem', resource: 'cases' })
+  })
+
+  it('preserves resource filters through editing and returning without accepting another owner', async () => {
+    Object.assign(query, { keyword: '  炎症  ', status: 'published', resource: 'cases', returnUrl: '/pbl' })
+    const wrapper = mount(ProblemDetail)
+    await flushPromises()
+    await wrapper.get('.edit').trigger('click')
+    expect(goDetail).toHaveBeenCalledWith('/case-edit', {
+      id: 'test-problem',
+      resource: 'cases',
+      keyword: '炎症',
+    })
   })
 })

@@ -47,14 +47,12 @@ function draft(topic: string): CaseDraftGenerateResult {
       ],
       referenceReasoning: {
         problemRepresentation: first.description,
-        differentials: points
-          .slice(0, 2)
-          .map((p, i) => ({
-            diagnosis: p.title,
-            supportingFactIds: ['morphology'],
-            opposingFactIds: [],
-            priority: i + 1,
-          })),
+        differentials: points.slice(0, 2).map((p, i) => ({
+          diagnosis: p.title,
+          supportingFactIds: ['morphology'],
+          opposingFactIds: [],
+          priority: i + 1,
+        })),
         tests: [{ name: '形态对照', purpose: '寻找区别证据', priority: 'necessary', resultFactId: 'morphology' }],
         management: [{ action: '请教师复核', rationale: '仅供教学', priority: 1, safetyCritical: true }],
       },

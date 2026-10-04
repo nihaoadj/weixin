@@ -6,11 +6,11 @@ import {
   demoCaseProblems,
   demoCloneCase,
   demoDecideCaseReview,
-  demoDraft,
   demoPublishCase,
   demoReviewQueue,
   demoReviewView,
   demoSaveCaseDraft,
+  demoDeleteCase,
   demoSubmitCaseForReview,
 } from '@/features/content/infrastructure/demoCaseContentStore'
 import {
@@ -32,39 +32,33 @@ const user = (openid: string, role: 'teacher' | 'student', permissions?: string[
   })
 
 describe('Demo guided case state machine', () => {
-  it('requires review, preserves author isolation and supports clone', () => {
+  it('saves usable cases directly, permits author edits and hides deleted resources', () => {
     user('flow-author', 'teacher')
-    expect(demoDraft('炎症').title).toContain('炎症')
     const saved = demoSaveCaseDraft(demoDraftTitle('自定义病例', true))
-    expect(saved.medicalReviewStatus).toBe('not_submitted')
+    expect(saved).toMatchObject({ status: '已发布', medicalReviewStatus: 'not_required' })
     expect(demoAuthoring(saved.id)).toBeTruthy()
+    expect(demoCaseProblems().find((item) => item.id === saved.id)?.allowedActions).toEqual(['edit', 'delete'])
     user('flow-other-author', 'teacher')
     expect(demoAuthoring(saved.id)).toBeUndefined()
     expect(() => demoSaveCaseDraft(showcaseDraft, saved.id)).toThrow('病例作者')
+    expect(() => demoDeleteCase(saved.id)).toThrow('病例作者')
+    expect(() => demoDeleteCase('pathology.cell-injury-showcase')).toThrow('系统病例只读')
 
     user('flow-author', 'teacher')
-    expect(demoSubmitCaseForReview(saved.id)?.medicalReviewStatus).toBe('pending')
-    expect(() => demoSaveCaseDraft(showcaseDraft, saved.id)).toThrow('审核中的病例')
-    user('demo_reviewer', 'teacher', ['medical_review'])
-    expect(demoReviewQueue().some((item) => item.id === saved.id)).toBe(true)
-    expect(demoReviewView(saved.id)?.caseDefinition).toBeTruthy()
-    expect(() => demoDecideCaseReview(saved.id, 'rejected', '退回')).toThrow('至少需要 5')
-    expect(demoDecideCaseReview(saved.id, 'rejected', '请补充危险鉴别')).toMatchObject({
-      medicalReviewStatus: 'rejected',
-    })
-
-    user('flow-author', 'teacher')
-    const edited = demoSaveCaseDraft(demoDraftTitle('修改后的病例', true), saved.id)
-    expect(edited.medicalReviewStatus).toBe('not_submitted')
-    demoSubmitCaseForReview(saved.id)
-    user('demo_reviewer', 'teacher', ['medical_review'])
-    demoDecideCaseReview(saved.id, 'approved', '')
-    user('flow-author', 'teacher')
-    expect(demoPublishCase(saved.id)).toMatchObject({ id: saved.id, status: '已发布' })
-    expect(() => demoSaveCaseDraft(showcaseDraft, saved.id)).toThrow('已审核病例')
+    const edited = demoSaveCaseDraft({ ...showcaseDraft, title: '修改后的病例' }, saved.id)
+    expect(edited).toMatchObject({ id: saved.id, version: 2, medicalReviewStatus: 'not_required' })
+    expect(() => demoPublishCase(saved.id)).toThrow('流程已退役')
+    expect(() => demoSubmitCaseForReview(saved.id)).toThrow('流程已退役')
     const clone = demoCloneCase(saved.id)
     expect(clone?.id).not.toBe(saved.id)
-    expect(clone?.medicalReviewStatus).toBe('not_submitted')
+    expect(clone?.medicalReviewStatus).toBe('not_required')
+    demoDeleteCase(saved.id)
+    expect(demoCaseProblems().some((item) => item.id === saved.id)).toBe(false)
+    expect(demoAuthoring(saved.id)).toBeUndefined()
+    expect(() => demoDeleteCase(saved.id)).not.toThrow()
+    expect(() => demoSaveCaseDraft(showcaseDraft, saved.id)).toThrow('病例不存在')
+    user('flow-student', 'student')
+    expect(() => demoStart(saved.id)).toThrow('病例不存在')
   })
 
   it('keeps additional case sessions on their own facts and rubric', () => {
@@ -113,9 +107,9 @@ describe('Demo guided case state machine', () => {
     )
     expect(() => demoComplete('missing-attempt')).toThrow('请先完成')
     user('flow-teacher', 'teacher')
-    expect(demoPublishCase('missing-case')).toBeUndefined()
-    expect(() => demoSubmitCaseForReview('missing-case')).toThrow('病例作者')
-    expect(demoReviewQueue('rejected')).toEqual([])
+    expect(() => demoPublishCase('missing-case')).toThrow('流程已退役')
+    expect(() => demoSubmitCaseForReview('missing-case')).toThrow('流程已退役')
+    expect(() => demoReviewQueue('rejected')).toThrow('医学审核权限')
     expect(() => demoReviewView('missing-case')).toThrow('医学审核权限')
     expect(() => demoDecideCaseReview('missing-case', 'approved', '')).toThrow('医学审核权限')
   })

@@ -76,6 +76,13 @@ class LearningTaskRecord:
     completed_at: datetime | None
     previous_status: str | None = None
     attempt: LearningTaskAttemptRecord | None = None
+    cycle_number: int = 1
+    target_type: str = ""
+    target_code: str = ""
+    variant_code: str = ""
+    plan_source_type: str = ""
+    plan_source_id: int | None = None
+    plan_source_context: dict[str, object] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,6 +124,13 @@ class LearningPlanRecord:
     tasks: tuple[LearningTaskRecord, ...]
     source_type: str = "case_assessment"
     source_id: int | None = None
+    source_context: dict[str, object] | None = None
+    current_cycle: int = 1
+    verification_status: str = "not_ready"
+    automation_exhausted: bool = False
+    decision_policy_version: str = ""
+    decision_basis: dict[str, object] | None = None
+    evaluated_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,7 +138,7 @@ class NotificationRecord:
     id: int
     type: str
     entity_type: str
-    entity_id: int
+    entity_id: int | str
     title: str
     body: str
     read_at: datetime | None

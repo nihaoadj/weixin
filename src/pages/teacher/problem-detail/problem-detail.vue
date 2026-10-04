@@ -2,35 +2,32 @@
   <view class="safe-page page page-enter">
     <MedDetailSkeleton
       v-if="loading"
-      label="正在加载问题…"
+      label="正在加载病例…"
     />
     <MedState
       v-else-if="loadError"
       variant="error"
       icon="retry"
-      title="问题加载失败"
+      title="病例加载失败"
       :description="loadError"
       action-label="重新加载"
-      secondary-action-label="返回工作台"
+      secondary-action-label="返回内容列表"
       @action="loadProblem(problemId)"
       @secondary-action="back"
     />
     <MedState
       v-else-if="!problem"
       icon="book"
-      title="问题不存在"
+      title="病例不存在"
       description="内容可能已移除，或当前身份无法查看。"
-      action-label="返回工作台"
+      action-label="返回内容列表"
       @action="back"
     />
     <view
       v-else
       class="detail-card"
     >
-      <view class="meta"
-        ><text class="type">{{ problem.type }}</text
-        ><text class="status">{{ problem.status }}</text></view
-      >
+      <text class="type">教学病例</text>
       <text
         class="title"
         role="heading"
@@ -41,7 +38,7 @@
         class="section-label"
         role="heading"
         aria-level="2"
-        >题目内容</text
+        >病例简介</text
       >
       <text
         class="description"
@@ -49,79 +46,143 @@
         >{{ problem.description || '暂无详细描述' }}</text
       >
       <view class="info"
-        ><text>发布对象</text><text>{{ targetText }}</text></view
-      >
-      <view class="info"
         ><text>创建日期</text><text>{{ problem.time }}</text></view
       >
-      <view
-        v-if="problem.publishTime"
-        class="info"
-        ><text>发布日期</text><text>{{ problem.publishTime }}</text></view
-      >
       <button
-        v-if="problem.status === '待审核'"
+        v-if="problem.allowedActions?.includes('edit')"
         class="primary-button edit"
         role="button"
         tabindex="0"
         hover-class="is-pressed"
         :hover-start-time="0"
         :hover-stay-time="80"
+        :disabled="deleting"
         @keydown="activateButtonOnKey"
         @click="edit"
       >
-        编辑问题
+        编辑病例
+      </button>
+      <button
+        v-if="problem.allowedActions?.includes('delete')"
+        class="delete-button"
+        :disabled="deleting"
+        @click="confirmDelete"
+      >
+        {{ deleting ? '正在删除…' : '删除病例' }}
       </button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { activateButtonOnKey } from '@/components/ui/keyboard'
 import MedState from '@/components/ui/MedState.vue'
 import MedDetailSkeleton from '@/components/ui/MedDetailSkeleton.vue'
-import { onBackPress, onLoad } from '@dcloudio/uni-app'
-import { requireRole } from '@/features/identity/public'
+import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
+import { getSession, requireRole } from '@/features/identity/public'
 import { backOrRoute, goDetail, handleBackPress, ROUTES } from '@/platform/navigation'
-import { findProblemAsync } from '@/features/content/public'
+import { teacherContentReturnParams } from '@/platform/navigation/teacher'
+let contentReturn = teacherContentReturnParams({}, 'cases')
+import { deleteGuidedCaseAsync, findProblemAsync } from '@/features/content/public'
 import type { Problem } from '@/types/domain'
 
 const problem = ref<Problem | null>(null)
 const loading = ref(false)
 const loadError = ref('')
+const deleting = ref(false)
 let problemId = ''
-const targetText = computed(() => {
-  if (problem.value?.target === 'class') return problem.value.targetLabel || problem.value.className || '指定班级'
-  if (problem.value?.target === 'individual')
-    return problem.value.targetLabel || `指定学生 ${problem.value.targetIds?.length || 0} 人`
-  return '全体学生'
+let actor: string | undefined
+let disposed = false
+let sourceQuery: Record<string, string | undefined> = {}
+onBeforeUnmount(() => {
+  disposed = true
 })
+const current = () => !disposed && getSession()?.role === 'teacher' && getSession()?.openid === actor
 function back() {
-  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
+  backOrRoute(ROUTES.teacherContent, contentReturn)
 }
 onLoad((options) => {
+  sourceQuery = options || {}
+  contentReturn = teacherContentReturnParams(options, 'cases')
   if (!requireRole('teacher')) return
+  actor = getSession()?.openid
   const id = typeof options?.id === 'string' ? options.id : ''
   problemId = id
   void loadProblem(id)
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' }))
+onShow(() => {
+  if (actor && !current()) {
+    problem.value = null
+    loading.value = false
+    deleting.value = false
+    loadError.value = '教师账号已变更，请返回内容列表。'
+  }
+})
+onBackPress(({ from }) => {
+  if (from === 'navigateBack') return false
+  if (deleting.value) return true
+  return handleBackPress(from, ROUTES.teacherContent, contentReturn)
+})
 
 async function loadProblem(id: string) {
-  if (loading.value) return
+  if (loading.value || !current()) return
   loading.value = true
   loadError.value = ''
   try {
-    problem.value = (await findProblemAsync(id)) || null
+    const result = (await findProblemAsync(id)) || null
+    if (!current()) return
+    problem.value = result
+    if (result && result.contentType !== 'guided_case') {
+      problem.value = null
+      return
+    }
+    if (result) contentReturn = teacherContentReturnParams(sourceQuery, 'cases')
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '暂时无法获取内容，请重试。'
+    if (current()) loadError.value = error instanceof Error ? error.message : '暂时无法获取内容，请重试。'
   } finally {
-    loading.value = false
+    if (current()) loading.value = false
   }
 }
 function edit() {
-  if (problem.value) goDetail(ROUTES.teacherProblemEdit, { id: problem.value.id })
+  if (!deleting.value && current() && problem.value?.allowedActions?.includes('edit'))
+    goDetail(ROUTES.teacherCaseEdit, {
+      id: problem.value.id,
+      ...contentReturn,
+    })
+}
+function confirmDelete() {
+  const item = problem.value
+  if (!item || deleting.value || !current() || !item.allowedActions?.includes('delete')) return
+  deleting.value = true
+  uni.showModal({
+    title: '删除这个病例？',
+    content: '删除后不能再选入新课堂，已有课堂与历史作答仍会保留。',
+    confirmText: '删除',
+    success: ({ confirm }) => {
+      if (!current()) return
+      if (confirm) void removeCase(item.id)
+      else deleting.value = false
+    },
+    fail: () => {
+      if (current()) deleting.value = false
+    },
+  })
+}
+async function removeCase(id: string) {
+  if (!current()) return
+  try {
+    await deleteGuidedCaseAsync(id)
+    if (!current()) return
+    problem.value = null
+    uni.showToast({ title: '病例已删除', icon: 'success' })
+    back()
+  } catch (reason) {
+    if (current())
+      uni.showToast({ title: reason instanceof Error ? reason.message : '删除失败，病例仍保留。', icon: 'none' })
+  } finally {
+    if (current()) deleting.value = false
+  }
 }
 </script>
 
@@ -180,6 +241,14 @@ function edit() {
   gap: 24rpx;
   color: var(--med-muted);
   overflow-wrap: anywhere;
+}
+.delete-button {
+  margin-top: 20rpx;
+  min-height: 80rpx;
+  color: #9c3f3a;
+  background: #fff;
+  border: 1rpx solid #e6c6c3;
+  font-size: 24rpx;
 }
 .edit {
   margin-top: 30rpx;

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -10,14 +10,35 @@ from app.modules.content.api.schemas import (
     KnowledgeCardReviewDecision,
 )
 from app.modules.content.application.records import KnowledgeCardContributionCommand
-from app.modules.content.domain.knowledge_catalog import CATALOG_VERSION, point_view, tree_view
 from app.modules.content.public import knowledge_card_contribution_view
-from app.modules.content.wiring import content_application
+from app.modules.content.wiring import content_application, knowledge_catalog_port
 from app.modules.identity.infrastructure.models import User
 from app.shared.actor import Actor
 from app.shared.errors import AppError
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+
+
+class KnowledgeSourceRead(BaseModel):
+    source_key: str
+    title: str
+    publisher: str
+    url: str
+    source_type: str
+    accessed_on: str
+
+
+class KnowledgeDependencyRead(BaseModel):
+    id: int
+    prerequisite_code: str
+    dependent_code: str
+    relation_kind: str
+    rationale: str
+    limitation: str
+    confidence: str
+    evidence_status: str
+    medical_review_status: str
+    sources: list[KnowledgeSourceRead]
 
 
 class KnowledgePointRead(BaseModel):
@@ -27,30 +48,50 @@ class KnowledgePointRead(BaseModel):
     topic: str
     title: str
     objective: str
+    learning_objectives: list[str] = Field(min_length=2)
     reference: str
     card_count: int
     catalog_version: str
+    catalog_evidence_status: str
+    catalog_medical_review_status: str
     parent_code: str
     description: str
     prerequisite_codes: list[str]
     related_codes: list[str]
+    dependencies: list[KnowledgeDependencyRead]
+    sources: list[KnowledgeSourceRead]
+    evidence_status: str
+    medical_review_status: str
     relationship_note: str
     case_slug: str
 
 
 class KnowledgeTreeRead(BaseModel):
     catalog_version: str
+    evidence_status: str
+    medical_review_status: str
     items: list[KnowledgePointRead]
 
 
 @router.get("/tree", response_model=KnowledgeTreeRead)
-def knowledge_tree(_user: User = Depends(get_current_user)) -> dict[str, object]:
-    return {"catalog_version": CATALOG_VERSION, "items": tree_view()}
+def knowledge_tree(_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, object]:
+    catalog = knowledge_catalog_port(db)
+    items = catalog.tree_view()
+    if not items:
+        raise AppError("SERVICE_ERROR", "知识目录不可用", 503)
+    return {
+        "catalog_version": catalog.catalog_version(),
+        "evidence_status": items[0]["catalog_evidence_status"],
+        "medical_review_status": items[0]["catalog_medical_review_status"],
+        "items": items,
+    }
 
 
 @router.get("/points/{code}", response_model=KnowledgePointRead)
-def knowledge_point(code: str, _user: User = Depends(get_current_user)) -> dict[str, object]:
-    point = point_view(code)
+def knowledge_point(
+    code: str, _user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> dict[str, object]:
+    point = knowledge_catalog_port(db).point_view(code)
     if point is None:
         raise AppError("RESOURCE_NOT_FOUND", "知识点不存在", 404)
     return point
@@ -66,6 +107,7 @@ def _card_command(payload: KnowledgeCardContributionWrite) -> KnowledgeCardContr
         correct_option=payload.correct_option,
         explanation=payload.explanation,
         reference=payload.reference,
+        target_student_ids=tuple(payload.target_student_ids),
     )
 
 

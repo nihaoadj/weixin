@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="470" viewBox="0 0 750 470" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="63" y1="12" x2="688" y2="439" gradientUnits="userSpaceOnUse"><stop stop-color="#F9FCFF"/><stop offset=".55" stop-color="#DCEEFF"/><stop offset="1" stop-color="#BFE3FF"/></linearGradient>
+    <linearGradient id="horizon" x1="0" y1="360" x2="0" y2="470" gradientUnits="userSpaceOnUse"><stop stop-color="#F4FBFF" stop-opacity="0"/><stop offset="1" stop-color="#F4FBFF"/></linearGradient>
+  </defs>
+  <rect width="750" height="470" fill="url(#sky)"/>
+  <path d="M-50 286C102 188 183 74 321 62c111-9 144 49 244 30 90-17 123-105 222-120" stroke="#FFFFFF" stroke-opacity=".56" stroke-width="92"/>
+  <path d="M-38 470C112 341 227 414 349 370c126-45 188-171 296-166 84 4 119 62 153 100" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="78"/>
+  <path d="M429 470c134-107 190-132 258-121 41 6 71 29 104 62" stroke="#9BD7FC" stroke-opacity=".45" stroke-width="42"/>
+  <path d="M683 62c-73 37-90 87-101 132m177-39c-51 23-80 55-85 112" stroke="#7CC6F8" stroke-opacity=".35" stroke-width="13"/>
+  <rect y="360" width="750" height="110" fill="url(#horizon)"/>
+</svg>

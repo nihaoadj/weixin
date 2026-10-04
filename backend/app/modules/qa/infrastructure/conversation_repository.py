@@ -45,10 +45,14 @@ class SqlAlchemyConversationRepository(ConversationRepository):
     def _topic_filter(knowledge_point_code: str | None):
         if knowledge_point_code is None:
             return True
-        return select(ConversationLearningContext.id).where(
-            ConversationLearningContext.conversation_id == Conversation.id,
-            ConversationLearningContext.topic_code == knowledge_point_code,
-        ).exists()
+        return (
+            select(ConversationLearningContext.id)
+            .where(
+                ConversationLearningContext.conversation_id == Conversation.id,
+                ConversationLearningContext.topic_code == knowledge_point_code,
+            )
+            .exists()
+        )
 
     def list_summaries(
         self, student_id: int, limit: int, offset: int, knowledge_point_code: str | None = None

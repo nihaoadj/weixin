@@ -27,6 +27,38 @@ describe('PBL learning report contract', () => {
             occurrences: 2,
           },
         ],
+        dashboard: {
+          data_basis: 'student_pbl_evidence',
+          period_start: '2026-09-14',
+          period_end: '2026-09-20',
+          mastery_score: 78,
+          mastery_delta: 12,
+          mastery_sample_count: 4,
+          study_minutes: 750,
+          study_duration_basis: 'estimated_activity_intervals',
+          plan_completion_rate: 87,
+          mastered_knowledge_count: 3,
+          ai_diagnostic_count: 2,
+          status_label: '优秀',
+          trend: [
+            {
+              period_start: '2026-09-14',
+              period_end: '2026-09-20',
+              score: 78,
+              sample_count: 4,
+            },
+          ],
+          weaknesses: [
+            {
+              target_type: 'knowledge_gap',
+              target_code: 'vascular_response',
+              label: '炎症的血管反应',
+              occurrences: 2,
+              mastery_percentage: 55,
+            },
+          ],
+          ai_summary: '本周学习状态良好。',
+        },
         next_action: null,
       },
       items: [
@@ -53,6 +85,12 @@ describe('PBL learning report contract', () => {
     expect(page.summary.statusCounts.improved).toBe(1)
     expect(page.summary.statusCounts.discussing).toBe(0)
     expect(page.summary.completedPersonalDiscussions).toBe(1)
+    expect(page.summary.dashboard).toMatchObject({
+      masteryScore: 78,
+      studyMinutes: 750,
+      dataBasis: 'student_pbl_evidence',
+    })
+    expect(page.summary.dashboard.weaknesses[0].masteryPercentage).toBe(55)
   })
 
   it('maps an append-only two-cycle target trail without introducing a composite score', () => {
@@ -68,6 +106,7 @@ describe('PBL learning report contract', () => {
     const parsed = reportDetailSchema.parse({
       session,
       status: 'improved',
+      visibility: 'classroom',
       current_phase: 'synthesis',
       phase_status: 'completed',
       phase_progress: [
@@ -133,6 +172,15 @@ describe('PBL learning report contract', () => {
       task_progress: { completed: 4, total: 4 },
       summary_text: '两轮证据可追溯。',
       next_action: { kind: 'none', label: '本次学习已完成' },
+      teacher_feedbacks: [
+        {
+          id: 31,
+          plan_id: 12,
+          action_type: 'feedback_only',
+          body: '请把形态证据与机制解释逐项对应。',
+          created_at: '2026-09-04T10:30:00Z',
+        },
+      ],
       timeline: [
         {
           type: 'cycle_evaluated',
@@ -147,6 +195,16 @@ describe('PBL learning report contract', () => {
     const report = mapLearningReport(parsed)
     expect(report.plans[0].evaluations.map((item) => item.cycle_number)).toEqual([1, 2])
     expect(report.targetProgress[0].cycles.map((item) => item.score)).toEqual([0, 100])
+    expect(report.visibility).toBe('classroom')
+    expect(report.teacherFeedbacks).toEqual([
+      {
+        id: '31',
+        planId: '12',
+        actionType: 'feedback_only',
+        body: '请把形态证据与机制解释逐项对应。',
+        createdAt: '2026-09-04T10:30:00Z',
+      },
+    ])
     expect(report).not.toHaveProperty('score')
     expect(report).not.toHaveProperty('compositeScore')
   })

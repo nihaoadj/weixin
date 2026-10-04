@@ -228,6 +228,7 @@ def _application(uow: _RecordingUow, audit: _RecordingAudit) -> ContentApplicati
     return ContentApplication(
         object(),
         uow,
+        object(),
         draft_generator=_FixedGenerator(result),
         draft_audit=audit,
     )

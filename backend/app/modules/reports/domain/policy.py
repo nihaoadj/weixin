@@ -5,12 +5,14 @@ from app.shared.errors import AppError
 
 
 class ReportPolicy:
-    """Report state and visibility policy; teacher class scope remains configurable."""
+    """Report state and visibility policy.
 
-    # Product has not decided whether teacher reports are limited to own classes.
-    # ``submitted_global`` preserves the current API behavior until that policy is
-    # explicitly changed and tested by the owner.
-    teacher_scope = "submitted_global"
+    T29 replaced the undecided ``submitted_global`` scope: teachers read and
+    review only reports attributed to classes they own; drafts and legacy
+    unattributed records stay student-only.
+    """
+
+    teacher_scope = "owned_class"
 
     def can_read(self, actor: Actor, student_id: int, status: str) -> bool:
         if actor.role == "student":

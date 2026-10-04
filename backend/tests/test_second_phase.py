@@ -74,8 +74,10 @@ def test_classes_review_and_analytics_permissions() -> None:
     assert client.post(f"/attempts/{attempt}/complete", headers=student_headers).status_code == 200
     overview = client.get(f"/analytics/overview?class_id={class_id}", headers=teacher_headers)
     assert overview.status_code == 200
-    assert overview.json()["eligible_pairs"] >= 1
-    assert overview.json()["completion_rate"] == 50.0
+    assert overview.json()["schema_version"] == 3
+    assert overview.json()["completed_tests"] == 0
+    assert overview.json()["completion_rate"] is None
+    assert "improved_rate" not in overview.json()
     invalid_range = client.get("/analytics/overview?date_from=2026-08-24&date_to=2026-08-23", headers=teacher_headers)
     assert invalid_range.status_code == 400
     assert client.get("/analytics/overview?class_id=99999", headers=teacher_headers).status_code == 404
@@ -109,12 +111,13 @@ def test_class_crud_and_case_student_analytics() -> None:
     problems = client.get("/problems", headers=headers).json()
     case_id = next(item["id"] for item in problems if item["content_type"] == "guided_case")
     case_result = client.get(f"/analytics/cases/{case_id}?class_id={class_id}", headers=headers)
-    assert case_result.status_code == 200
+    assert case_result.status_code == 409
     student_result = client.get(f"/analytics/students/{student_id}?class_id={class_id}", headers=headers)
     assert student_result.status_code == 200
+    assert student_result.json()["completed_tests"] == 0
     assert client.delete(f"/classes/{class_id}/members/{student_id}", headers=headers).status_code == 204
     assert client.delete(f"/classes/{class_id}/members/{student_id}", headers=headers).status_code == 204
-    assert client.get("/analytics/students/99999", headers=headers).status_code == 404
+    assert client.get(f"/analytics/students/99999?class_id={class_id}", headers=headers).status_code == 404
     archived = client.patch(f"/classes/{class_id}", headers=headers, json={"status": "archived"})
     assert archived.status_code == 200
     assert client.post(f"/classes/{class_id}/members/{student_id}", headers=headers).status_code == 409
@@ -153,40 +156,31 @@ def test_case_analytics_is_owner_scoped() -> None:
     )
     assert problem.status_code == 200
     problem_id = problem.json()["id"]
-    assert client.post(f"/problems/{problem_id}/medical-review/submit", headers=owner_headers).status_code == 200
-    assert (
-        client.post(
-            f"/problems/{problem_id}/medical-review",
-            headers={"Authorization": f"Bearer {login('teacher', 'demo_reviewer')}"},
-            json={"decision": "approved", "comment": "审核通过"},
-        ).status_code
-        == 200
-    )
-    assert client.post(f"/problems/{problem_id}/publish", headers=owner_headers).status_code == 200
+    assert problem.json()["status"] == "published"
+    assert problem.json()["medical_review_status"] == "not_required"
     assert client.get(f"/analytics/cases/{problem_id}", headers=other_headers).status_code == 404
 
 
-def test_legacy_class_ids_and_class_members_are_unioned() -> None:
+def test_legacy_class_ids_and_class_members_are_unioned(db) -> None:
     teacher = login("teacher", "legacy_teacher")
     student = login("student", "legacy_student", ["legacy-code"])
     headers = {"Authorization": f"Bearer {teacher}"}
     classroom = client.post("/classes", headers=headers, json={"name": "兼容班", "code": "legacy-code"})
     assert classroom.status_code == 200
-    problem = client.post(
-        "/problems",
-        headers=headers,
-        json={
-            "type": "病例分析",
-            "title": "legacy visible",
-            "description": "compatibility",
-            "target": "class",
-            "target_label": "兼容班",
-            "target_ids": ["legacy-code"],
-        },
+    from app.modules.content.infrastructure.models import Problem
+
+    case = Problem(
+        type="病例分析",
+        title="legacy visible",
+        content_type="guided_case",
+        status="published",
+        medical_review_status="approved",
+        target="class",
+        target_ids="legacy-code",
     )
-    assert problem.status_code == 200
-    problem_id = problem.json()["id"]
-    assert client.post(f"/problems/{problem_id}/publish", headers=headers).status_code == 200
+    db.add(case)
+    db.commit()
+    problem_id = case.id
     visible = client.get("/problems", headers={"Authorization": f"Bearer {student}"})
     assert any(item["id"] == problem_id for item in visible.json())
 

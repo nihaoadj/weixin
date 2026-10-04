@@ -1,0 +1,13 @@
+{
+  "paths": 100,
+  "checks": [
+    {
+      "command": "git diff --check -- <scoped paths>",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --cached --check -- <scoped paths>",
+      "exit_code": 0
+    }
+  ]
+}

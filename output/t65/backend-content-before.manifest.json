@@ -1,0 +1,32 @@
+{
+  "created_at": "2026-10-03T14:33:26.5251283Z",
+  "files": [
+    {
+      "path": "backend/app/modules/content/infrastructure/repositories.py",
+      "sha256": "C2DBB9C34E719755ECD8584B34D36A7D9DBCA9E00CBECEBFCB7F543B971BC472",
+      "bytes": 22256
+    },
+    {
+      "path": "backend/app/modules/content/application/ports.py",
+      "sha256": "3A821122EA4DAD804CDCB9F76251C36754A6D21BC65361B985294318F0815023",
+      "bytes": 3714
+    },
+    {
+      "path": "backend/app/modules/content/application/use_cases.py",
+      "sha256": "00CA420804AD04FD009F62D33084FBAF9BF87EA9799DDDFB4E775CC0887212D6",
+      "bytes": 17248
+    },
+    {
+      "path": "backend/tests/test_characterization.py",
+      "sha256": "53AA5028B5384DE9B086D8AFDF34F482E179F5827729F9D2DBDF9CE54382F382",
+      "bytes": 8714
+    }
+  ],
+  "git_status": [
+    "MM backend/app/modules/content/application/ports.py",
+    "MM backend/app/modules/content/application/use_cases.py",
+    "MM backend/app/modules/content/infrastructure/repositories.py",
+    "M  backend/tests/test_characterization.py"
+  ],
+  "archive_sha256": "C0C52723241766DB13223D84D35484082BB07619829B2FA6369DCA1D7EE7C36F"
+}

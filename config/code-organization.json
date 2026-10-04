@@ -1,0 +1,14 @@
+{
+  "backend_root": "backend",
+  "backend_boundaries_config": "config/backend-boundaries.json",
+  "root_html_allowlist": ["index.html"],
+  "runtime_python_roots": ["backend/app"],
+  "runtime_forbidden_import_prefixes": [
+    "backend.scripts",
+    "backend.tests",
+    "app.scripts",
+    "app.tests",
+    "scripts",
+    "tests"
+  ]
+}

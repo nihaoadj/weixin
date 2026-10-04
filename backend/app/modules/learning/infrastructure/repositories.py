@@ -28,7 +28,6 @@ from app.modules.learning.infrastructure.models import (
     LearningTaskAttempt,
     StudentNotification,
 )
-from app.modules.learning.infrastructure.pbl_mastery import evaluate_pbl_plan
 from app.modules.training.infrastructure.models import AICallLog, CaseAssessment, CaseAttempt
 from app.modules.training.public import AssessmentSourceContract, CaseProblemContract, CaseSourceContract
 from app.shared.actor import Actor
@@ -110,6 +109,13 @@ class SqlAlchemyLearningRepository(LearningRepository):
             completed_at=task.completed_at,
             previous_status=previous_status,
             attempt=cls._task_attempt_record(task.attempt, task.public_definition) if task.attempt else None,
+            cycle_number=task.cycle_number,
+            target_type=task.target_type,
+            target_code=task.target_code,
+            variant_code=task.variant_code,
+            plan_source_type=task.plan.source_type if task.plan else "",
+            plan_source_id=task.plan.source_id if task.plan else None,
+            plan_source_context=deepcopy(task.plan.source_context or {}) if task.plan else None,
         )
 
     @classmethod
@@ -132,6 +138,13 @@ class SqlAlchemyLearningRepository(LearningRepository):
             completed_at=plan.completed_at,
             superseded_at=plan.superseded_at,
             tasks=tuple(cls._task_record(task) for task in sorted(plan.tasks, key=lambda item: item.position)),
+            source_context=deepcopy(plan.source_context or {}),
+            current_cycle=plan.current_cycle,
+            verification_status=plan.verification_status,
+            automation_exhausted=plan.automation_exhausted,
+            decision_policy_version=plan.decision_policy_version,
+            decision_basis=deepcopy(plan.decision_basis or {}),
+            evaluated_at=plan.evaluated_at,
         )
 
     @staticmethod
@@ -140,7 +153,7 @@ class SqlAlchemyLearningRepository(LearningRepository):
             id=item.id,
             type=item.type,
             entity_type=item.entity_type,
-            entity_id=item.entity_id,
+            entity_id=item.entity_public_id or item.entity_id,
             title=item.title,
             body=item.body,
             read_at=item.read_at,
@@ -422,43 +435,12 @@ class SqlAlchemyLearningRepository(LearningRepository):
             .join(LearningPlan)
             .where(LearningTask.id == task_id, LearningPlan.student_id == student_id)
         )
+        if task is not None and task.plan.source_type in {"pbl_suggestion", "classroom_package"}:
+            raise PersistenceConflict
         if task is not None and task.status != "completed":
             task.status = "completed"
             task.completed_at = completed_at
-            if task.plan.source_type == "pbl_suggestion":
-                assessed = self._session.scalar(
-                    select(CaseAssessment)
-                    .join(CaseAttempt)
-                    .where(
-                        CaseAttempt.learning_task_id == task.id,
-                        CaseAttempt.student_id == student_id,
-                        CaseAttempt.status == "assessed",
-                    )
-                )
-                if assessed is not None and task.attempt is None:
-                    self._session.add(
-                        LearningTaskAttempt(
-                            task_id=task.id,
-                            student_id=student_id,
-                            status="assessed",
-                            answer={
-                                "case_attempt_id": assessed.attempt_id,
-                                "dimension_scores": {
-                                    str(item.get("dimension_id")): item.get("score")
-                                    for item in assessed.dimensions
-                                    if item.get("dimension_id") is not None
-                                },
-                            },
-                            score=assessed.total_score,
-                            evidence=[f"病例训练记录 {assessed.attempt_id}；评估记录 {assessed.id}"],
-                            feedback="病例重练已完成，系统将按目标维度自动判定。",
-                            assessed_at=completed_at,
-                            model_name="case_assessment",
-                            prompt_version="pbl-learning-v2",
-                        )
-                    )
-                self._session.flush()
-                evaluate_pbl_plan(self._session, task.plan, completed_at)
+            self._session.flush()
 
     def complete_plan(self, student_id: int, plan_id: int, completed_at: datetime) -> LearningPlanRecord:
         plan = self._session.scalar(
@@ -468,9 +450,9 @@ class SqlAlchemyLearningRepository(LearningRepository):
         )
         if plan is None:
             raise PersistenceConflict
-        if plan.source_type == "pbl_suggestion":
-            evaluate_pbl_plan(self._session, plan, completed_at)
-        elif plan.status != "completed":
+        if plan.source_type in {"pbl_suggestion", "classroom_package"}:
+            raise PersistenceConflict
+        if plan.status != "completed":
             plan.status = "completed"
             plan.completed_at = completed_at
         self._session.flush()

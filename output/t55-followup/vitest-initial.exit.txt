@@ -1,0 +1,1 @@
+npx vitest run [reference behavior + Demo seed] | exit 1

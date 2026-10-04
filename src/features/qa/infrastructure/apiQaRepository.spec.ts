@@ -52,8 +52,11 @@ describe('API core repository', () => {
             student_id: 2,
             student_name: '学生',
             status: 'pending_review',
+            report_kind: 'qa_learning_report',
             ai_score: 80,
             ai_summary: 'summary',
+            class_id: null,
+            class_name: null,
             messages: [],
             created_at: '2026-01-01T00:00:00Z',
             updated_at: '2026-01-01T00:00:00Z',
@@ -67,7 +70,7 @@ describe('API core repository', () => {
     await expect(qa.findConversation('conversation/a')).resolves.toMatchObject({
       conversationId: 'conversation/a',
     })
-    await expect(reports.findReport('conversation/a')).resolves.toMatchObject({ id: '3' })
+    await expect(reports.findReportByConversation('conversation/a')).resolves.toMatchObject({ id: '3' })
     const urls = vi.mocked(uni.request).mock.calls.map(([options]) => String(options.url))
     expect(urls).toEqual([
       'https://api.example.com/conversations/by-client/conversation%2Fa',

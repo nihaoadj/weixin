@@ -1,11 +1,17 @@
 <template>
   <view class="safe-page report-page">
+    <text
+      class="sr-only"
+      role="heading"
+      aria-level="1"
+      >历史问答总结</text
+    >
     <MedState
       v-if="isLoading"
       variant="loading"
       icon="retry"
-      title="正在加载报告"
-      description="正在获取最新报告内容。"
+      title="正在加载历史总结"
+      description="正在获取已保存的问答总结。"
     />
     <MedState
       v-else-if="loadError"
@@ -21,8 +27,8 @@
     <MedState
       v-else-if="!report"
       icon="report"
-      title="报告不存在"
-      description="报告可能尚未生成，请返回聊天继续学习。"
+      title="历史总结不存在"
+      description="这条历史记录不存在，请返回答疑继续学习。"
       action-label="返回聊天"
       @action="backToChat"
     />
@@ -33,7 +39,7 @@
             name="report"
             size="lg"
         /></view>
-        <text class="eyebrow">FORMATIVE ASSESSMENT</text>
+        <text class="eyebrow">HISTORICAL QA SUMMARY</text>
         <view class="score-row"
           ><text class="score">{{ report.analysis.score }}</text
           ><text class="score-total">/ 100</text></view
@@ -42,7 +48,7 @@
         <text class="summary">{{ report.analysis.summary }}</text>
       </view>
 
-      <SafetyBanner class="report-safety">报告用于回顾学习过程，不应输入真实患者身份信息。</SafetyBanner>
+      <SafetyBanner class="report-safety">历史总结仅用于回顾学习过程，不应输入真实患者身份信息。</SafetyBanner>
 
       <view class="section card">
         <text class="section-title">改进建议</text>
@@ -77,6 +83,34 @@
         <text class="teacher-feedback">{{ report.teacherFeedback || '教师暂未填写文字反馈。' }}</text>
       </view>
 
+      <view class="section card submission-facts">
+        <text class="section-title">提交信息</text>
+        <view
+          v-if="report.classId"
+          class="fact-row"
+        >
+          <text class="fact-label">接收班级</text>
+          <text class="fact-value">{{ report.className || '已提交班级' }}</text>
+        </view>
+        <view
+          v-else
+          class="fact-row"
+        >
+          <text class="fact-label">班级归属</text>
+          <text class="fact-value">历史记录未关联班级，仅本人可见</text>
+        </view>
+        <view class="fact-row">
+          <text class="fact-label">当前状态</text>
+          <text class="fact-value">{{
+            report.status === '已批阅'
+              ? '教师已完成批阅'
+              : report.status === '草稿'
+                ? '历史草稿，仅本人可见'
+                : '历史提交记录，仅供本人回看'
+          }}</text>
+        </view>
+      </view>
+
       <view class="section card">
         <text class="section-title">对话预览</text>
         <view
@@ -97,14 +131,6 @@
       <view class="safety-note">本报告用于教学反馈，不构成医学诊断或治疗建议。</view>
       <view class="actions">
         <button
-          class="primary-button"
-          :loading="submitting"
-          :disabled="report.status !== '草稿'"
-          @click="submitToTeacher"
-        >
-          {{ actionLabel }}
-        </button>
-        <button
           class="secondary"
           @click="backToChat"
         >
@@ -122,21 +148,15 @@ import MedIcon from '@/components/ui/MedIcon.vue'
 import MedState from '@/components/ui/MedState.vue'
 import SafetyBanner from '@/components/ui/SafetyBanner.vue'
 import { requireRole } from '@/features/identity/public'
-import { backOrRoute, handleBackPress, relaunchForRole, ROUTES } from '@/platform/navigation'
-import { findReportByConversationAsync, submitReportForReviewAsync } from '@/features/reports/public'
+import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
+import { findReportByConversationAsync } from '@/features/reports/public'
 import type { Report } from '@/types/domain'
 
 const report = ref<Report | null>(null)
 const isLoading = ref(false)
 const loadError = ref('')
-const submitting = ref(false)
 let reportKey = ''
 const previewMessages = computed(() => report.value?.messages.slice(0, 5) || [])
-const actionLabel = computed(() => {
-  if (report.value?.status === '待批阅') return '已提交教师批阅'
-  if (report.value?.status === '已批阅') return '教师已完成批阅'
-  return '提交给教师批阅'
-})
 
 onLoad((options) => {
   if (!requireRole('student')) return
@@ -155,25 +175,6 @@ async function loadReport(id: string) {
     loadError.value = error instanceof Error ? error.message : '请稍后重试'
   } finally {
     isLoading.value = false
-  }
-}
-
-async function submitToTeacher() {
-  if (submitting.value || !report.value || report.value.status !== '草稿') return
-  submitting.value = true
-  try {
-    const submitted = await submitReportForReviewAsync(report.value.conversationId)
-    if (!submitted) {
-      uni.showToast({ title: '报告状态已变化，请重新打开', icon: 'none' })
-      return
-    }
-    report.value = submitted
-    uni.showToast({ title: '报告已提交', icon: 'success' })
-    relaunchForRole('student')
-  } catch (error) {
-    uni.showToast({ title: error instanceof Error ? error.message : '提交失败，请重试', icon: 'none' })
-  } finally {
-    submitting.value = false
   }
 }
 
@@ -301,6 +302,25 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentChat))
   line-height: 1.65;
   white-space: pre-wrap;
 }
+.fact-row {
+  display: flex;
+  margin-top: 14rpx;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+.fact-label {
+  flex: none;
+  width: 150rpx;
+  color: var(--med-muted);
+  font-size: 25rpx;
+}
+.fact-value {
+  flex: 1;
+  color: var(--med-text);
+  font-size: 25rpx;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
 .preview-row {
   display: flex;
   margin-top: 18rpx;
@@ -358,7 +378,10 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentChat))
   background: var(--med-divider);
   border-radius: 18rpx;
 }
-.primary-button[disabled] {
-  opacity: 0.58;
+@media screen and (min-width: 600px) {
+  .fact-label,
+  .fact-value {
+    font-size: 13px;
+  }
 }
 </style>

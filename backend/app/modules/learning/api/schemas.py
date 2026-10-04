@@ -88,6 +88,9 @@ class NotificationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     type: Literal[
+        "learning_route_ready",
+        "final_test_released",
+        "learning_route_completed",
         "learning_plan_ready",
         "learning_plan_due",
         "learning_plan_completed",
@@ -96,8 +99,8 @@ class NotificationRead(BaseModel):
         "pbl_automation_exhausted",
         "pbl_teacher_feedback",
     ]
-    entity_type: Literal["learning_plan", "pbl_session"]
-    entity_id: int
+    entity_type: Literal["learning_plan", "pbl_session", "learning_route"]
+    entity_id: int | str
     title: str
     body: str
     read_at: datetime | None = None

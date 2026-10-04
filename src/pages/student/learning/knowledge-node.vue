@@ -20,200 +20,398 @@
       </button>
     </view>
     <template v-else-if="point">
-      <view class="node-head">
-        <text class="eyebrow-label">{{ point.systemLabel }}</text>
-        <view class="head-line">
-          <text class="node-title">{{ point.title }}</text>
-          <text :class="['status-pill', `status-${point.status}`]"
-            >{{ statusMark(point.status) }} {{ statusLabel(point.status) }}</text
-          >
-        </view>
-        <text class="objective">{{ point.objective }}</text>
-        <text
-          v-if="preparationNote"
-          class="preparation-note"
-        >
-          {{ preparationNote }}
-        </text>
-      </view>
-
-      <view class="content-section">
-        <text class="section-kicker">学习目标</text>
-        <text class="description">{{ study?.material?.objective || point.objective }}</text>
-        <text class="section-kicker">待解释情境</text>
-        <text class="description">{{ study?.material?.scenario || '请先围绕观察线索形成你的问题和假设。' }}</text>
-      </view>
-
-      <view
-        v-if="study?.material"
-        class="content-section"
-      >
-        <text class="section-kicker">研讨准备</text>
-        <view
-          v-for="section in study.material.background"
-          :key="section.title"
-          class="study-section"
-        >
-          <text class="relationship-label">{{ section.title }}</text>
-          <text class="description">{{ section.text }}</text>
-        </view>
-        <view class="study-section">
-          <text class="relationship-label">{{ study.material.example.title }}</text>
-          <text class="description">{{ study.material.example.text }}</text>
-        </view>
-        <text class="source-note"
-          >固定材料版本 {{ study.material.version }} ·
-          {{ study.material.reviewStatus === 'unreviewed' ? '合成材料，待教师审核' : '' }}</text
-        >
-      </view>
-
-      <view class="content-section relationship-section">
-        <text class="section-kicker">学习位置</text>
-        <view class="relationship-group">
-          <text class="relationship-label">前置知识</text>
-          <text
-            v-if="!prerequisites.length"
-            class="relationship-empty"
-          >
-            可以从这里直接开始。
-          </text>
-          <button
-            v-for="item in prerequisites"
-            :key="item.code"
-            class="relation-row"
-            @click="openPoint(item.code)"
-          >
-            <text :class="['relation-mark', `status-${item.status}`]">{{ statusMark(item.status) }}</text>
-            <view>
-              <text>{{ item.title }}</text>
-              <text>{{ statusLabel(item.status) }}</text>
-            </view>
-            <text>›</text>
-          </button>
-        </view>
-        <view class="relationship-group">
-          <text class="relationship-label">关联知识</text>
-          <text
-            v-if="!related.length"
-            class="relationship-empty"
-          >
-            暂无额外关联节点。
-          </text>
-          <button
-            v-for="item in related"
-            :key="item.code"
-            class="relation-row"
-            @click="openPoint(item.code)"
-          >
-            <text :class="['relation-mark', `status-${item.status}`]">{{ statusMark(item.status) }}</text>
-            <view>
-              <text>{{ item.title }}</text>
-              <text>{{ item.systemLabel }} · {{ statusLabel(item.status) }}</text>
-            </view>
-            <text>›</text>
-          </button>
-        </view>
-      </view>
-
-      <view class="content-section source-section">
-        <text class="section-kicker">资料来源</text>
-        <text>{{ study?.material.reference || point.reference }}</text>
-        <text class="source-note">学习状态只由客观练习、复习记录和已确认薄弱证据更新。</text>
-      </view>
-
-      <view
-        v-if="study?.practiceUnlocked && study.path"
-        class="content-section"
-      >
-        <text class="section-kicker">针对补学</text>
-        <view
-          v-for="section in study.material.remediation"
-          :key="section.title"
-          class="study-section"
-        >
-          <text class="relationship-label">{{ section.title }}</text>
-          <text class="description">{{ section.text }}</text>
-        </view>
-        <text class="section-kicker">自主 AI 练习</text>
-        <text class="source-note"
-          >AI 生成 · 未经教师审核。仅供个人练习，按 AI 参考答案反馈，不计正式成绩或知识点达标。</text
-        >
-        <button
-          v-if="!practiceGroup || practiceGroup.status === 'failed'"
-          class="secondary-action"
-          :disabled="practiceBusy"
-          @click="createPrivatePractice"
-        >
-          {{ practiceBusy ? '正在生成…' : '生成本轮 3 题练习' }}
-        </button>
-        <template v-else-if="practiceGroup.status === 'generating'">
-          <text class="source-note">正在生成练习，请稍后刷新本页。</text>
-        </template>
-        <template v-else-if="currentPrivateQuestion">
-          <text class="relationship-label"
-            >第 {{ currentPrivateQuestion.index + 1 }} / {{ practiceGroup.questions.length }} 题</text
-          >
-          <text class="description">{{ currentPrivateQuestion.prompt }}</text>
-          <button
-            v-for="(option, index) in currentPrivateQuestion.options"
-            :key="option"
-            class="practice-option"
-            :disabled="practiceBusy || Boolean(privateFeedback)"
-            @click="answerPrivatePracticeQuestion(index)"
-          >
-            {{ String.fromCharCode(65 + index) }}. {{ option }}
-          </button>
-          <view
-            v-if="privateFeedback"
-            class="practice-feedback"
-          >
-            <text>{{ privateFeedback.correct ? '按 AI 参考答案：正确' : '按 AI 参考答案：需要补学' }}</text>
-            <text>{{ privateFeedback.explanation }}</text>
-            <text>建议复习：{{ formatDue(privateFeedback.dueAt) }}</text>
-            <button
-              class="secondary-action"
-              @click="nextPrivateQuestion"
+      <view class="node-hero">
+        <image
+          class="hero-art"
+          src="/static/knowledge-node-hero.svg"
+          mode="scaleToFill"
+          alt=""
+          aria-hidden="true"
+        />
+        <view class="hero-inner">
+          <view class="hero-module">
+            <image
+              src="/static/knowledge-node-layers.svg"
+              class="hero-module-icon"
+              alt=""
+              aria-hidden="true"
+            />
+            <text>{{ point.systemLabel }}</text>
+          </view>
+          <view class="head-line">
+            <text class="node-title">{{ point.title }}</text>
+            <text :class="['status-pill', `status-${point.status}`]"
+              >{{ statusMark(point.status) }} {{ statusLabel(point.status) }}</text
             >
-              {{ hasNextPrivateQuestion ? '下一题' : '查看本轮结果' }}
+          </view>
+          <text class="hero-summary">{{ point.description || point.objective }}</text>
+          <text
+            v-if="preparationNote"
+            class="preparation-note"
+            >{{ preparationNote }}</text
+          >
+        </view>
+      </view>
+
+      <view class="node-sheet">
+        <view class="content-section goals-section">
+          <view class="section-heading">
+            <image
+              src="/static/knowledge-node-target.svg"
+              class="section-icon"
+              alt=""
+              aria-hidden="true"
+            />
+            <text class="section-title">学习目标</text>
+          </view>
+          <view class="goals-panel">
+            <view class="goals-copy">
+              <view
+                v-for="(objective, index) in study?.material?.learningObjectives || point.learningObjectives"
+                :key="objective"
+                class="goal-row"
+              >
+                <text class="goal-number">{{ index + 1 }}</text>
+                <text class="description">{{ objective }}</text>
+              </view>
+            </view>
+            <view
+              class="goals-decoration"
+              aria-hidden="true"
+            >
+              <image
+                src="/static/knowledge-node-goals.svg"
+                alt=""
+              />
+            </view>
+          </view>
+        </view>
+
+        <view
+          v-if="study?.material"
+          class="content-section"
+        >
+          <view class="section-heading">
+            <image
+              src="/static/knowledge-node-book.svg"
+              class="section-icon"
+              alt=""
+              aria-hidden="true"
+            />
+            <text class="section-title">研讨准备</text>
+          </view>
+          <view class="preparation-grid">
+            <view
+              v-for="section in study.material.background"
+              :key="section.title"
+              class="preparation-card"
+            >
+              <view class="prep-icon-shell">
+                <image
+                  src="/static/knowledge-node-eye.svg"
+                  class="prep-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+              </view>
+              <text class="item-title">{{ section.title }}</text>
+              <text class="description">{{ section.text }}</text>
+            </view>
+            <view class="preparation-card">
+              <view class="prep-icon-shell">
+                <image
+                  src="/static/knowledge-node-bulb.svg"
+                  class="prep-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+              </view>
+              <text class="item-title">{{ study.material.example.title }}</text>
+              <text class="description">{{ study.material.example.text }}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="content-section relationship-section">
+          <view class="section-heading">
+            <image
+              src="/static/knowledge-node-network.svg"
+              class="section-icon"
+              alt=""
+              aria-hidden="true"
+            />
+            <text class="section-title">学习位置</text>
+          </view>
+          <view class="relationship-grid">
+            <view class="relationship-card">
+              <view class="relationship-card-head">
+                <image
+                  src="/static/knowledge-node-cap.svg"
+                  class="relationship-card-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <text class="item-title">前置知识</text>
+              </view>
+              <text
+                v-if="!prerequisites.length"
+                class="relationship-empty"
+                >可以从这里直接开始。</text
+              >
+              <button
+                v-for="item in prerequisites"
+                :key="item.code"
+                class="relation-row"
+                @click="openPoint(item.code)"
+              >
+                <image
+                  src="/static/knowledge-node-document.svg"
+                  class="relation-item-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <view class="relation-copy">
+                  <text class="relation-title">{{ item.title }}</text>
+                  <text class="relation-meta">{{ item.systemLabel }} · {{ statusLabel(item.status) }}</text>
+                </view>
+                <text
+                  class="relation-chevron"
+                  aria-hidden="true"
+                  >›</text
+                >
+              </button>
+            </view>
+            <view class="relationship-card">
+              <view class="relationship-card-head">
+                <image
+                  src="/static/knowledge-node-network.svg"
+                  class="relationship-card-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <text class="item-title">关联知识</text>
+              </view>
+              <text
+                v-if="!related.length"
+                class="relationship-empty"
+                >暂无额外关联节点。</text
+              >
+              <button
+                v-for="item in related"
+                :key="item.code"
+                class="relation-row"
+                @click="openPoint(item.code)"
+              >
+                <image
+                  src="/static/knowledge-node-document.svg"
+                  class="relation-item-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <view class="relation-copy">
+                  <text class="relation-title">{{ item.title }}</text>
+                  <text class="relation-meta">{{ item.systemLabel }} · {{ statusLabel(item.status) }}</text>
+                </view>
+                <text
+                  class="relation-chevron"
+                  aria-hidden="true"
+                  >›</text
+                >
+              </button>
+            </view>
+          </view>
+          <view
+            v-if="point.dependencies.length"
+            class="dependency-notes"
+          >
+            <text class="subsection-title">前置关系依据</text>
+            <view
+              v-for="dependency in point.dependencies"
+              :key="dependency.id"
+              class="dependency-detail"
+            >
+              <text class="dependency-path"
+                >{{ byCode.get(dependency.prerequisiteCode)?.title || dependency.prerequisiteCode }} →
+                {{ point.title }}</text
+              >
+              <text>{{ dependency.rationale }}</text>
+              <text class="dependency-limitation">边界：{{ dependency.limitation }}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="content-section source-section">
+          <view class="section-heading source-heading">
+            <image
+              src="/static/knowledge-node-book.svg"
+              class="section-icon"
+              alt=""
+              aria-hidden="true"
+            />
+            <text class="section-title">权威学习资料推荐</text>
+          </view>
+          <text
+            v-if="!point.sources.length"
+            class="relationship-empty"
+            >当前目录暂无可查看的学习资料。</text
+          >
+          <view
+            v-for="source in point.sources"
+            :key="source.sourceKey"
+            class="source-card"
+          >
+            <view class="source-identity"
+              ><text>{{ sourceIdentityLabel(source.publisher) }}</text></view
+            >
+            <view class="source-content">
+              <text class="source-publisher">{{ source.publisher }} · {{ sourceTypeLabel(source.sourceType) }}</text>
+              <text class="source-title">{{ source.title }}</text>
+              <text class="source-description">{{ sourceCardSummary(point) }}</text>
+              <view class="source-link-row">
+                <image
+                  src="/static/knowledge-node-link.svg"
+                  class="source-link-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <text class="source-url">{{ source.url }}</text>
+              </view>
+            </view>
+            <button
+              class="source-open"
+              :disabled="!source.url"
+              @click="openSource(source.sourceKey)"
+            >
+              <text>查看原文</text>
+              <image
+                src="/static/knowledge-node-external.svg"
+                class="source-open-icon"
+                alt=""
+                aria-hidden="true"
+              />
             </button>
           </view>
-        </template>
-        <template v-else>
-          <text class="source-note"
-            >本轮练习已完成。{{
-              practiceGroup.canRetest ? '错题可生成一组变式再测。' : '请结合补学内容复习，或开启新的研讨。'
-            }}</text
-          >
-          <button
-            v-if="practiceGroup.canRetest"
-            class="secondary-action"
-            :disabled="practiceBusy"
-            @click="createPrivatePractice"
-          >
-            生成变式再测
-          </button>
-        </template>
+        </view>
+
+        <view class="content-section advice-section">
+          <view class="section-heading">
+            <image
+              src="/static/knowledge-node-idea.svg"
+              class="section-icon"
+              alt=""
+              aria-hidden="true"
+            />
+            <text class="section-title">学习建议</text>
+          </view>
+          <view class="advice-grid">
+            <view class="advice-step">
+              <view class="advice-icon-shell">
+                <image
+                  src="/static/knowledge-node-book.svg"
+                  class="advice-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+              </view>
+              <view class="advice-content">
+                <text class="advice-number">1.</text>
+                <text class="advice-title">先阅读资料</text>
+                <text class="advice-copy">建立基础认知</text>
+              </view>
+            </view>
+            <text
+              class="advice-arrow"
+              aria-hidden="true"
+              >→</text
+            >
+            <view class="advice-step">
+              <view class="advice-icon-shell">
+                <image
+                  src="/static/knowledge-node-eye.svg"
+                  class="advice-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+              </view>
+              <view class="advice-content">
+                <text class="advice-number">2.</text>
+                <text class="advice-title">再观察线索</text>
+                <text class="advice-copy">结合题目情境</text>
+              </view>
+            </view>
+            <text
+              class="advice-arrow"
+              aria-hidden="true"
+              >→</text
+            >
+            <view class="advice-step">
+              <view class="advice-icon-shell">
+                <image
+                  src="/static/knowledge-node-group.svg"
+                  class="advice-icon"
+                  alt=""
+                  aria-hidden="true"
+                />
+              </view>
+              <view class="advice-content">
+                <text class="advice-number">3.</text>
+                <text class="advice-title">最后开始研讨</text>
+                <text class="advice-copy">形成完整判断</text>
+              </view>
+            </view>
+          </view>
+        </view>
       </view>
 
       <view class="node-actions">
-        <button
-          class="primary-action"
-          @click="startDiscussion"
-        >
-          {{ study?.path ? (study.phase === 'completed' ? '查看已完成研讨' : '继续研讨') : '开始研讨' }}
-        </button>
-        <button
-          class="secondary-action"
-          :disabled="!canPractice"
-          @click="startReview"
-        >
-          {{ study?.legacyAccess ? '进入已有自测与巩固' : '进入自测与巩固' }}
-        </button>
-        <text
-          v-if="!canPractice"
-          class="action-note"
-          >{{ study?.lockReason || '完成四阶段研讨后开放练习。' }}</text
-        >
+        <view class="actions-inner">
+          <text
+            v-if="actionError"
+            class="action-error"
+            role="alert"
+            >{{ actionError }}</text
+          >
+          <view class="action-buttons">
+            <button
+              class="primary-action"
+              :disabled="discussionBusy"
+              @click="startDiscussion"
+            >
+              <image
+                src="/static/knowledge-node-chat.svg"
+                class="action-icon"
+                alt=""
+                aria-hidden="true"
+              />
+              <text>{{
+                discussionBusy
+                  ? '正在进入…'
+                  : study?.activeSession
+                    ? study.activeSession.phase === 'completed'
+                      ? study.learningRouteId
+                        ? '查看学习计划'
+                        : '查看已完成研讨'
+                      : '继续研讨'
+                    : '开始研讨'
+              }}</text>
+            </button>
+            <button
+              v-if="study?.learningRouteId"
+              class="review-action"
+              @click="openLearningRoute"
+            >
+              <image
+                src="/static/knowledge-node-document.svg"
+                class="action-icon"
+                alt=""
+                aria-hidden="true"
+              />
+              <view class="action-copy"
+                ><text>查看研讨学习计划</text><text class="action-caption">资料、病例与最终测试</text></view
+              >
+            </button>
+          </view>
+        </view>
       </view>
     </template>
   </view>
@@ -224,15 +422,9 @@ import { computed, ref } from 'vue'
 import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
 import {
   getKnowledgeMap,
-  getStudyPractices,
-  getPrivatePractice,
-  generateStudyPractice,
-  answerPrivatePractice,
   getStudyPath,
   startStudyPath,
   type KnowledgeMapPoint,
-  type PrivatePracticeFeedback,
-  type PrivatePracticeGroup,
   type StudyPathState,
 } from '@/features/learning/public'
 import { createPblMessageId } from '@/features/pbl/public'
@@ -243,22 +435,21 @@ const requestedCode = ref('')
 const points = ref<KnowledgeMapPoint[]>([])
 const point = ref<KnowledgeMapPoint>()
 const study = ref<StudyPathState>()
-const practiceGroup = ref<PrivatePracticeGroup>()
-const privateFeedback = ref<PrivatePracticeFeedback>()
-const practiceBusy = ref(false)
-const privateQuestionIndex = ref<number>()
 const loading = ref(false)
 const error = ref('')
+const discussionBusy = ref(false)
+const actionError = ref('')
 const byCode = computed(() => new Map(points.value.map((item) => [item.code, item])))
 const prerequisites = computed(() =>
-  (point.value?.prerequisiteCodes || [])
+  (point.value?.dependencies || [])
+    .map((dependency) => dependency.prerequisiteCode)
     .map((code) => byCode.value.get(code))
     .filter((item): item is KnowledgeMapPoint => Boolean(item)),
 )
 const related = computed(() =>
-  (point.value?.relatedCodes || [])
-    .map((code) => byCode.value.get(code))
-    .filter((item): item is KnowledgeMapPoint => Boolean(item)),
+  points.value.filter((candidate) =>
+    candidate.dependencies.some((dependency) => dependency.prerequisiteCode === point.value?.code),
+  ),
 )
 const preparationNote = computed(() => {
   const incomplete = prerequisites.value.filter((item) => item.status !== 'stable')
@@ -286,23 +477,49 @@ function statusMark(status: KnowledgeMapPoint['status']) {
   }[status]
 }
 
+function sourceCardSummary(current: KnowledgeMapPoint) {
+  const firstClause = (value?: string) =>
+    (value || '')
+      .trim()
+      .split(/[，,；;。！？!?]/, 1)[0]
+      ?.trim() || ''
+  const descriptionClause = firstClause(current.description)
+  const objectiveClause = firstClause(current.objective)
+  const summary =
+    descriptionClause && descriptionClause.length <= 22 ? descriptionClause : objectiveClause || descriptionClause
+  return summary ? `${summary}。` : ''
+}
+
+function sourceTypeLabel(value: string) {
+  return (
+    {
+      peer_reviewed: '同行评议文献',
+      academic_reference: '学术参考资料',
+      clinical_reference: '临床参考资料',
+      professional_manual: '专业手册',
+    }[value] || value
+  )
+}
+
+function sourceIdentityLabel(publisher: string) {
+  if (publisher === 'NCBI/PMC') return 'PMC'
+  if (publisher === 'NCBI Bookshelf') return 'NIH'
+  if (publisher === 'Merck Manual Professional Edition') return 'MSD'
+  if (publisher === 'National Cancer Institute') return 'NCI'
+  if (publisher === 'U.S. National Library of Medicine') return 'NLM'
+  return publisher
+}
+
 async function load() {
   if (!requestedCode.value || loading.value) return
   loading.value = true
   error.value = ''
+  actionError.value = ''
   try {
     points.value = await getKnowledgeMap()
     point.value = byCode.value.get(requestedCode.value)
     if (!point.value) error.value = '未找到这个知识节点，可能已不在当前目录中。'
-    else {
-      study.value = await getStudyPath(point.value.code)
-      if (study.value.path && study.value.practiceUnlocked) {
-        const groups = await getStudyPractices(study.value.path.id)
-        practiceGroup.value = [...groups].reverse().find((group) => group.status === 'ready') || groups[0]
-        privateQuestionIndex.value = undefined
-        privateFeedback.value = undefined
-      }
-    }
+    else study.value = await getStudyPath(point.value.code)
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '知识节点加载失败，请稍后重试。'
   } finally {
@@ -319,28 +536,16 @@ function returnToTree() {
   goReplace(ROUTES.studentCases, { view: 'knowledge' })
 }
 
-const canPractice = computed(() => Boolean(study.value?.practiceUnlocked || study.value?.legacyAccess))
-const currentPrivateQuestion = computed(() => {
-  if (!practiceGroup.value || privateQuestionIndex.value !== undefined)
-    return practiceGroup.value?.questions.find((question) => question.index === privateQuestionIndex.value)
-  const attempted = new Set(practiceGroup.value.attempts.map((attempt) => attempt.questionIndex))
-  return practiceGroup.value.questions.find((question) => !attempted.has(question.index))
-})
-const hasNextPrivateQuestion = computed(() => {
-  if (!practiceGroup.value || !currentPrivateQuestion.value) return false
-  return practiceGroup.value.questions.some(
-    (question) =>
-      question.index > currentPrivateQuestion.value!.index &&
-      !practiceGroup.value!.attempts.some((attempt) => attempt.questionIndex === question.index),
-  )
-})
-
 async function startDiscussion() {
-  if (!point.value || loading.value) return
-  loading.value = true
-  error.value = ''
+  if (!point.value || loading.value || discussionBusy.value) return
+  if (study.value?.learningRouteId) {
+    goDetail(ROUTES.studentLearningPlanDetail, { routeId: study.value.learningRouteId })
+    return
+  }
+  discussionBusy.value = true
+  actionError.value = ''
   try {
-    const state = study.value?.path
+    const state = study.value?.activeSession
       ? study.value
       : await startStudyPath({
           pointCode: point.value.code,
@@ -348,64 +553,21 @@ async function startDiscussion() {
           interactionStyle: 'guided',
         })
     study.value = state
-    goDetail(ROUTES.studentPbl, { topicCode: point.value.code, dialogueId: state.path?.sessionId || '' })
+    goDetail(ROUTES.studentPbl, { topicCode: point.value.code, dialogueId: state.activeSession?.sessionId || '' })
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '无法开始研讨，请稍后重试。'
+    actionError.value = reason instanceof Error ? reason.message : '无法开始研讨，请稍后重试。'
   } finally {
-    loading.value = false
+    discussionBusy.value = false
   }
 }
 
-function startReview() {
-  if (point.value && canPractice.value) goDetail(ROUTES.studentKnowledgeLoop, { topicCode: point.value.code })
+function openSource(sourceKey: string) {
+  if (!point.value || !sourceKey) return
+  goDetail(ROUTES.studentSourceView, { pointCode: point.value.code, sourceKey })
 }
 
-async function createPrivatePractice() {
-  if (!study.value?.path || practiceBusy.value) return
-  practiceBusy.value = true
-  try {
-    const cycle: 1 | 2 =
-      practiceGroup.value?.status === 'failed' ? practiceGroup.value.cycle : practiceGroup.value?.canRetest ? 2 : 1
-    practiceGroup.value = await generateStudyPractice(study.value.path.id, cycle, createPblMessageId())
-    privateQuestionIndex.value = undefined
-    privateFeedback.value = undefined
-  } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : '练习生成失败，可稍后重试。', icon: 'none' })
-  } finally {
-    practiceBusy.value = false
-  }
-}
-
-async function answerPrivatePracticeQuestion(selectedOption: number) {
-  if (!practiceGroup.value || !currentPrivateQuestion.value || practiceBusy.value || privateFeedback.value) return
-  practiceBusy.value = true
-  try {
-    privateFeedback.value = await answerPrivatePractice({
-      groupId: practiceGroup.value.id,
-      clientId: createPblMessageId(),
-      questionIndex: currentPrivateQuestion.value.index,
-      selectedOption,
-    })
-    practiceGroup.value.attempts.push(privateFeedback.value)
-  } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : '作答未保存，请重试。', icon: 'none' })
-  } finally {
-    practiceBusy.value = false
-  }
-}
-
-async function nextPrivateQuestion() {
-  if (!practiceGroup.value || !currentPrivateQuestion.value) return
-  const attempted = new Set(practiceGroup.value.attempts.map((attempt) => attempt.questionIndex))
-  privateQuestionIndex.value = practiceGroup.value.questions.find(
-    (question) => question.index > currentPrivateQuestion.value!.index && !attempted.has(question.index),
-  )?.index
-  privateFeedback.value = undefined
-  if (privateQuestionIndex.value === undefined) practiceGroup.value = await getPrivatePractice(practiceGroup.value.id)
-}
-
-function formatDue(value: string) {
-  return value.replace('T', ' ').slice(0, 16)
+function openLearningRoute() {
+  if (study.value?.learningRouteId) goDetail(ROUTES.studentLearningPlanDetail, { routeId: study.value.learningRouteId })
 }
 
 onLoad((options) => {
@@ -420,219 +582,611 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentCases, { view: 'kn
 
 <style scoped>
 .node-page {
+  --node-ink: #0b1e65;
+  --node-text: #3f609b;
+  --node-muted: #6580ae;
+  --node-blue: #087fd7;
+  --node-line: #deedfb;
+  --node-wash: #f5faff;
   min-height: 100vh;
-  padding: 30rpx 28rpx 48rpx;
-  background: var(--med-page);
+  background: var(--node-wash);
+  color: var(--node-text);
 }
 .state-copy {
   display: flex;
-  min-height: 300rpx;
+  min-height: 72vh;
+  padding: 32rpx;
   align-items: center;
   justify-content: center;
-  color: var(--med-muted);
+  color: var(--node-muted);
   font-size: 26rpx;
 }
 .error-state {
   flex-direction: column;
   gap: 20rpx;
-  color: var(--med-danger);
+  color: #9b2d49;
   text-align: center;
 }
 .text-action {
-  min-height: 64rpx;
+  min-height: 88rpx;
   margin: 0;
-  padding: 0 18rpx;
-  color: var(--med-clinical);
-  background: var(--med-wash);
-  font-size: 24rpx;
+  padding: 0 28rpx;
+  color: var(--node-blue);
+  background: #fff;
+  border: 1rpx solid var(--node-line);
+  border-radius: 20rpx;
+  font-size: 25rpx;
 }
-.node-head {
+.node-hero {
+  position: relative;
+  min-height: 258rpx;
+  overflow: hidden;
+  background: linear-gradient(115deg, #fbfeff 0%, #f1faff 65%, #e7f5ff 88%, #fff 100%);
+}
+.hero-art {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+}
+.hero-inner {
+  position: relative;
+  z-index: 1;
   display: flex;
   max-width: 920px;
+  min-height: 258rpx;
+  box-sizing: border-box;
   margin: 0 auto;
-  padding: 8rpx 0 28rpx;
+  padding: 22rpx 32rpx 42rpx;
   flex-direction: column;
-  gap: 14rpx;
-  border-bottom: 1rpx solid var(--med-border);
+  justify-content: center;
+  gap: 11rpx;
+}
+.hero-module {
+  display: flex;
+  align-items: center;
+  gap: 7rpx;
+  color: var(--node-blue);
+  font-size: 22rpx;
+  font-weight: 750;
+  line-height: 1.4;
+}
+.hero-module-icon {
+  width: 22rpx;
+  height: 22rpx;
 }
 .head-line {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
+  gap: 18rpx;
 }
 .node-title {
-  color: var(--med-ink);
-  font-size: 42rpx;
+  max-width: 72%;
+  color: var(--node-ink);
+  font-size: 48rpx;
   font-weight: 800;
   letter-spacing: -1rpx;
-  line-height: 1.2;
+  line-height: 1.26;
+  overflow-wrap: anywhere;
 }
 .status-pill {
-  padding: 8rpx 12rpx;
-  flex: none;
-  color: var(--med-clinical);
-  background: var(--med-wash);
+  display: inline-flex;
+  min-height: 40rpx;
+  box-sizing: border-box;
+  padding: 4rpx 15rpx;
+  align-items: center;
+  color: #086b80;
+  background: #e4f9fb;
+  border: 1rpx solid #c3eaf0;
   border-radius: 99rpx;
   font-size: 21rpx;
+  white-space: nowrap;
 }
 .status-pill.status-weak {
-  color: #fff;
-  background: var(--med-danger);
+  color: #a5294a;
+  background: #fff0f4;
+  border-color: #f4c8d5;
 }
 .status-pill.status-due {
-  color: #fff;
-  background: var(--med-warning);
+  color: #885018;
+  background: #fff4e7;
+  border-color: #f1d8b6;
 }
 .status-pill.status-learning {
-  color: #fff;
-  background: var(--med-accent);
+  color: #075e95;
+  background: #e8f4ff;
+  border-color: #c9e3f7;
 }
 .status-pill.status-stable {
-  color: #fff;
-  background: var(--med-success);
+  color: #086a5e;
+  background: #e5f8f2;
+  border-color: #bce9db;
 }
-.objective {
-  color: var(--med-text-secondary);
-  font-size: 27rpx;
-  line-height: 1.65;
+.hero-summary {
+  display: block;
+  max-width: 72%;
+  color: #4a659d;
+  font-size: 24rpx;
+  line-height: 1.55;
 }
 .preparation-note {
-  padding: 14rpx 16rpx;
-  color: var(--med-safety-text);
-  background: var(--med-safety-soft);
-  border-left: 4rpx solid var(--med-safety);
-  font-size: 23rpx;
-  line-height: 1.55;
+  display: block;
+  max-width: 72%;
+  color: #795123;
+  font-size: 20rpx;
+  line-height: 1.4;
+}
+.node-sheet {
+  position: relative;
+  z-index: 2;
+  min-height: 65vh;
+  box-sizing: border-box;
+  margin-top: -28rpx;
+  padding: 9rpx 30rpx 206rpx;
+  background: #fff;
+  border-radius: 34rpx 34rpx 0 0;
 }
 .content-section {
   display: flex;
   max-width: 920px;
   margin: 0 auto;
-  padding: 30rpx 0;
+  padding: 24rpx 2rpx 25rpx;
   flex-direction: column;
   gap: 14rpx;
-  border-bottom: 1rpx solid var(--med-divider);
+  border-bottom: 1rpx solid var(--node-line);
 }
-.section-kicker {
-  color: var(--med-clinical);
-  font-family: var(--med-font-utility);
-  font-size: 21rpx;
-  font-weight: 700;
-  letter-spacing: 2rpx;
+.section-heading {
+  display: flex;
+  min-height: 38rpx;
+  align-items: center;
+  gap: 12rpx;
+}
+.section-icon {
+  width: 42rpx;
+  height: 42rpx;
+  flex: none;
+}
+.section-title {
+  color: var(--node-ink);
+  font-size: 30rpx;
+  font-weight: 800;
+  line-height: 1.35;
 }
 .description {
-  color: var(--med-text);
-  font-size: 28rpx;
-  line-height: 1.8;
+  color: var(--node-text);
+  font-size: 23rpx;
+  line-height: 1.58;
+  overflow-wrap: anywhere;
 }
-.study-section {
-  display: flex;
-  flex-direction: column;
+.goals-panel {
+  position: relative;
+  display: grid;
+  min-height: 106rpx;
+  box-sizing: border-box;
+  padding: 19rpx 20rpx;
+  grid-template-columns: minmax(0, 1fr) 116rpx;
+  align-items: center;
   gap: 8rpx;
+  background: linear-gradient(106deg, #f4faff 0%, #eaf5ff 100%);
+  border: 1rpx solid #e7f2fd;
+  border-radius: 20rpx;
+  overflow: hidden;
 }
-.relationship-section {
-  gap: 26rpx;
-}
-.relationship-group {
+.goals-copy {
+  position: relative;
+  z-index: 1;
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 10rpx;
 }
-.relationship-label {
-  color: var(--med-ink);
-  font-size: 27rpx;
-  font-weight: 700;
+.goal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 13rpx;
 }
-.relationship-empty,
-.source-note {
-  color: var(--med-muted);
+.goal-number {
+  display: inline-flex;
+  width: 38rpx;
+  height: 38rpx;
+  flex: 0 0 38rpx;
+  align-items: center;
+  justify-content: center;
+  color: #0874ca;
+  background: linear-gradient(150deg, #e7f6ff, #cce8ff);
+  border-radius: 50%;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+.goal-row .description {
+  flex: 1;
+}
+.subsection-title {
+  color: var(--node-ink);
   font-size: 23rpx;
-  line-height: 1.55;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.goals-decoration {
+  position: relative;
+  height: 100rpx;
+}
+.goals-decoration image {
+  position: absolute;
+  right: -10rpx;
+  bottom: -12rpx;
+  width: 122rpx;
+  height: 122rpx;
+}
+.preparation-grid,
+.relationship-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+}
+.preparation-card,
+.relationship-card {
+  display: flex;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 17rpx;
+  flex-direction: column;
+  gap: 6rpx;
+  background: linear-gradient(145deg, #f5fbff, #eaf6ff);
+  border: 1rpx solid #eaf4fd;
+  border-radius: 18rpx;
+}
+.preparation-card:nth-child(even) {
+  background: linear-gradient(145deg, #f5fdff, #eafaff);
+}
+.preparation-card {
+  display: grid;
+  grid-template-columns: 68rpx minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  align-content: start;
+  column-gap: 11rpx;
+  row-gap: 5rpx;
+}
+.prep-icon-shell {
+  display: flex;
+  width: 68rpx;
+  height: 68rpx;
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-items: center;
+  justify-content: center;
+  background: #e1f6ff;
+  border: 2rpx solid #fff;
+  border-radius: 50%;
+}
+.prep-icon {
+  width: 50rpx;
+  height: 50rpx;
+}
+.preparation-card .item-title,
+.preparation-card .description {
+  grid-column: 2;
+}
+.item-title {
+  color: var(--node-ink);
+  font-size: 25rpx;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.source-note,
+.relationship-empty {
+  color: var(--node-muted);
+  font-size: 21rpx;
+  line-height: 1.45;
+}
+.relationship-card-head {
+  display: flex;
+  min-height: 50rpx;
+  align-items: center;
+  gap: 9rpx;
+}
+.relationship-card-icon {
+  width: 50rpx;
+  height: 50rpx;
+  flex: none;
 }
 .relation-row {
   display: flex;
   width: 100%;
-  min-height: 76rpx;
+  min-height: 66rpx;
+  box-sizing: border-box;
   margin: 0;
-  padding: 10rpx 0;
+  padding: 7rpx 8rpx;
   align-items: center;
-  gap: 14rpx;
-  color: var(--med-text);
-  background: transparent;
-  border-bottom: 1rpx solid var(--med-divider);
-  border-radius: 0;
-  font-size: 26rpx;
+  gap: 7rpx;
+  color: var(--node-ink);
+  background: rgba(255, 255, 255, 0.86);
+  border: 1rpx solid #e3eff9;
+  border-radius: 12rpx;
+  font-size: 23rpx;
   text-align: left;
 }
-.relation-row > view {
+.relation-row + .relation-row {
+  margin-top: 6rpx;
+}
+.relation-item-icon {
+  width: 38rpx;
+  height: 38rpx;
+  flex: none;
+}
+.relation-copy {
   display: flex;
   min-width: 0;
   flex: 1;
   flex-direction: column;
   gap: 2rpx;
 }
-.relation-row > view text:last-child {
-  color: var(--med-muted);
-  font-size: 21rpx;
+.relation-title {
+  font-size: 23rpx;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
-.relation-mark {
-  display: inline-flex;
-  width: 34rpx;
-  height: 34rpx;
-  flex: 0 0 34rpx;
-  align-items: center;
-  justify-content: center;
-  color: var(--med-clinical);
-  background: var(--med-wash);
-  border-radius: 50%;
-  font-family: var(--med-font-utility);
+.relation-meta {
+  color: var(--node-muted);
+  font-size: 19rpx;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.relation-chevron {
+  color: var(--node-ink);
+  font-size: 30rpx;
+}
+.dependency-notes {
+  display: flex;
+  margin-top: 3rpx;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.dependency-detail {
+  display: flex;
+  padding: 11rpx 0;
+  flex-direction: column;
+  gap: 4rpx;
+  color: var(--node-text);
+  border-bottom: 1rpx solid #e7f1f9;
+  font-size: 21rpx;
+  line-height: 1.48;
+}
+.dependency-path {
+  color: var(--node-blue);
   font-weight: 700;
 }
-.relation-mark.status-weak,
-.relation-mark.status-due,
-.relation-mark.status-learning,
-.relation-mark.status-stable {
-  color: #fff;
-}
-.relation-mark.status-weak {
-  background: var(--med-danger);
-}
-.relation-mark.status-due {
-  background: var(--med-warning);
-}
-.relation-mark.status-learning {
-  background: var(--med-accent);
-}
-.relation-mark.status-stable {
-  background: var(--med-success);
+.dependency-limitation {
+  color: #755e47;
 }
 .source-section {
-  color: var(--med-text-secondary);
-  font-size: 23rpx;
-  line-height: 1.6;
+  gap: 10rpx;
 }
-.node-actions {
+.source-heading {
+  align-items: center;
+}
+.source-card {
   display: flex;
-  max-width: 920px;
-  margin: 0 auto;
-  padding: 32rpx 0;
-  flex-direction: column;
-  gap: 12rpx;
+  min-width: 0;
+  padding: 14rpx;
+  align-items: flex-start;
+  gap: 11rpx;
+  background: #fff;
+  border: 1rpx solid #d8eafe;
+  border-radius: 18rpx;
+  box-shadow: 0 6rpx 16rpx rgba(22, 97, 181, 0.075);
 }
-.action-note {
-  color: var(--med-muted);
-  font-size: 23rpx;
-  line-height: 1.55;
+.source-identity {
+  display: flex;
+  width: 88rpx;
+  min-height: 78rpx;
+  padding: 4rpx;
+  flex: 0 0 88rpx;
+  align-items: center;
+  justify-content: center;
+  color: #0868bd;
+  border-right: 1rpx solid #e2effb;
+  font-size: 16rpx;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2rpx;
+}
+.source-publisher {
+  width: fit-content;
+  max-width: 100%;
+  padding: 1rpx 7rpx;
+  color: #176e8a;
+  background: #e5f8fb;
+  border-radius: 7rpx;
+  font-size: 18rpx;
+  overflow-wrap: anywhere;
+}
+.source-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--node-ink);
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-description {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--node-text);
+  font-size: 19rpx;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-link-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5rpx;
+}
+.source-link-icon {
+  width: 20rpx;
+  height: 20rpx;
+  flex: none;
+}
+.source-url {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: #075cb2;
+  font-size: 19rpx;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-open {
+  display: flex;
+  min-width: 130rpx;
+  min-height: 58rpx;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5rpx 10rpx;
+  flex: 0 0 130rpx;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  color: #075ab1;
+  background: linear-gradient(180deg, #fff, #f0f8ff);
+  border: 1rpx solid #bfddfb;
+  border-radius: 99rpx;
+  font-size: 19rpx;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.source-open-icon {
+  width: 20rpx;
+  height: 20rpx;
+  flex: none;
+}
+.source-open[disabled] {
+  opacity: 0.5;
+}
+.advice-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rpx minmax(0, 1fr) 24rpx minmax(0, 1fr);
+  align-items: center;
+  gap: 2rpx;
+}
+.advice-step {
+  display: flex;
+  min-width: 0;
+  min-height: 100rpx;
+  box-sizing: border-box;
+  padding: 10rpx 6rpx;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 5rpx;
+  background: linear-gradient(150deg, #f6fbff, #eaf6ff);
+  border-radius: 16rpx;
+  text-align: left;
+}
+.advice-icon-shell {
+  display: flex;
+  width: 44rpx;
+  height: 44rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 3rpx 9rpx rgba(20, 108, 197, 0.09);
+}
+.advice-icon {
+  width: 36rpx;
+  height: 36rpx;
+  flex: none;
+}
+.advice-content {
+  display: grid;
+  min-width: 0;
+  min-height: 56rpx;
+  grid-template-columns: 18rpx minmax(0, 1fr);
+  grid-template-rows: 28rpx 26rpx;
+  align-items: start;
+  column-gap: 2rpx;
+}
+.advice-number {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  color: var(--node-blue);
+  font-size: 19rpx;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.advice-title {
+  display: block;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  color: var(--node-ink);
+  font-size: 18rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.advice-copy {
+  display: block;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  color: var(--node-muted);
+  font-size: 17rpx;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.advice-arrow {
+  display: flex;
+  width: 100%;
+  min-height: 42rpx;
+  align-items: center;
+  justify-content: center;
+  color: #0875d2;
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+.practice-section {
+  gap: 16rpx;
+}
+.study-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7rpx;
 }
 .practice-option {
   width: 100%;
+  min-height: 88rpx;
   margin: 0;
-  padding: 16rpx;
-  color: var(--med-text);
-  background: var(--med-surface);
-  border: 1rpx solid var(--med-border);
-  border-radius: var(--med-radius-sm);
+  padding: 12rpx 16rpx;
+  color: var(--node-text);
+  background: #f7fbff;
+  border: 1rpx solid var(--node-line);
+  border-radius: 14rpx;
   font-size: 25rpx;
   line-height: 1.5;
   text-align: left;
@@ -641,54 +1195,172 @@ onBackPress(({ from }) => handleBackPress(from, ROUTES.studentCases, { view: 'kn
   display: flex;
   flex-direction: column;
   gap: 10rpx;
-  padding: 16rpx 0 0;
-  color: var(--med-text-secondary);
-  border-top: 1rpx solid var(--med-divider);
+  padding-top: 16rpx;
+  color: var(--node-text);
+  border-top: 1rpx solid var(--node-line);
   font-size: 24rpx;
   line-height: 1.55;
 }
-.primary-action,
 .secondary-action {
   min-height: 88rpx;
   margin: 0;
-  border-radius: var(--med-radius-sm);
-  font-size: 28rpx;
+  color: #075cae;
+  background: #eef8ff;
+  border: 1rpx solid #c8e2f9;
+  border-radius: 18rpx;
+  font-size: 25rpx;
+}
+.node-actions {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 13rpx 30rpx calc(13rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid #d6eafb;
+  box-shadow: 0 -8rpx 24rpx rgba(14, 83, 160, 0.055);
+}
+.actions-inner {
+  display: flex;
+  max-width: 920px;
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 5rpx;
+}
+.action-buttons {
+  display: flex;
+  gap: 16rpx;
+}
+.primary-action,
+.review-action {
+  display: flex;
+  min-width: 0;
+  min-height: 92rpx;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5rpx 12rpx;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99rpx;
+  gap: 10rpx;
+  font-size: 26rpx;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+}
+.action-icon {
+  width: 36rpx;
+  height: 36rpx;
+  flex: none;
+}
+.action-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+.action-caption {
+  font-size: 17rpx;
+  font-weight: 500;
+  line-height: 1.25;
 }
 .primary-action {
   color: #fff;
-  background: var(--med-clinical);
+  background: linear-gradient(105deg, #48b9e9, #0875de);
+  box-shadow: 0 7rpx 15rpx rgba(16, 111, 208, 0.16);
 }
-.secondary-action {
-  color: var(--med-clinical);
-  background: var(--med-wash);
+.review-action {
+  color: #075aba;
+  background: linear-gradient(180deg, #fff, #f4fbff);
+  border: 2rpx solid #529cf4;
+}
+.primary-action[disabled] {
+  color: #7890b2;
+  background: #eff4f8;
+  border-color: #d8e2ec;
+  box-shadow: none;
+}
+.review-action[disabled] {
+  color: #6590c9;
+  background: linear-gradient(180deg, #fff, #f6fbff);
+  border-color: #b8d9fc;
+  opacity: 1;
+}
+.review-action[disabled] .action-icon {
+  opacity: 0.65;
+}
+.action-error {
+  color: #a5294a;
+  font-size: 23rpx;
+  line-height: 1.4;
+  text-align: center;
+}
+@media screen and (max-width: 350px) {
+  .preparation-grid,
+  .relationship-grid {
+    grid-template-columns: 1fr;
+  }
+  .source-identity {
+    display: none;
+  }
+  .source-open {
+    min-width: 74px;
+    flex-basis: 74px;
+    font-size: 12px;
+  }
+  .relation-meta,
+  .source-url,
+  .advice-copy,
+  .action-caption {
+    font-size: 12px;
+  }
+  .advice-title,
+  .primary-action,
+  .review-action {
+    font-size: 12px;
+  }
 }
 @media screen and (min-width: 600px) {
-  .node-page {
-    padding: 28px 32px 56px;
+  .hero-inner {
+    padding: 24px 32px 40px;
   }
   .node-title {
-    font-size: 30px;
+    font-size: 34px;
   }
-  .objective {
+  .hero-summary {
     font-size: 17px;
   }
-  .section-kicker {
-    font-size: 13px;
+  .node-sheet {
+    padding: 12px 32px 180px;
+  }
+  .content-section {
+    padding: 24px 0;
+  }
+  .section-title {
+    font-size: 21px;
   }
   .description {
-    font-size: 18px;
+    font-size: 16px;
   }
-  .relationship-label {
+  .item-title {
     font-size: 17px;
   }
-  .relation-row {
-    min-height: 58px;
+  .source-title {
     font-size: 16px;
   }
+  .source-note,
+  .source-description {
+    font-size: 14px;
+  }
+  .node-actions {
+    padding: 12px 32px calc(16px + env(safe-area-inset-bottom));
+  }
   .primary-action,
-  .secondary-action {
+  .review-action {
     min-height: 52px;
-    font-size: 16px;
+    font-size: 17px;
   }
 }
 </style>

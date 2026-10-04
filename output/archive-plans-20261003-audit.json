@@ -1,0 +1,406 @@
+{
+  "archive": "docs/archive/update-plans-t44-t61-20261003.zip",
+  "archive_sha256": "ab07e1b4dd7135780a1546de6be79d7a7d7d1f474139fd44abbcd1cd644128f4",
+  "file_count": 82,
+  "plan_count": 18,
+  "retained": [
+    "docs/update_plan/62-insights-default-complete-rows",
+    "docs/update_plan/63-content-learning-pruning"
+  ],
+  "rewritten_links": [
+    {
+      "source": "README.md",
+      "old_target": "docs/update_plan/44-single-round-learning-routes/deliveries/implementation-progress.md",
+      "new_target": "docs/archive/update-plans-t44-t61-20261003.md#file-9b5dbef5fcc525ed"
+    },
+    {
+      "source": "docs/database.md",
+      "old_target": "update_plan/44-single-round-learning-routes/07-migration-cleanup.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-d14615b9eadb4d05"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/61-teacher-native-navigation/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-3d479fb973057ebc"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/60-teacher-navigation-pbl-polish/deliveries/completion.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-7e337457659fb927"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/54-pbl-classroom-ui/deliveries/completion.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-f75bffe61d2f3673"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/54-pbl-classroom-ui/deliveries/completion.md#用户要求复查后的结果",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-f75bffe61d2f3673"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/44-single-round-learning-routes/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-9804d4537dea3e4b"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/45-case-learning-ui/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-818ad7ac9df86a3d"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/48-mixed-final-test-tutor/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-99c447560573d3c2"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/49-final-test-ui/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-52a10337a681b868"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/51-student-learning-insights/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-569495ccf535b9fc"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/52-teacher-retired-cleanup/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-a198eed1e5d913a1"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/53-teacher-workspace-separation/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-74541bb1841fd8be"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/53-teacher-workspace-separation/deliveries/exit-audit.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-0ce7574093022a3f"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/55-teacher-pbl-reference-ui/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-d3ba16ab5e46aa29"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/55-teacher-pbl-reference-ui/deliveries/reference-followup.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-f7dc2bab147d31df"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/59-teacher-contiguous-swipe/deliveries/completion.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-7a5059a6c1a76967"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/58-teacher-swipe-motion/completion.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-6ee0e02c8051c8b2"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/57-teacher-fixed-regions-gestures/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-7127df3d0b4d4ba8"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/57-teacher-fixed-regions-gestures/deliveries/completion.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-d240026248547729"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/deliveries/overview-one-screen.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-ce9223287f5027c8"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/README.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-b87fd5d6123e169f"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/deliveries/completion.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-112a1c526194f015"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/deliveries/wxss-fix.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-0a5cc40c51df6d38"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/deliveries/wxss-fix.md#90以上相似度目标的细节跟进",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-0a5cc40c51df6d38"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/deliveries/student-scroll.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-56c54d3482c6dc92"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/deliveries/overview-density-plan.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-20ca39630f02c038"
+    },
+    {
+      "source": "docs/manual-acceptance.md",
+      "old_target": "update_plan/56-teacher-insights-reference-ui/deliveries/overview-density.md",
+      "new_target": "archive/update-plans-t44-t61-20261003.md#file-9373e7e038937fe7"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "61-teacher-native-navigation/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-3d479fb973057ebc"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "61-teacher-native-navigation/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-a776c7610474b09b"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "60-teacher-navigation-pbl-polish/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-6f04eae568d94a63"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "60-teacher-navigation-pbl-polish/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-7e337457659fb927"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "59-teacher-contiguous-swipe/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-805275f66f593bb8"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "59-teacher-contiguous-swipe/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-7a5059a6c1a76967"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "58-teacher-swipe-motion/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-8b90b29deefed424"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "58-teacher-swipe-motion/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-6ee0e02c8051c8b2"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "57-teacher-fixed-regions-gestures/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-7127df3d0b4d4ba8"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "57-teacher-fixed-regions-gestures/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-d240026248547729"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "56-teacher-insights-reference-ui/deliveries/overview-one-screen.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-ce9223287f5027c8"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "56-teacher-insights-reference-ui/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-b87fd5d6123e169f"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "56-teacher-insights-reference-ui/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-112a1c526194f015"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "56-teacher-insights-reference-ui/deliveries/wxss-fix.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-0a5cc40c51df6d38"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "56-teacher-insights-reference-ui/deliveries/student-scroll.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-56c54d3482c6dc92"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "56-teacher-insights-reference-ui/deliveries/overview-density.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-9373e7e038937fe7"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "55-teacher-pbl-reference-ui/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-d3ba16ab5e46aa29"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "55-teacher-pbl-reference-ui/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-7de3d9dade51aba9"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "55-teacher-pbl-reference-ui/deliveries/reference-followup.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-f7dc2bab147d31df"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "54-pbl-classroom-ui/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-b462752199285f9b"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "54-pbl-classroom-ui/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-f75bffe61d2f3673"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "53-teacher-workspace-separation/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-74541bb1841fd8be"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "53-teacher-workspace-separation/deliveries/exit-audit.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-0ce7574093022a3f"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "53-teacher-workspace-separation/04-steps-acceptance.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-3a313ecb2a92f926"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "53-teacher-workspace-separation/deliveries/planning.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-9f195bf80bf014ed"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "53-teacher-workspace-separation/deliveries/implementation.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-68bc119b99ecf359"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "52-teacher-retired-cleanup/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-a198eed1e5d913a1"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "52-teacher-retired-cleanup/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-1544c9029b7c94c9"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "51-student-learning-insights/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-569495ccf535b9fc"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "51-student-learning-insights/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-08ea160816728e38"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "50-learning-result-ui/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-d2d6bc55aa5fccb3"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "50-learning-result-ui/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-76e2e48f75ec48aa"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "49-final-test-ui/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-52a10337a681b868"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "49-final-test-ui/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-c2bd98f287968823"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "48-mixed-final-test-tutor/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-99c447560573d3c2"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "48-mixed-final-test-tutor/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-d6b635563791d18a"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "47-case-stage-content/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-3ce7d9aca13fb2e3"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "47-case-stage-content/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-0c6205ed864d8e9e"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "46-learning-plan-ui/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-32c614c42093f561"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "46-learning-plan-ui/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-5550bbd5aad56985"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "45-case-learning-ui/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-818ad7ac9df86a3d"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "45-case-learning-ui/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-ef7d1e094821b03f"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "45-case-learning-ui/deliveries/visual-followup.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-1eb01c30796fda4d"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "44-single-round-learning-routes/README.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-9804d4537dea3e4b"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old_target": "44-single-round-learning-routes/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-2ebd775fff144e8e"
+    },
+    {
+      "source": "docs/update_plan/summary.md",
+      "old_target": "44-single-round-learning-routes/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-2ebd775fff144e8e"
+    },
+    {
+      "source": "docs/update_plan/summary.md",
+      "old_target": "44-single-round-learning-routes/deliveries/completion.md",
+      "new_target": "../archive/update-plans-t44-t61-20261003.md#file-2ebd775fff144e8e"
+    }
+  ],
+  "verification": {
+    "zip_crc": "passed",
+    "manifest_files": 82,
+    "manifest_size_sha256": "82/82 passed",
+    "retained_plan_directories": [
+      "62-insights-default-complete-rows",
+      "63-content-learning-pruning"
+    ],
+    "independent_agent_check_exit": 0,
+    "format_check_exit": 0,
+    "local_link_check": {
+      "exit": 0,
+      "documents": 12,
+      "links": 131,
+      "archive_anchor_check": "passed"
+    },
+    "git_diff_check_exit": 0,
+    "application_tests": "not run: documentation/archive only"
+  }
+}

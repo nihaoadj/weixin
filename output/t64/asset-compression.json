@@ -1,0 +1,18 @@
+[
+  {
+    "file": "src\\static\\insights-hero.png",
+    "before": 1284069,
+    "after": 131805,
+    "original_size": [1536, 1024],
+    "size": [640, 427],
+    "mode": "RGBA"
+  },
+  {
+    "file": "src\\static\\content-reference-hero.png",
+    "before": 840401,
+    "after": 184755,
+    "original_size": [1484, 1060],
+    "size": [640, 457],
+    "mode": "RGBA"
+  }
+]

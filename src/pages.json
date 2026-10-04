@@ -26,7 +26,7 @@
     },
     {
       "path": "pages/student/question/question",
-      "style": { "navigationBarTitleText": "病例与练习" }
+      "style": { "navigationBarTitleText": "病例学习" }
     },
     {
       "path": "pages/student/question-detail/question-detail",
@@ -50,47 +50,103 @@
     },
     {
       "path": "pages/student/insights/detail",
-      "style": { "navigationBarTitleText": "PBL 学情详情" }
-    },
-    {
-      "path": "pages/student/learning/plan",
-      "style": { "navigationBarTitleText": "训练计划" }
-    },
-    {
-      "path": "pages/student/learning/drill",
-      "style": { "navigationBarTitleText": "动态微训练" }
-    },
-    {
-      "path": "pages/student/learning/review",
-      "style": { "navigationBarTitleText": "训练复盘" }
+      "style": { "navigationBarTitleText": "学习记录" }
     },
     {
       "path": "pages/student/learning/knowledge-loop",
-      "style": { "navigationBarTitleText": "知识巩固" }
+      "style": { "navigationBarTitleText": "知识点学习" }
     },
     {
       "path": "pages/student/learning/knowledge-node",
-      "style": { "navigationBarTitleText": "知识学习" }
+      "style": { "navigationBarTitleText": "学习节点" }
+    },
+    {
+      "path": "pages/student/learning/source-view",
+      "style": { "navigationBarTitleText": "资料原文" }
+    },
+    {
+      "path": "pages/student/learning/plans",
+      "style": { "navigationBarTitleText": "研讨学习计划" }
+    },
+    {
+      "path": "pages/student/learning/plan-detail",
+      "style": { "navigationBarTitleText": "学习计划详情", "navigationStyle": "custom" }
+    },
+    {
+      "path": "pages/student/learning/route-reading",
+      "style": { "navigationBarTitleText": "资料学习" }
+    },
+    {
+      "path": "pages/student/learning/route-case",
+      "style": { "navigationBarTitleText": "病例学习", "navigationStyle": "custom" }
+    },
+    {
+      "path": "pages/student/learning/final-test",
+      "style": { "navigationBarTitleText": "最终测试", "navigationStyle": "custom" }
+    },
+    {
+      "path": "pages/student/learning/learning-result",
+      "style": { "navigationBarTitleText": "学习结果", "navigationStyle": "custom" }
     },
     {
       "path": "pages/report/report",
-      "style": { "navigationBarTitleText": "问答报告" }
+      "style": { "navigationBarTitleText": "历史问答总结" }
     },
     {
       "path": "pages/teacher/list/list",
-      "style": { "navigationBarTitleText": "学生报告" }
+      "style": { "navigationBarTitleText": "教学工作台" }
     },
     {
       "path": "pages/teacher/index/index",
-      "style": { "navigationBarTitleText": "教师工作台" }
+      "style": { "navigationBarTitleText": "PBL" }
     },
     {
-      "path": "pages/teacher/detail/detail",
-      "style": { "navigationBarTitleText": "报告批阅" }
+      "path": "pages/teacher/pbl/index",
+      "style": { "navigationBarTitleText": "PBL" }
+    },
+    {
+      "path": "pages/teacher/pbl/test-queue",
+      "style": { "navigationBarTitleText": "测试待办" }
+    },
+    {
+      "path": "pages/teacher/insights/index",
+      "style": { "navigationBarTitleText": "学情" }
+    },
+    {
+      "path": "pages/teacher/insights/student-detail",
+      "style": { "navigationBarTitleText": "学生学情" }
+    },
+    {
+      "path": "pages/teacher/insights/result",
+      "style": { "navigationBarTitleText": "课堂学习结果" }
+    },
+    {
+      "path": "pages/teacher/content/index",
+      "style": { "navigationBarTitleText": "内容" }
+    },
+    {
+      "path": "pages/teacher/content/import-question",
+      "style": { "navigationBarTitleText": "复制到个人题库" }
+    },
+    {
+      "path": "pages/teacher/pbl-diagnostic-detail/pbl-diagnostic-detail",
+      "style": { "navigationBarTitleText": "固定诊断" }
+    },
+    {
+      "path": "pages/teacher/pbl-progress/pbl-progress",
+      "style": { "navigationBarTitleText": "课堂学情" }
+    },
+    {
+      "path": "pages/teacher/learning/final-test",
+      "style": { "navigationBarTitleText": "课堂最终测试审阅" }
+    },
+    {
+      "path": "pages/teacher/learning/result",
+      "style": { "navigationBarTitleText": "课堂学习结果" }
     },
     {
       "path": "pages/teacher/problem-edit/problem-edit",
-      "style": { "navigationBarTitleText": "问题编写" }
+      "style": { "navigationBarTitleText": "病例库" }
     },
     {
       "path": "pages/teacher/case-edit/case-edit",
@@ -101,20 +157,12 @@
       "style": { "navigationBarTitleText": "问题详情" }
     },
     {
-      "path": "pages/teacher/problem-stats/problem-stats",
-      "style": { "navigationBarTitleText": "问题统计" }
-    },
-    {
       "path": "pages/teacher/analytics/index",
       "style": { "navigationBarTitleText": "教学学情" }
     },
     {
-      "path": "pages/teacher/analytics/case-detail",
-      "style": { "navigationBarTitleText": "病例分析" }
-    },
-    {
       "path": "pages/teacher/analytics/student-detail",
-      "style": { "navigationBarTitleText": "学生档案" }
+      "style": { "navigationBarTitleText": "学生综合学情" }
     },
     {
       "path": "pages/teacher/medical-review/review-list",
@@ -130,7 +178,15 @@
     },
     {
       "path": "pages/teacher/knowledge-cards/knowledge-cards",
-      "style": { "navigationBarTitleText": "知识补充卡" }
+      "style": { "navigationBarTitleText": "病例库" }
+    },
+    {
+      "path": "pages/teacher/question-bank/index",
+      "style": { "navigationBarTitleText": "个人题库" }
+    },
+    {
+      "path": "pages/teacher/question-bank/detail",
+      "style": { "navigationBarTitleText": "题库题目" }
     }
   ],
   "globalStyle": {

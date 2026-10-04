@@ -1,0 +1,1 @@
+npm run test (Vitest full frontend suite) | exit 1

@@ -1,30 +1,32 @@
-# 项目文档
+# 文档入口
 
-从此页进入当前权威文档。历史验收、旧迁移路线和已完成计划均作为阶段资料单列，不能替代当前实现说明或生产验收。
+先用标题或关键词定位，再读任务所需章节。普通维护只读相关主题；业务变化才读产品合同，接续任务才读计划/交付，追查历史才解压归档。不递归打开全部链接，不重复读取未变化的内容。
 
-## 首先阅读
+| 任务                             | 主题                                                |
+| -------------------------------- | --------------------------------------------------- |
+| 业务、阶段、评分与发布           | [产品](product.md)                                  |
+| 模块、接口、API/Demo、缓存与契约 | [架构](architecture.md)                             |
+| 代码归属、目录布局与结构重构参考 | [代码与目录组织规范](code-organization-standard.md) |
+| 本仓库文件组织检查与修复结论     | [文件组织审计](code-organization-audit.md)          |
+| 变更流程、命令、验证与发布       | [开发](development.md)                              |
+| 数据库、迁移、回填与恢复         | [数据库](database.md)                               |
+| 授权、AI、凭据与敏感数据         | [安全](security.md)                                 |
+| 页面、视觉与交互                 | [UI](ui.md)                                         |
+| Demo工具操作与渲染取证           | [微信验收](wechat.md)                               |
+| 工具阻塞后的人工补验与反馈       | [人工验收台账](manual-acceptance.md)                |
 
-| 文档                                         | 职责                                       |
-| -------------------------------------------- | ------------------------------------------ |
-| [architecture.md](architecture.md)           | 技术栈、模块边界与当前接入状态             |
-| [data-layer.md](data-layer.md)               | 数据访问、API/Demo、契约、缓存与错误边界   |
-| [更新计划索引](update_plan/README.md)        | 当前产品与工程更新计划、计划门禁和交付入口 |
-| [ADR 0001](adr/0001-data-layer-contracts.md) | 数据层的重大工程取舍                       |
-| [openapi.json](openapi.json)                 | 已生成的 API 契约快照                      |
+专项材料：[计划与交付](update_plan/README.md)、[知识库来源/审核](knowledge-base/README.md)。`openapi.json`是生成契约，不手改。
 
-## 按职责阅读
+## 维护
 
-| 区域 | 入口                                  | 内容                               |
-| ---- | ------------------------------------- | ---------------------------------- |
-| 产品 | [功能与角色流程](product/features.md) | 当前功能、学生与教师流程、后续方向 |
-| 前端 | [前端文档](frontend/README.md)        | 视觉设计、公开接口和页面边界       |
-| 后端 | [后端文档](backend/README.md)         | API、数据库与模块责任              |
-| 运行 | [运行文档](operations/README.md)      | 开发、构建、部署和依赖维护         |
-| 治理 | [安全边界](governance/security.md)    | 权限、敏感数据、AI 与凭据处置      |
+源码确认实现；主题记录现行合同/操作；计划记录目标/证据。规则只维护一处，AGENTS保留项目要求，SKILL保留任务方法。先补现有章节，确有独立职责才增文件；命令、函数、字段以代码为准，不复制完整清单。
 
-## 历史资料
+完整计划最多保留最近两轮，旧阶段压缩进概述；用户明确完成归档的阶段直接退出当前计划。过程日志仅记录节点变化和必要证据。
 
-- [前端阶段记录](records/frontend/README.md)：已完成的动效设计与视觉验收。
-- [架构迁移路线](records/architecture/cloud-demo-to-fastapi-migration.md)：从云函数和本地 Demo 到 FastAPI 的历史路线。
-- [初始版本比较](audit/initial-version-comparison.md)：初始版本的功能、安全与迁移差异。
-- [T01–T25 阶段概述](update_plan/01-25-summary.md)：已归档阶段、当前边界与待验收项。
+## 历史
+
+[2026-10-03更新计划归档包](archive/update-plans-t44-t61-20261003.zip)保存T44–T61共18份计划的82个原文件，MANIFEST.json中的路径、字节数与SHA-256已逐项校验。[归档索引](archive/update-plans-t44-t61-20261003.md)提供原文件定位，[阶段概述](update_plan/summary.md)保留成果与替代关系；完整计划仅留最新T65/T66；T64见[归档索引](archive/update-plan-t64-20261004.md)；T63见[归档索引](archive/update-plan-t63-20261003.md)；T62另见[归档包](archive/update-plan-t62-20261003.zip)。归档不改写验收结果，原有补验继续由台账维护。
+
+[2026-09-26历史包](archive/history-20260926.zip)保存整理前原文（旧计划、审计、UI参考、日志及指令）。`MANIFEST.json`包含原路径和SHA-256，已逐项校验。按原路径解压单份到临时目录；历史条款不作为现行合同。
+
+[T43 完成归档包](archive/t43-completed-20260926.zip)保留该阶段全部现存原文及哈希清单；按用户决定免除剩余验收，后续不再验收 T43。包内 ARCHIVE-COMPLETION.json 记录此次决定，原文旧待办仅供历史追查。

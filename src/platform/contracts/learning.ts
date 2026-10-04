@@ -7,6 +7,26 @@ export type ApiLearningProfile = components['schemas']['LearningProfileRead']
 export type ApiLearningTaskAttempt = components['schemas']['LearningTaskAttemptRead']
 
 const timestamp = z.string().min(1)
+const knowledgeSourceSchema = z.object({
+  source_key: z.string().min(1),
+  title: z.string().min(1),
+  publisher: z.string().min(1),
+  url: z.string().url(),
+  source_type: z.string().min(1),
+  accessed_on: z.string().min(1),
+})
+const knowledgeDependencySchema = z.object({
+  id: z.number().int().positive(),
+  prerequisite_code: z.string().min(1),
+  dependent_code: z.string().min(1),
+  relation_kind: z.string().min(1),
+  rationale: z.string().min(1),
+  limitation: z.string().min(1),
+  confidence: z.string().min(1),
+  evidence_status: z.string().min(1),
+  medical_review_status: z.string().min(1),
+  sources: z.array(knowledgeSourceSchema).min(1),
+})
 const knowledgePointSchema = z.object({
   code: z.string().min(1),
   system_code: z.string().min(1),
@@ -14,6 +34,7 @@ const knowledgePointSchema = z.object({
   topic: z.string().min(1),
   title: z.string().min(1),
   objective: z.string(),
+  learning_objectives: z.array(z.string().min(1)).min(2),
   reference: z.string(),
   card_count: z.number().int().nonnegative(),
   description: z.string().optional(),
@@ -21,10 +42,19 @@ const knowledgePointSchema = z.object({
   related_codes: z.array(z.string()).optional(),
   case_slug: z.string().optional(),
   catalog_version: z.string().min(1),
+  catalog_evidence_status: z.string().min(1),
+  catalog_medical_review_status: z.string().min(1),
+  evidence_status: z.string().min(1),
+  medical_review_status: z.string().min(1),
+  relationship_note: z.string().min(1),
+  sources: z.array(knowledgeSourceSchema).min(1),
+  dependencies: z.array(knowledgeDependencySchema),
 })
 
 export const apiKnowledgeCatalogSchema = z.object({
   catalog_version: z.string().min(1),
+  evidence_status: z.string().min(1),
+  medical_review_status: z.string().min(1),
   items: z.array(knowledgePointSchema),
 })
 export const apiKnowledgeMapSchema = z.object({
@@ -150,6 +180,9 @@ export const apiLearningTaskStartSchema = z.discriminatedUnion('mode', [
 const notificationSchema = z.object({
   id: z.number().int(),
   type: z.enum([
+    'learning_route_ready',
+    'final_test_released',
+    'learning_route_completed',
     'learning_plan_ready',
     'learning_plan_due',
     'learning_plan_completed',
@@ -158,8 +191,8 @@ const notificationSchema = z.object({
     'pbl_automation_exhausted',
     'pbl_teacher_feedback',
   ]),
-  entity_type: z.enum(['learning_plan', 'pbl_session']),
-  entity_id: z.number().int(),
+  entity_type: z.enum(['learning_plan', 'pbl_session', 'learning_route']),
+  entity_id: z.union([z.number().int(), z.string()]),
   title: z.string(),
   body: z.string(),
   read_at: timestamp.nullable().optional(),

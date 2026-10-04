@@ -13,9 +13,7 @@ class ContentPolicy:
 
     @staticmethod
     def require_owner(actor: Actor, author_id: int | None) -> None:
-        # Historical rows without an author may be claimed by the first writer,
-        # matching the pre-modularization compatibility rule.
-        if author_id is not None and author_id != actor.id:
+        if author_id != actor.id:
             raise AppError("RESOURCE_NOT_FOUND", "内容不存在", 404)
 
     @staticmethod

@@ -12,6 +12,7 @@ import type { Problem } from '@/types/records'
 import { saveSession } from '@/features/identity/public'
 import { clearApiCache } from '@/platform/http/apiClient'
 import { mockHttp, now, respond } from '@/test/http'
+import { upsertProblem as seedProblem, claimProblemOwner } from '@/features/content/infrastructure/demoProblemStore'
 
 const conversation = {
   conversationId: 'conversation',
@@ -37,17 +38,6 @@ const problem: Problem = {
   status: 'draft',
   time: now,
 }
-const problemDto = {
-  id: 1,
-  title: '题目',
-  description: '描述',
-  type: '医学常识',
-  target: 'all',
-  target_label: '全体学生',
-  status: 'draft',
-  created_at: now,
-}
-const draft = { ...conversation, analysis: { errors: [], score: 80, summary: '摘要' } }
 const login = (role: 'student' | 'teacher') =>
   saveSession({ openid: role, role, nickName: role, avatarUrl: '', createdAt: now })
 
@@ -61,13 +51,7 @@ function createRepositories(mode: 'demo' | 'api'): FeatureRepositories {
   const content: ContentRepository = mode === 'api' ? new ApiContentRepository() : new DemoContentRepository()
   if (mode === 'api') return { qa: new ApiQaRepository(), reports: new ApiReportRepository(), content }
 
-  const reportsRef: { current?: ReportRepository } = {}
-  const qa = new DemoQaRepository(content, {
-    getReports: () => reportsRef.current?.getReports() || Promise.resolve([]),
-  })
-  const reports = new DemoReportRepository(qa)
-  reportsRef.current = reports
-  return { qa, reports, content }
+  return { qa: new DemoQaRepository(content), reports: new DemoReportRepository(), content }
 }
 
 function failHttp(status: number) {
@@ -98,117 +82,113 @@ describe.each(['demo', 'api'] as const)('%s feature repository contract', (mode)
     )
     expect(await repositories.qa.getConversations()).toEqual([])
     expect((await repositories.qa.getConversationSummaries(20, 0)).items).toEqual([])
-    expect(await repositories.reports.getReports()).toEqual([])
-    expect((await repositories.reports.getReportSummaries(20, 0)).total).toBe(0)
     expect(await repositories.qa.getStudentQuestions()).toEqual([])
     login('teacher')
-    expect(await repositories.content.getProblems()).toEqual([])
+    const resources = await repositories.content.getProblems()
+    if (mode === 'api') expect(resources).toEqual([])
+    else expect(resources.every((item) => item.contentType === 'guided_case')).toBe(true)
     failHttp(404)
     expect(await repositories.content.findProblem('missing')).toBeUndefined()
-    expect(await repositories.content.publishProblem('missing')).toBeNull()
-    expect(await repositories.content.rejectProblem('missing')).toBeNull()
-    expect(await repositories.reports.reviewReport('missing', 80, '')).toBeNull()
+    if (mode === 'api') {
+      expect(await repositories.content.publishProblem('missing')).toBeNull()
+      expect(await repositories.content.rejectProblem('missing')).toBeNull()
+    } else {
+      await expect(repositories.content.publishProblem('missing')).rejects.toMatchObject({
+        code: 'RETIRED_FLOW',
+        statusCode: 409,
+      })
+      await expect(repositories.content.rejectProblem('missing')).rejects.toMatchObject({
+        code: 'RETIRED_FLOW',
+        statusCode: 409,
+      })
+    }
     login('student')
     expect(await repositories.qa.findConversation('missing')).toBeUndefined()
     expect(await repositories.reports.findReport('missing')).toBeUndefined()
-    expect(await repositories.reports.submitReportForReview('missing')).toBeNull()
     expect(await repositories.qa.findStudentQuestion('missing')).toBeUndefined()
     expect(await repositories.qa.getQuestionThread('missing')).toBeUndefined()
   })
 
-  it('preserves report state transitions and summary/detail separation', async () => {
-    let state = 'draft'
-    const dto = () => ({
-      id: 1,
-      conversation_id: 1,
-      conversation_client_id: 'conversation',
-      student_id: 1,
-      student_name: 'student',
-      status: state,
-      ai_score: 80,
-      ai_summary: '摘要',
-      messages: conversationDto.messages,
-      created_at: now,
-      updated_at: now,
-    })
-    mockHttp((path) => {
-      if (path.endsWith('/submit')) state = 'pending_review'
-      if (path.endsWith('/review')) state = 'reviewed'
-      if (path === '/conversations/summaries')
-        return {
-          items: [
-            {
-              id: 1,
-              client_id: 'conversation',
-              message_preview: '预览',
-              message_count: 1,
-              report_status: state,
-              created_at: now,
-              updated_at: now,
-            },
-          ],
-          total: 1,
-          limit: 20,
-          offset: 0,
-        }
-      if (path === '/reports/summaries')
-        return {
-          items: [{ ...dto(), message_preview: '预览', message_count: 1 }],
-          total: 1,
-          pending_count: 1,
-          reviewed_count: 0,
-          limit: 20,
-          offset: 0,
-        }
-      return path.startsWith('/conversations') ? conversationDto : dto()
-    })
+  it('keeps QA history independent from the retained read-only report history', async () => {
+    mockHttp((path) =>
+      path === '/conversations/summaries'
+        ? {
+            items: [
+              {
+                id: 1,
+                client_id: 'conversation',
+                message_preview: '预览',
+                message_count: 1,
+                created_at: now,
+                updated_at: now,
+                topic_codes: [],
+              },
+            ],
+            total: 1,
+            limit: 20,
+            offset: 0,
+          }
+        : conversationDto,
+    )
     await repositories.qa.upsertConversation(conversation)
-    expect((await repositories.reports.saveDraftReport(draft)).status).toBe('draft')
-    expect((await repositories.reports.submitReportForReview('conversation'))?.status).toBe('pending_review')
     expect((await repositories.qa.findConversation('conversation'))?.messages).toHaveLength(1)
     expect((await repositories.qa.getConversationSummaries(20, 0)).items[0]).not.toHaveProperty('messages')
-    login('teacher')
-    const summary = (await repositories.reports.getReportSummaries(20, 0)).items[0]
-    expect(summary.status).toBe('pending_review')
-    expect(summary).not.toHaveProperty('messages')
-    expect((await repositories.reports.findReport(summary.id))?.messages).toHaveLength(1)
-    expect((await repositories.reports.reviewReport(summary.id, 90, '反馈'))?.status).toBe('reviewed')
-    login('student')
-    failHttp(409)
-    await expect(repositories.reports.submitReportForReview('conversation')).rejects.toMatchObject({
-      code: 'STATE_CONFLICT',
-    })
+    expect((await repositories.qa.getConversationSummaries(20, 0)).items[0]?.reportStatus).toBeUndefined()
+    expect('saveDraftReport' in repositories.reports).toBe(false)
+    expect('submitReportForReview' in repositories.reports).toBe(false)
+    expect('reviewReport' in repositories.reports).toBe(false)
   })
 
-  it('rejects unauthorized writes and resolves answer state without per-question HTTP', async () => {
+  it('rejects unauthorized writes before returning retired flow errors and hides old questions', async () => {
     failHttp(403)
     await expect(repositories.content.upsertProblem(problem)).rejects.toMatchObject({ code: 'FORBIDDEN' })
     login('teacher')
-    let answered = false
-    mockHttp((path, options) => {
-      if (path.endsWith('/thread')) {
-        if (options.method === 'POST') answered = true
-        return { question_id: 1, messages: conversationDto.messages, updated_at: now }
-      }
-      if (path === '/student/questions')
-        return [{ ...problemDto, published_at: now, status: answered ? 'answered' : 'unanswered' }]
-      if (path.startsWith('/student/questions/'))
-        return { ...problemDto, published_at: now, status: answered ? 'answered' : 'unanswered' }
-      return {
-        ...problemDto,
-        status: path.endsWith('/publish') ? 'published' : path.endsWith('/reject') ? 'rejected' : 'draft',
-      }
+    claimProblemOwner(problem.id)
+    seedProblem({ ...problem, status: '已发布' })
+    vi.mocked(uni.request).mockImplementation((options) => {
+      const path = new URL(String(options.url)).pathname
+      respond(
+        options,
+        path === '/student/questions'
+          ? []
+          : {
+              detail: {
+                code:
+                  path.startsWith('/student/questions/') || (path.endsWith('/thread') && options.method !== 'POST')
+                    ? 'RESOURCE_NOT_FOUND'
+                    : 'RETIRED_FLOW',
+                message: '旧讨论题流程已退役',
+              },
+            },
+        path === '/student/questions'
+          ? 200
+          : path.startsWith('/student/questions/') || (path.endsWith('/thread') && options.method !== 'POST')
+            ? 404
+            : 409,
+      )
+      return undefined as never
     })
-    expect((await repositories.content.upsertProblem(problem)).status).toBe('draft')
-    expect((await repositories.content.rejectProblem('1'))?.status).toBe('rejected')
-    expect((await repositories.content.publishProblem('1'))?.status).toBe('published')
+    await expect(repositories.content.upsertProblem(problem)).rejects.toMatchObject({
+      code: 'RETIRED_FLOW',
+      statusCode: 409,
+    })
+    await expect(repositories.content.rejectProblem('1')).rejects.toMatchObject({
+      code: 'RETIRED_FLOW',
+      statusCode: 409,
+    })
+    await expect(repositories.content.publishProblem('1')).rejects.toMatchObject({
+      code: 'RETIRED_FLOW',
+      statusCode: 409,
+    })
     login('student')
     const count = vi.mocked(uni.request).mock.calls.length
-    expect((await repositories.qa.getStudentQuestions())[0].status).toBe('unanswered')
+    expect(await repositories.qa.getStudentQuestions()).toEqual([])
     expect(vi.mocked(uni.request).mock.calls.length - count).toBe(mode === 'api' ? 1 : 0)
-    await repositories.qa.saveQuestionThread({ questionId: '1', messages: conversation.messages, updatedAt: now })
-    expect((await repositories.qa.findStudentQuestion('1'))?.status).toBe('answered')
-    expect((await repositories.qa.getQuestionThread('1'))?.messages).toHaveLength(1)
+    await expect(
+      repositories.qa.saveQuestionThread({ questionId: '1', messages: conversation.messages, updatedAt: now }),
+    ).rejects.toMatchObject({ code: 'RETIRED_FLOW', statusCode: 409 })
+    expect(await repositories.qa.findStudentQuestion('1')).toBeUndefined()
+    expect(await repositories.qa.getQuestionThread('1')).toBeUndefined()
   })
 })
 
@@ -223,31 +203,37 @@ it('uses feature public APIs without a legacy aggregate facade', async () => {
     identity.saveSession({ openid: role, role, nickName: role, avatarUrl: '', createdAt: now })
   user('teacher')
   const viewProblem = { ...problem, status: '待审核' as const }
-  await content.saveProblemsAsync([viewProblem])
-  expect((await content.getProblemsAsync())[0].status).toBe('待审核')
-  expect((await content.upsertProblemAsync(viewProblem)).status).toBe('待审核')
-  expect((await content.publishProblemAsync('1'))?.status).toBe('已发布')
-  expect((await content.rejectProblemAsync('1'))?.status).toBe('已拒绝')
-  expect((await content.findProblemAsync('1'))?.status).toBe('已拒绝')
-  await content.resetProblemsAsync()
+  const demoProblems = await import('@/features/content/infrastructure/demoProblemStore')
+  demoProblems.claimProblemOwner(viewProblem.id)
+  demoProblems.upsertProblem(viewProblem)
+  expect((await content.getProblemsAsync()).every((item) => item.contentType === 'guided_case')).toBe(true)
+  await expect(content.saveProblemsAsync([viewProblem])).rejects.toMatchObject({
+    code: 'RETIRED_FLOW',
+    statusCode: 409,
+  })
+  await expect(content.upsertProblemAsync(viewProblem)).rejects.toMatchObject({ code: 'RETIRED_FLOW', statusCode: 409 })
+  await expect(content.publishProblemAsync('1')).rejects.toMatchObject({ code: 'RETIRED_FLOW', statusCode: 409 })
+  await expect(content.rejectProblemAsync('1')).rejects.toMatchObject({ code: 'RETIRED_FLOW', statusCode: 409 })
+  expect(await content.findProblemAsync('1')).toBeUndefined()
+  await expect(content.resetProblemsAsync()).rejects.toMatchObject({ code: 'RETIRED_FLOW', statusCode: 409 })
+  expect(demoProblems.findProblem('1')).toEqual(viewProblem)
   user('student')
   await qa.upsertConversationAsync(conversation)
   expect((await qa.findConversationAsync('conversation'))?.messages).toHaveLength(1)
   expect(await qa.getConversationsAsync()).toHaveLength(1)
-  expect((await reports.saveDraftReportAsync(draft)).status).toBe('草稿')
-  expect((await reports.findReportAsync('conversation'))?.status).toBe('草稿')
-  expect((await reports.getReportsAsync())[0].status).toBe('草稿')
-  expect((await qa.getConversationSummariesAsync()).items[0].reportStatus).toBe('草稿')
-  expect((await reports.submitReportForReviewAsync('conversation'))?.status).toBe('待批阅')
-  const questions = await qa.getStudentQuestionsAsync()
-  if (questions[0]) {
-    await qa.findStudentQuestionAsync(questions[0].id)
-    await qa.saveQuestionThreadAsync({ questionId: questions[0].id, messages: [], updatedAt: now })
-    expect(await qa.getQuestionThreadAsync(questions[0].id)).toBeTruthy()
-  }
-  user('teacher')
-  const report = (await reports.getReportSummariesAsync()).items[0]
-  expect((await reports.reviewReportAsync(report.id, 80, '反馈'))?.status).toBe('已批阅')
+  expect(await reports.findReportAsync('conversation')).toBeUndefined()
+  expect(await reports.findReportByConversationAsync('conversation')).toBeUndefined()
+  expect((await qa.getConversationSummariesAsync()).items[0]?.reportStatus).toBeUndefined()
+  expect('saveDraftReportAsync' in reports).toBe(false)
+  expect('submitReportForReviewAsync' in reports).toBe(false)
+  expect('reviewReportAsync' in reports).toBe(false)
+  expect(await qa.getStudentQuestionsAsync()).toEqual([])
+  expect(await qa.findStudentQuestionAsync('1')).toBeUndefined()
+  await expect(qa.saveQuestionThreadAsync({ questionId: '1', messages: [], updatedAt: now })).rejects.toMatchObject({
+    code: 'RETIRED_FLOW',
+    statusCode: 409,
+  })
+  expect(await qa.getQuestionThreadAsync('1')).toBeUndefined()
   vi.unstubAllEnvs()
 })
 
@@ -256,8 +242,14 @@ it('does not silently overwrite API data or restore Demo seeds remotely', async 
   await expect(content.saveProblems([])).rejects.toMatchObject({ code: 'UNSUPPORTED_OPERATION' })
   await expect(content.resetProblems()).rejects.toMatchObject({ code: 'UNSUPPORTED_OPERATION' })
   vi.stubEnv('VITE_API_BASE_URL', 'https://example.test')
-  mockHttp(() => problemDto)
-  expect((await content.upsertProblem({ ...problem, id: 'new-local-id' })).id).toBe('1')
+  vi.mocked(uni.request).mockImplementation((options) => {
+    respond(options, { detail: { code: 'RETIRED_FLOW', message: '旧讨论题流程已退役' } }, 409)
+    return undefined as never
+  })
+  await expect(content.upsertProblem({ ...problem, id: 'new-local-id' })).rejects.toMatchObject({
+    code: 'RETIRED_FLOW',
+    statusCode: 409,
+  })
   expect(vi.mocked(uni.request).mock.calls[0][0].method).toBe('POST')
   clearApiCache()
   vi.unstubAllEnvs()

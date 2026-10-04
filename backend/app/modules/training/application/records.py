@@ -19,6 +19,9 @@ class TrainingProblemRecord:
     target_ids: tuple[str, ...]
     case_definition: dict[str, object]
     rubric: dict[str, object]
+    knowledge_point_codes: tuple[str, ...] = ()
+    capability_tags: tuple[str, ...] = ()
+    medical_review_status: str = ""
 
 
 @dataclass(frozen=True, slots=True)

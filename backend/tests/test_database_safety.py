@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.request import Request, urlopen
@@ -362,9 +363,15 @@ def test_e2e_launcher_seeds_api_data_and_matches_cors_origin() -> None:
             )
             with urlopen(problems_request, timeout=5) as response:  # noqa: S310 - loopback URL from child log
                 problems = json.loads(response.read())
-            assert len(problems) == 7
+            # The retained open question stays in the fixture database, while
+            # the active content API now exposes only its six guided cases.
+            assert len(problems) == 6
+            assert all(item["content_type"] == "guided_case" for item in problems)
             assert any(item["slug"] == "pathology-demo-pending-v2" for item in problems)
             assert resource_root.joinpath("app.sqlite3").exists()
+            database_uri = f"file:{resource_root.joinpath('app.sqlite3').as_posix()}?mode=ro"
+            with closing(sqlite3.connect(database_uri, uri=True)) as seeded:
+                assert seeded.execute("SELECT COUNT(*) FROM problems").fetchone()[0] == 7
         finally:
             stop_e2e_server(process, log_path, shutdown_path)
         assert not resource_root.exists()

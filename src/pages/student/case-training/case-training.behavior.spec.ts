@@ -5,6 +5,10 @@ import type { CaseAttempt } from '@/types/case'
 
 const hooks = vi.hoisted(() => ({
   load: undefined as undefined | ((query?: Record<string, string>) => void),
+  show: undefined as undefined | (() => void),
+}))
+const auth = vi.hoisted(() => ({
+  user: { openid: 'student-1', role: 'student' } as { openid: string; role: string } | null,
 }))
 const getCaseAttemptAsync = vi.hoisted(() => vi.fn())
 const sendPatientMessageAsync = vi.hoisted(() => vi.fn())
@@ -15,9 +19,15 @@ vi.mock('@dcloudio/uni-app', () => ({
   onLoad: (hook: (query?: Record<string, string>) => void) => {
     hooks.load = hook
   },
+  onShow: (hook: () => void) => {
+    hooks.show = hook
+  },
   onBackPress: vi.fn(),
 }))
-vi.mock('@/features/identity/public', () => ({ requireRole: () => true }))
+vi.mock('@/features/identity/public', () => ({
+  getSession: () => auth.user,
+  requireRole: () => auth.user?.role === 'student',
+}))
 vi.mock('@/features/training/public', () => ({
   getCaseAttemptAsync,
   sendPatientMessageAsync,
@@ -67,6 +77,8 @@ const mountPage = () =>
 describe('case training dialogue workspace', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    auth.user = { openid: 'student-1', role: 'student' }
+    hooks.show = undefined
     Object.assign(uni, { pageScrollTo: vi.fn() })
     hooks.load = undefined
     getCaseAttemptAsync.mockResolvedValue(historyAttempt)
@@ -111,5 +123,23 @@ describe('case training dialogue workspace', () => {
       summary: '中年男性急性发热伴咳嗽。',
       keyFindings: ['发热 3 天', '咳嗽'],
     })
+  })
+
+  it('clears a private case and ignores an in-flight read after the student identity changes', async () => {
+    let resolveAttempt!: (value: CaseAttempt) => void
+    getCaseAttemptAsync.mockImplementationOnce(() => new Promise<CaseAttempt>((resolve) => (resolveAttempt = resolve)))
+    const wrapper = mountPage()
+    hooks.load?.({ id: historyAttempt.id })
+
+    auth.user = { openid: 'student-2', role: 'student' }
+    hooks.show?.()
+    await flushPromises()
+    expect(wrapper.text()).toContain('学生身份已变化')
+    expect(wrapper.text()).not.toContain(historyAttempt.opening.chiefComplaint)
+
+    resolveAttempt(historyAttempt)
+    await flushPromises()
+    expect(wrapper.text()).toContain('学生身份已变化')
+    expect(wrapper.text()).not.toContain(historyAttempt.opening.chiefComplaint)
   })
 })

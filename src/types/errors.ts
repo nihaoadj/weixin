@@ -12,6 +12,7 @@ export type StableErrorCode =
   | 'API_CONFIG_ERROR'
   | 'STALE_SESSION'
   | 'UNSUPPORTED_OPERATION'
+  | 'RETIRED_FLOW'
 
 export class AppError extends Error {
   readonly statusCode?: number

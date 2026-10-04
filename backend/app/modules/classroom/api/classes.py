@@ -2,15 +2,31 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.dependencies import require_teacher
-from app.modules.classroom.api.schemas import ClassCreate, ClassMemberCreate, ClassRead, ClassStudentRead, ClassUpdate
+from app.dependencies import require_student, require_teacher
+from app.modules.classroom.api.schemas import (
+    ClassCreate,
+    ClassMemberCreate,
+    ClassRead,
+    ClassStudentRead,
+    ClassUpdate,
+    StudentActiveClassRead,
+)
 from app.modules.classroom.application.records import ClassCommand, ClassUpdateCommand
-from app.modules.classroom.public import class_view, student_view
+from app.modules.classroom.public import class_view, student_active_class_view, student_view
 from app.modules.classroom.wiring import classroom_application
 from app.modules.identity.infrastructure.models import User
 from app.shared.actor import Actor
 
 router = APIRouter(prefix="/classes", tags=["classes"])
+
+
+@router.get("/my-active", response_model=list[StudentActiveClassRead])
+def list_my_active_classes(
+    student: User = Depends(require_student), db: Session = Depends(get_db)
+) -> list[dict[str, object]]:
+    application = classroom_application(db)
+    scopes = application.student_active_classes(Actor.from_user(student))
+    return [student_active_class_view(item) for item in scopes]
 
 
 @router.get("", response_model=list[ClassRead])

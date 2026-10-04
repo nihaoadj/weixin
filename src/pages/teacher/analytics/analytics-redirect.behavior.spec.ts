@@ -7,7 +7,7 @@ vi.mock('@/features/identity/public', () => ({ requireRole }))
 vi.mock('@/platform/navigation', () => ({
   relaunchTo,
   handleBackPress: vi.fn(),
-  ROUTES: { teacherWorkspace: '/workspace' },
+  ROUTES: { teacherInsights: '/insights' },
 }))
 vi.mock('@dcloudio/uni-app', () => ({
   onLoad: (hook: () => void) => hook(),
@@ -23,7 +23,7 @@ describe('legacy teacher analytics route', () => {
   it('redirects into the analytics section of the insights workspace', () => {
     const wrapper = mount(AnalyticsRedirect)
     expect(wrapper.text()).toContain('教学统计已统一归入教师学情工作区')
-    expect(relaunchTo).toHaveBeenCalledWith('/workspace', { tab: 'reports', section: 'analytics' })
+    expect(relaunchTo).toHaveBeenCalledWith('/insights', {})
   })
 
   it('does not redirect before the teacher role guard succeeds', () => {

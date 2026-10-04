@@ -278,3 +278,9 @@ def assessment_view(assessment: AssessmentRecord, previous: AssessmentRecord | N
         "fallback_used": assessment.fallback_used,
         "comparison": comparison,
     }
+
+
+class CaseSnapshotPort(Protocol):
+    """Freeze existing attempts before an author changes their reusable case."""
+
+    def freeze(self, problem_id: int) -> None: ...

@@ -37,8 +37,8 @@ describe.each(['demo', 'api'] as const)('%s case repository semantics', (mode) =
         learningObjectives: ['学习'],
       })
       const saved = await content.saveGuidedCaseAsync(draft)
-      expect(saved.status).toBe('draft')
-      await expect(content.publishGuidedCaseAsync(saved.id)).rejects.toMatchObject({ code: 'STATE_CONFLICT' })
+      expect(saved).toMatchObject({ status: 'published', medicalReviewStatus: 'not_required' })
+      await expect(content.publishGuidedCaseAsync(saved.id)).rejects.toMatchObject({ code: 'RETIRED_FLOW' })
     } else {
       status = 409
       await expect(content.publishGuidedCaseAsync('1')).rejects.toMatchObject({ code: 'STATE_CONFLICT' })

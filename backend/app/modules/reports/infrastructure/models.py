@@ -19,6 +19,7 @@ class Report(Base):
         UniqueConstraint("conversation_id", name="uq_report_conversation"),
         Index("ix_reports_updated_id", "updated_at", "id"),
         Index("ix_reports_student_updated_id", "student_id", "updated_at", "id"),
+        Index("ix_reports_class_status_updated_id", "class_id", "status", "updated_at", "id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -31,6 +32,10 @@ class Report(Base):
     teacher_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     teacher_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewer_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    # Submitting class and its name at submit time; drafts and unattributable
+    # history stay NULL and remain student-only.
+    class_id: Mapped[int | None] = mapped_column(ForeignKey("classes.id"), nullable=True)
+    class_name_snapshot: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

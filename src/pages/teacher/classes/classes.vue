@@ -351,16 +351,16 @@ input {
   margin: 0;
   padding: 0 15rpx;
   line-height: 58rpx;
-  font-size: 21rpx;
+  font-size: 24rpx;
 }
 .danger {
-  color: #b8323d;
-  background: #fff0f1;
+  color: var(--med-danger);
+  background: var(--med-alert-soft);
 }
 .members {
   margin-top: 20rpx;
   padding-top: 18rpx;
-  border-top: 1rpx solid #e8eef4;
+  border-top: 1rpx solid var(--med-divider);
 }
 .member-add {
   align-items: stretch;
@@ -370,7 +370,7 @@ input {
 }
 .member {
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #eef2f5;
+  border-bottom: 1rpx solid var(--med-divider);
   font-size: 23rpx;
 }
 .empty {

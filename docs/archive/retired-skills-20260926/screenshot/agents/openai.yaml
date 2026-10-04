@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Desktop Screenshot'
+  short_description: 'Capture user-requested desktop screenshots'
+  icon_small: './assets/screenshot-small.svg'
+  icon_large: './assets/screenshot.png'
+  default_prompt: 'Use $screenshot to capture the requested desktop window, screen, or region.'

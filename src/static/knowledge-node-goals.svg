@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 116" fill="none">
+  <defs>
+    <linearGradient id="sheet" x1="40" y1="11" x2="94" y2="104" gradientUnits="userSpaceOnUse"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF6FF"/></linearGradient>
+    <linearGradient id="edge" x1="37" y1="13" x2="103" y2="101" gradientUnits="userSpaceOnUse"><stop stop-color="#D7EDFF"/><stop offset="1" stop-color="#79BAF0"/></linearGradient>
+    <linearGradient id="target" x1="84" y1="66" x2="120" y2="107" gradientUnits="userSpaceOnUse"><stop stop-color="#F9FEFF"/><stop offset="1" stop-color="#B9E0FC"/></linearGradient>
+  </defs>
+  <g transform="rotate(7 68 58)">
+    <rect x="40" y="16" width="66" height="88" rx="10" fill="#82BFEF" opacity=".2"/>
+    <rect x="34" y="13" width="66" height="88" rx="10" fill="url(#edge)" opacity=".75"/>
+    <rect x="40" y="18" width="55" height="77" rx="6" fill="url(#sheet)" stroke="#D5EAFC" stroke-width="2"/>
+    <rect x="54" y="8" width="27" height="17" rx="6" fill="#A5D3F7"/>
+    <circle cx="67.5" cy="11" r="4" fill="#F5FBFF"/>
+    <path d="m50 43 4 4 7-9m-11 24 4 4 7-9m-11 24 4 4 7-9" stroke="#69B3ED" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M66 43h19M66 62h19M66 81h15" stroke="#C8E6FB" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <circle cx="100" cy="87" r="25" fill="#9BCEF6" opacity=".27"/>
+  <circle cx="100" cy="87" r="20" fill="url(#target)" stroke="#72B8ED" stroke-width="5"/>
+  <circle cx="100" cy="87" r="11" fill="#F8FDFF" stroke="#75B8ED" stroke-width="4"/>
+  <circle cx="100" cy="87" r="4" fill="#288BD9"/>
+  <path d="m101 86 18-22m0 0 1 10m-1-10-9 3" stroke="#368FDC" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

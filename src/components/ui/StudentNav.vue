@@ -18,10 +18,7 @@
       @keydown="activateButtonOnKey"
       @click="open(item.key)"
     >
-      <MedIcon
-        :name="item.icon"
-        size="sm"
-      />
+      <StudentNavIcon :name="item.icon" />
       <text>{{ item.label }}</text>
     </button>
   </view>
@@ -29,7 +26,7 @@
 
 <script setup lang="ts">
 import { activateButtonOnKey } from '@/components/ui/keyboard'
-import MedIcon from '@/components/ui/MedIcon.vue'
+import StudentNavIcon from '@/components/ui/StudentNavIcon.vue'
 
 import { goPrimary, ROUTES, type StudentPrimaryRoute } from '@/platform/navigation'
 
@@ -78,10 +75,14 @@ function open(key: StudentTab) {
   border-radius: var(--med-radius-sm);
   font-size: 24rpx;
   line-height: 1.2;
+  transition:
+    color var(--med-motion-settle) var(--med-ease-out),
+    opacity var(--med-motion-settle) var(--med-ease-out),
+    transform var(--med-motion-settle) var(--med-ease-out);
 }
 .student-nav__item.active {
   color: var(--med-clinical);
-  background: var(--med-wash);
+  background: transparent;
   font-weight: 700;
 }
 @media screen and (min-width: 600px) and (max-width: 899px) {

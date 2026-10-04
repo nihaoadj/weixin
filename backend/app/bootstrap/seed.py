@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.modules.classroom.infrastructure.models import ClassMember, ClassRoom, MedicalReview
+from app.modules.content.domain.card_blueprints import CARDS, RECALL_CARDS
 from app.modules.content.domain.digest import case_digest
-from app.modules.content.domain.knowledge_catalog import CARDS, POINTS, RECALL_CARDS
 from app.modules.content.domain.pathology_data import TOPICS
 from app.modules.content.domain.templates import SAFETY_NOTICE as _SAFETY_NOTICE
 from app.modules.content.domain.templates import showcase_draft as _content_showcase_draft
 from app.modules.content.domain.templates import topic_for_draft
 from app.modules.content.infrastructure.models import KnowledgeCardContribution, Problem, ProblemKnowledgeLink
+from app.modules.content.wiring import knowledge_catalog_port
 from app.modules.identity.infrastructure.models import User
 
 SAFETY_NOTICE = _SAFETY_NOTICE
@@ -17,15 +18,15 @@ SAFETY_NOTICE = _SAFETY_NOTICE
 _CAPABILITY_TAGS = {
     f"{topic}-showcase": ["differential_diagnosis", "evidence_reasoning", "management_safety"] for topic in TOPICS
 }
-_KNOWLEDGE_POINT_CODES = {
-    f"{topic}-showcase": tuple(point.code for point in POINTS if point.system == topic) for topic in TOPICS
-}
 
 
-def _apply_knowledge_links(problem: Problem) -> None:
+def _apply_knowledge_links(db: Session, problem: Problem) -> None:
     """Keep synthetic cases connected to the canonical pathology catalog."""
 
-    expected = _KNOWLEDGE_POINT_CODES.get(problem.slug or "", ())
+    topic_code = (problem.slug or "").removesuffix("-showcase")
+    expected = tuple(
+        str(point["code"]) for point in knowledge_catalog_port(db).tree_view() if point["system_code"] == topic_code
+    )
     if tuple(link.point_code for link in problem.knowledge_links) == expected:
         return
     problem.knowledge_links.clear()
@@ -79,7 +80,7 @@ def seed_showcase_case(db: Session) -> Problem:
     else:
         problem = Problem(**showcase_case_payload())
         db.add(problem)
-    _apply_knowledge_links(problem)
+    _apply_knowledge_links(db, problem)
     db.commit()
     db.refresh(problem)
     teacher = db.scalar(select(User).where(User.external_id == "demo_teacher"))
@@ -146,7 +147,7 @@ def seed_showcase_case(db: Session) -> Problem:
         else:
             item.author_id = teacher.id
             item.medical_review_status = "approved"
-        _apply_knowledge_links(item)
+        _apply_knowledge_links(db, item)
         digest = case_digest(item)
         if (
             db.scalar(

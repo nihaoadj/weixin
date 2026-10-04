@@ -12,7 +12,8 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    name: 'brand' | 'student' | 'teacher' | 'chat' | 'history' | 'book' | 'report' | 'send' | 'copy' | 'retry'
+    name:
+      'brand' | 'student' | 'teacher' | 'chat' | 'history' | 'book' | 'report' | 'send' | 'copy' | 'retry' | 'classroom'
     size?: 'sm' | 'md' | 'lg'
   }>(),
   { size: 'md' },

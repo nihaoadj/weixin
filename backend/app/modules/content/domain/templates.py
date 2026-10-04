@@ -60,6 +60,7 @@ def topic_for_draft(topic: str):
 def showcase_draft(topic: str = "细胞损伤与适应") -> dict[str, object]:
     key = topic_for_draft(topic)
     case = CASES[key]
+
     def criteria(dim):
         return [
             {
@@ -70,6 +71,7 @@ def showcase_draft(topic: str = "细胞损伤与适应") -> dict[str, object]:
                 "critical": False,
             }
         ]
+
     facts = [
         {
             "id": "background",

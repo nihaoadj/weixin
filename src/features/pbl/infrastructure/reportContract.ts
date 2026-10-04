@@ -48,6 +48,38 @@ const evaluation = z.object({
   evaluated_at: z.string(),
 })
 const taskProgress = z.object({ completed: z.number(), total: z.number() })
+const dashboard = z.object({
+  data_basis: z.enum(['student_pbl_evidence', 'synthetic_demo']),
+  period_start: z.string(),
+  period_end: z.string(),
+  mastery_score: z.number().min(0).max(100).nullable(),
+  mastery_delta: z.number().nullable(),
+  mastery_sample_count: z.number().min(0),
+  study_minutes: z.number().min(0),
+  study_duration_basis: z.enum(['estimated_activity_intervals', 'synthetic_demo']),
+  plan_completion_rate: z.number().min(0).max(100).nullable(),
+  mastered_knowledge_count: z.number().min(0),
+  ai_diagnostic_count: z.number().min(0),
+  status_label: z.string(),
+  trend: z.array(
+    z.object({
+      period_start: z.string(),
+      period_end: z.string(),
+      score: z.number().min(0).max(100).nullable(),
+      sample_count: z.number().min(0),
+    }),
+  ),
+  weaknesses: z.array(
+    z.object({
+      target_type: z.string(),
+      target_code: z.string(),
+      label: z.string(),
+      occurrences: z.number().min(0),
+      mastery_percentage: z.number().min(0).max(100).nullable(),
+    }),
+  ),
+  ai_summary: z.string(),
+})
 const listItem = z.object({
   session: reportSession,
   status: reportStatus,
@@ -68,6 +100,7 @@ export const reportPageSchema = z.object({
     recurring_targets: z.array(
       z.object({ target_type: z.string(), target_code: z.string(), label: z.string(), occurrences: z.number() }),
     ),
+    dashboard,
     next_action: action.extend({ session_id: z.number(), case_title: z.string() }).nullable(),
   }),
   items: z.array(listItem),
@@ -78,6 +111,7 @@ export const reportPageSchema = z.object({
 export const reportDetailSchema = z.object({
   session: reportSession,
   status: reportStatus,
+  visibility: z.enum(['private', 'classroom', 'legacy_shared']),
   current_phase: phase.nullable(),
   phase_status: z.enum(['active', 'completed']).nullable(),
   phase_progress: z.array(
@@ -158,6 +192,15 @@ export const reportDetailSchema = z.object({
   task_progress: taskProgress,
   summary_text: z.string(),
   next_action: action,
+  teacher_feedbacks: z.array(
+    z.object({
+      id: z.number(),
+      plan_id: z.number().nullable(),
+      action_type: z.string(),
+      body: z.string(),
+      created_at: z.string().nullable(),
+    }),
+  ),
   timeline: z.array(
     z.object({
       type: z.string(),
@@ -219,6 +262,34 @@ export function mapReportPage(value: z.infer<typeof reportPageSchema>): PblRepor
         label: item.label,
         occurrences: item.occurrences,
       })),
+      dashboard: {
+        dataBasis: value.summary.dashboard.data_basis,
+        periodStart: value.summary.dashboard.period_start,
+        periodEnd: value.summary.dashboard.period_end,
+        masteryScore: value.summary.dashboard.mastery_score,
+        masteryDelta: value.summary.dashboard.mastery_delta,
+        masterySampleCount: value.summary.dashboard.mastery_sample_count,
+        studyMinutes: value.summary.dashboard.study_minutes,
+        studyDurationBasis: value.summary.dashboard.study_duration_basis,
+        planCompletionRate: value.summary.dashboard.plan_completion_rate,
+        masteredKnowledgeCount: value.summary.dashboard.mastered_knowledge_count,
+        aiDiagnosticCount: value.summary.dashboard.ai_diagnostic_count,
+        statusLabel: value.summary.dashboard.status_label,
+        trend: value.summary.dashboard.trend.map((item) => ({
+          periodStart: item.period_start,
+          periodEnd: item.period_end,
+          score: item.score,
+          sampleCount: item.sample_count,
+        })),
+        weaknesses: value.summary.dashboard.weaknesses.map((item) => ({
+          targetType: item.target_type,
+          targetCode: item.target_code,
+          label: item.label,
+          occurrences: item.occurrences,
+          masteryPercentage: item.mastery_percentage,
+        })),
+        aiSummary: value.summary.dashboard.ai_summary,
+      },
       nextAction: value.summary.next_action
         ? {
             ...mapAction(value.summary.next_action),
@@ -249,6 +320,7 @@ export function mapLearningReport(value: z.infer<typeof reportDetailSchema>): Pb
   return {
     session: mapSession(value.session),
     status: value.status,
+    visibility: value.visibility,
     currentPhase: value.current_phase ?? undefined,
     phaseStatus: value.phase_status ?? undefined,
     phaseProgress: value.phase_progress.map((item) => ({
@@ -317,6 +389,13 @@ export function mapLearningReport(value: z.infer<typeof reportDetailSchema>): Pb
     taskProgress: value.task_progress,
     summaryText: value.summary_text,
     nextAction: mapAction(value.next_action),
+    teacherFeedbacks: value.teacher_feedbacks.map((item) => ({
+      id: String(item.id),
+      planId: item.plan_id == null ? undefined : String(item.plan_id),
+      actionType: item.action_type,
+      body: item.body,
+      createdAt: item.created_at ?? undefined,
+    })),
     timeline: value.timeline.map((item) => ({
       type: item.type,
       label: item.label,

@@ -7,7 +7,12 @@ import { tmpdir } from 'node:os'
 import process from 'node:process'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const artifacts = ['docs/openapi.json', 'src/data/contracts/openapi.generated.ts', 'src/test/fixtures/case-draft.json', 'src/features/content/infrastructure/pathologyCatalog.generated.json']
+const artifacts = [
+  'docs/openapi.json',
+  'src/data/contracts/openapi.generated.ts',
+  'src/test/fixtures/case-draft.json',
+  'src/features/content/infrastructure/pathologyCatalog.generated.json',
+]
 
 function parseOutputDirectory(args) {
   if (args.length === 0) return projectRoot

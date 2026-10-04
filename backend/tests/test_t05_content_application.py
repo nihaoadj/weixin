@@ -10,12 +10,13 @@ import pytest
 from app.modules.content.application.records import ProblemCommand, ProblemRecord
 from app.modules.content.application.use_cases import ContentApplication
 from app.shared.actor import Actor
-from app.shared.errors import AppError, PersistenceConflict
+from app.shared.errors import AppError
 
 NOW = datetime(2026, 8, 31, tzinfo=UTC)
 AUTHOR = Actor(1, "author", "teacher", "作者")
 REVIEWER = Actor(2, "reviewer", "teacher", "审核者", permissions=frozenset({"medical_review"}))
 TEACHER = Actor(3, "teacher", "teacher", "教师")
+CATALOG = SimpleNamespace(contains_points=lambda _codes: True)
 
 
 class Uow:
@@ -103,60 +104,36 @@ def repository(current: ProblemRecord):
     )
 
 
-@pytest.mark.parametrize(
-    "current,changed",
-    [
-        (problem(), command(content_type="question")),
-        (problem(medical_review_status="pending"), command()),
-        (problem(status="published"), command()),
-        (problem(medical_review_status="approved"), command()),
-    ],
-)
-def test_content_update_rejects_immutable_type_review_and_published_cases(current, changed) -> None:
+@pytest.mark.parametrize("medical,status", [("pending", "draft"), ("approved", "published"), ("rejected", "draft")])
+def test_content_update_is_direct_for_owner_regardless_of_old_lifecycle(medical, status) -> None:
+    current = problem(medical_review_status=medical, status=status)
     uow = Uow()
-    with pytest.raises(AppError, match="immutable|审核中|immutable"):
-        ContentApplication(repository(current), uow).update(AUTHOR, current.id, changed)
-    assert uow.commits == uow.rollbacks == 0
+    result = ContentApplication(repository(current), uow, CATALOG).update(AUTHOR, current.id, command())
+    assert result.id == current.id and uow.commits == 1
 
 
-def test_content_clone_retries_a_unique_version_then_returns_counted_copy() -> None:
+def test_content_type_conversion_is_still_retired() -> None:
+    current = problem()
+    with pytest.raises(AppError) as raised:
+        ContentApplication(repository(current), Uow(), CATALOG).update(
+            AUTHOR, current.id, command(content_type="question")
+        )
+    assert (raised.value.code, raised.value.status_code) == ("RETIRED_FLOW", 409)
+
+
+@pytest.mark.parametrize("operation", ["clone", "publish", "reject", "submit_review"])
+def test_content_old_lifecycle_writes_are_retired_without_repository_mutation(operation) -> None:
     current = problem(status="published", medical_review_status="approved")
-    repo = repository(current)
-    calls = 0
-
-    def clone(*_args):
-        nonlocal calls
-        calls += 1
-        if calls == 1:
-            raise PersistenceConflict()
-        return problem(id=9, version=2, status="draft", medical_review_status="not_submitted")
-
-    repo.clone = clone
     uow = Uow()
-    result = ContentApplication(repo, uow).clone(AUTHOR, current.id)
-    assert (result.id, result.answer_count, calls, uow.rollbacks, uow.commits) == (9, 4, 2, 1, 1)
-
-
-def test_content_publish_invalidates_stale_review_and_preserves_published_idempotency() -> None:
-    reviewed = problem(status="published", medical_review_status="approved")
-    repo = repository(reviewed)
-    invalidated = []
-    repo.invalidate_review = invalidated.append
-    uow = Uow()
-    with pytest.raises(AppError, match="摘要已失效"):
-        ContentApplication(repo, uow).publish(AUTHOR, reviewed.id)
-    assert invalidated == [reviewed.id] and uow.commits == 1
-
-    repo.latest_approved_review_digest = lambda *_: __import__(
-        "app.modules.content.domain.digest", fromlist=["case_digest"]
-    ).case_digest(reviewed)
-    returned = ContentApplication(repo, uow).publish(AUTHOR, reviewed.id)
-    assert returned.id == reviewed.id and uow.commits == 1
+    with pytest.raises(AppError) as raised:
+        getattr(ContentApplication(repository(current), uow, CATALOG), operation)(AUTHOR, current.id)
+    assert (raised.value.code, raised.value.status_code) == ("RETIRED_FLOW", 409)
+    assert uow.commits == uow.rollbacks == 0
 
 
 def test_content_review_permissions_and_generator_availability_fail_closed() -> None:
     current = problem()
-    service = ContentApplication(repository(current), Uow())
+    service = ContentApplication(repository(current), Uow(), CATALOG)
     with pytest.raises(AppError, match="生成器"):
         service.generate_draft(AUTHOR, "topic", "level", [])
     for operation in (
@@ -171,10 +148,10 @@ def test_content_review_permissions_and_generator_availability_fail_closed() -> 
 
 def test_content_review_rejects_self_review_wrong_owner_and_approved_resubmission() -> None:
     current = problem(medical_review_status="approved")
-    service = ContentApplication(repository(current), Uow())
-    with pytest.raises(AppError, match="已经审核"):
+    service = ContentApplication(repository(current), Uow(), CATALOG)
+    with pytest.raises(AppError, match="无需审核或发布"):
         service.submit_review(AUTHOR, current.id)
-    with pytest.raises(AppError, match="Authors cannot"):
+    with pytest.raises(AppError, match="无需审核或发布"):
         service.decide_review(
             Actor(AUTHOR.id, "same", "teacher", "same", permissions=frozenset({"medical_review"})),
             current.id,

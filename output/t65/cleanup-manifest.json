@@ -1,0 +1,326 @@
+[
+  {
+    "path": "src/components/ui/PageContextBar.vue",
+    "bytes": 1821,
+    "sha256": "a4e612cc943d4bdd6a6df9564d0406ee79f07e440f4fc8980e4ed0e0f8fdb96d",
+    "action": "delete"
+  },
+  {
+    "path": "src/components/chat/ChatWelcome.vue",
+    "bytes": 2560,
+    "sha256": "37efc3a4625f604cffecd5b2ca4840d1b8215aa7aafcf922133f264424e6c179",
+    "action": "delete"
+  },
+  {
+    "path": "src/components/student/PblStatusDistribution.vue",
+    "bytes": 2963,
+    "sha256": "4fc9d0af6d3048a4adb6f907e5c7cd6a7f05fc171e1c5c8e0cfc7ce90148368f",
+    "action": "delete"
+  },
+  {
+    "path": "src/components/student/PblReportSectionHeading.vue",
+    "bytes": 884,
+    "sha256": "ae3f98117c94749e9a7bdd251af51b254f142f4848c560230a6a49d97d322ebc",
+    "action": "delete"
+  },
+  {
+    "path": "src/components/student/PblRecurringTargets.vue",
+    "bytes": 1595,
+    "sha256": "d650392465a82e703b9d0830faedb145bb2114f1fd69a16f52f076ae7cd161e0",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/teacher-books-stethoscope.svg",
+    "bytes": 4381,
+    "sha256": "c3fc77984f827d882b3b925351543647e12f8af7707e9d6594d6a31831e8adb3",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-tool-topic.svg",
+    "bytes": 342,
+    "sha256": "c2b5bdd3478511b520f033e0569932d74ea8122242b5ae83fbd6918c5f2c520d",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-tool-create.svg",
+    "bytes": 200,
+    "sha256": "3d1528a88a7bc5bd2c42fd4cb2cb35a44e637c7fe325555ea8cd7bde73ffa3df",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-tool-class.svg",
+    "bytes": 303,
+    "sha256": "d1a1733ee4d492baae9e1e8c5164a0c18e30fb55886b31c7defecde8c9a07a15",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-teacher-hero.svg",
+    "bytes": 2508,
+    "sha256": "5fe0b4660358e2d395cf81501f326cdee9cf0b96a95929d39180f1da2fcfd10e",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-teacher-discussion.svg",
+    "bytes": 743,
+    "sha256": "d4e12afe123a7f0bb28b805849152fc32c76d7fe50ac2037e53b1efeea2cd513",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-nav-overview.svg",
+    "bytes": 306,
+    "sha256": "82d1bf8ba0c9061f7221c112bd4ff79be8a9329f73cfcdc9665f31fc51a246f6",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-nav-pbl.svg",
+    "bytes": 399,
+    "sha256": "fb54bed6a3b71c17d8b67c1a0840325491963a46fd61430e7ac4c181291cbb9d",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-nav-problems.svg",
+    "bytes": 261,
+    "sha256": "2f714b79532571a729295fc5b7190a3b5fb5ecaf26303e7e41cc542f414bfc98",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/pbl-nav-reports.svg",
+    "bytes": 292,
+    "sha256": "77c37dcda7eec43568a199b0a9f58f67fd84ea928fb3fed9e6d1d473aec9d61e",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/images/hospital.png",
+    "bytes": 69889,
+    "sha256": "873c46bd5a5955e5f4a33672ccaa6c38d467d72ec94bc38efbcab47fbadb3e8d",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/icons/content-brand.svg",
+    "bytes": 823,
+    "sha256": "456b9b72fa9fe9f4501ae4a786316a47d88f0333616d655f3dc879673a46cea1",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/icons/content-card.svg",
+    "bytes": 633,
+    "sha256": "d821531b5473475cae9615e6a94a4cca15d70d9ae5414ba0b8d0f4754e178b80",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/icons/content-case.svg",
+    "bytes": 588,
+    "sha256": "2b91207d9e667503a3dd864972adf8ced87d9839432aee1b76396516f013d593",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/icons/content-filter.svg",
+    "bytes": 212,
+    "sha256": "1534a415ecfdf22b2b21795ce68822dbbaa5d09cab285078e3b2049de8f91030",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/icons/content-hero.svg",
+    "bytes": 2340,
+    "sha256": "3aa3bd620fe23b91eb511192dd72760299080645c2807c60c8c2fa5b225e4e6c",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/icons/content-question.svg",
+    "bytes": 501,
+    "sha256": "ceff7caf4cf0e957267f0036fcaa91a85d6dfb0e6990721abbc599232bde4bab",
+    "action": "delete"
+  },
+  {
+    "path": "src/static/icons/content-review.svg",
+    "bytes": 556,
+    "sha256": "53a38f7381050e7aa3ed9b12c8d12e5c855aaa5d4b4faf2e7d438659c6efc6ba",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/case-training-smoke.mjs",
+    "bytes": 13972,
+    "sha256": "289723b6adafb48f32d17884dac9b47943d97e6df179d4270753c34b8180996c",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/knowledge-scroll-smoke.mjs",
+    "bytes": 7940,
+    "sha256": "47e4b44a4f55147bfebb210e89ed8be67c7251d9dc14a211a1e73aaf3f206b71",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/legacy-automator-disabled.mjs",
+    "bytes": 322,
+    "sha256": "e682a95dc87a3eb0eb6a6ed1417a5ea94eacdc0cf38396e0c931c26c7f66d6b7",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/pbl-dialogue-smoke.mjs",
+    "bytes": 5813,
+    "sha256": "ae1a506df442c1f942732cfedaa019c40924636f2da474ab0fb9d4232b014dde",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/pbl-handoff-smoke.mjs",
+    "bytes": 15759,
+    "sha256": "04a1f21878c0ee16971200435cc5df541f795106ba8dadc1b2016745dbd64089",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/protocol-probe.mjs",
+    "bytes": 2119,
+    "sha256": "fff9e4876f0e1cc3b87d685832f8a0f1e53e98833fb69fcf76a661b5c7c68af8",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/smoke.mjs",
+    "bytes": 6732,
+    "sha256": "49ccf999786ca5d519d7689a0dbfa05ec3c762d63f419d3f7793ec34a1e6f342",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/student-navigation-smoke.mjs",
+    "bytes": 8320,
+    "sha256": "a5da02f23faf07fb1d66f95dd554443147e5e799c5caff2631b322f8590aa7ce",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t26-baseline.mjs",
+    "bytes": 15355,
+    "sha256": "e4e5e866260883f68dff6648ff1b57835965b3dfa03e9e4b8c5f2c1166b7cc77",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t28-baseline-error-state.mjs",
+    "bytes": 2644,
+    "sha256": "2c0412b96588a0749585dd21d1102e97f36cda00ad9ad5dd8b912eecf8e21e9b",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t28-baseline.mjs",
+    "bytes": 13118,
+    "sha256": "458cfcd34b16faec55046f3f1bb874931ed6c3106570d2920b7a52d90e234124",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t28-diagnostic-evidence.mjs",
+    "bytes": 12966,
+    "sha256": "ade62cd544bf897ab89f064981e509f69ec153874c4ef3adaf59ea3d3a0d23fa",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t28-follow-up-evidence.mjs",
+    "bytes": 12650,
+    "sha256": "f02a41f0aa1e7803c016162118e3effbe8c96275bc28efee127485bb81bf8265",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t28-overview-evidence.mjs",
+    "bytes": 11593,
+    "sha256": "6fef906661f1e5c33706a5b91dabdcb2d5ab523d1a59b0a144e390bf8b56f455",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t28-student-spillover.mjs",
+    "bytes": 7667,
+    "sha256": "45e2edf0ceee17e2e9234a3c11798df4f0c6063c5182ff6da6601733a7363b40",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t29-baseline.mjs",
+    "bytes": 10969,
+    "sha256": "10a4914a3c2f11ba3f0ca03260def5951a850aafab0c35e8bf637c1ac43e809f",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t29-evidence-teacher.mjs",
+    "bytes": 10608,
+    "sha256": "18a400feea746a7ce352cdee1bcf7f9377072a9710921f0cfdfdbc66cea9ca51",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t29-evidence.mjs",
+    "bytes": 21027,
+    "sha256": "5dd9f55b8fb7f915af4f72a0371a015a0383ba05ed93cb6db6ca54a7542a005f",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/t31-response-style-evidence.mjs",
+    "bytes": 261,
+    "sha256": "e3919363b3b72f50a500177bf9a2b6b337e3e7f4dba22768b6f359614f4f5ff1",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/teacher-case-authoring-smoke.mjs",
+    "bytes": 11218,
+    "sha256": "c2f3ffabdbddde52ad85d44bcd160434dc75ec40068c20275bfe29c900e19995",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/teacher-class-smoke.mjs",
+    "bytes": 8009,
+    "sha256": "091ebd05b680de54e65bc3a4d86fd366d5faf3425f0db71eb4b400fcb84730f7",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/teacher-insights-ui.mjs",
+    "bytes": 9404,
+    "sha256": "09a8678d1fb9e1d1e473cde9d9c06445a9dc141b47a51fbaa2bc62e335d8a8be",
+    "action": "delete"
+  },
+  {
+    "path": "scripts/wechat/teacher-workspace-smoke.mjs",
+    "bytes": 18320,
+    "sha256": "18ed1e8790552756bd5ce7fb24dea5e3e980d97943bd9e33f2e78ffd87652c5c",
+    "action": "delete"
+  },
+  {
+    "path": "src/components/ui/ui.behavior.spec.ts",
+    "bytes": 5035,
+    "sha256": "0929029c9e3210608b26a610fb2b5cfa1ed55a745e1db44fd02d1779cc96c00b",
+    "action": "edit"
+  },
+  {
+    "path": "src/components/chat/chat.behavior.spec.ts",
+    "bytes": 4944,
+    "sha256": "c007250d6729d7333ed3dbe47e9fc72f51c662f0a9d6d2184feaf717fa0c0e77",
+    "action": "edit"
+  },
+  {
+    "path": "src/components/student/pbl-report.behavior.spec.ts",
+    "bytes": 3684,
+    "sha256": "7d1d37f5e7e5ae43eae647cfaefec91010b0f11aac01509f9d81156285e98db9",
+    "action": "edit"
+  },
+  {
+    "path": "src/platform/navigation/index.ts",
+    "bytes": 7772,
+    "sha256": "15203a2c4608e69e0aba45fd50cf3ca20f75ed2f304177b5d78ddfba9bbdd938",
+    "action": "edit"
+  },
+  {
+    "path": "src/platform/navigation/navigation.spec.ts",
+    "bytes": 6846,
+    "sha256": "7b61d8445fad9ea055e40b7589e559b88c82f85b2cb450e749b893f067105309",
+    "action": "edit"
+  },
+  {
+    "path": "package.json",
+    "bytes": 5556,
+    "sha256": "150e206db4b40d5d36f4abb0fcd0f8bf8da459b94da9482bb952f623a64acb77",
+    "action": "edit"
+  },
+  {
+    "path": "package-lock.json",
+    "bytes": 487109,
+    "sha256": "1f823cd1e2fea8e50dbff2fa0541b114e3fa69d7d10d7b342abe933d895d93c2",
+    "action": "edit"
+  },
+  {
+    "path": "docs/wechat.md",
+    "bytes": 5631,
+    "sha256": "380f038afc1b8a2fadea24a3f87028593ccf7015d61b9c3f3c909f8426e54a5e",
+    "action": "edit"
+  }
+]

@@ -19,7 +19,7 @@ STATUS_CODES = {
     409: "STATE_CONFLICT",
     422: "VALIDATION_ERROR",
 }
-STABLE_CODES = set(STATUS_CODES.values()) | {"SERVICE_ERROR", "ROLE_REQUIRED", "INVALID_DATE_RANGE"}
+STABLE_CODES = set(STATUS_CODES.values()) | {"SERVICE_ERROR", "ROLE_REQUIRED", "INVALID_DATE_RANGE", "RETIRED_FLOW"}
 
 
 class ErrorDetail(BaseModel):
@@ -32,8 +32,10 @@ class ErrorDetail(BaseModel):
         "SERVICE_ERROR",
         "ROLE_REQUIRED",
         "INVALID_DATE_RANGE",
+        "RETIRED_FLOW",
     ]
     message: str
+    reason: str | None = None
 
 
 class ErrorResponse(BaseModel):
@@ -56,7 +58,10 @@ def http_exception_handler(_request: Request, exc: HTTPException) -> JSONRespons
 
 
 def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content=error_payload(exc.code, exc.message))
+    payload = error_payload(exc.code, exc.message)
+    if getattr(exc, "reason", None):
+        payload["detail"]["reason"] = exc.reason
+    return JSONResponse(status_code=exc.status_code, content=payload)
 
 
 def validation_exception_handler(_request: Request, _exc: RequestValidationError) -> JSONResponse:

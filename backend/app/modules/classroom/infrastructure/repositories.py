@@ -5,7 +5,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modules.classroom.application.ports import ClassroomRepository
-from app.modules.classroom.application.records import ClassCommand, ClassRecord, ClassStudentRecord, ClassUpdateCommand
+from app.modules.classroom.application.records import (
+    ClassCommand,
+    ClassRecord,
+    ClassStudentRecord,
+    ClassUpdateCommand,
+    TeachingMemberScope,
+)
 from app.modules.classroom.infrastructure.models import ClassMember, ClassRoom
 from app.modules.identity.infrastructure.models import User
 from app.shared.errors import PersistenceConflict
@@ -71,6 +77,16 @@ class SqlAlchemyClassroomRepository(ClassroomRepository):
             ClassStudentRecord(id=user.id, nickname=user.nickname, external_id=user.external_id, joined_at=joined_at)
             for user, joined_at in rows
         )
+
+    def teaching_members(self, teacher_id: int) -> tuple[TeachingMemberScope, ...]:
+        rows = self._session.execute(
+            select(ClassRoom.id, ClassRoom.name, ClassRoom.status, User.id, User.nickname)
+            .join(ClassMember, ClassMember.class_id == ClassRoom.id)
+            .join(User, User.id == ClassMember.student_id)
+            .where(ClassRoom.teacher_id == teacher_id)
+            .order_by(ClassRoom.id, User.id)
+        )
+        return tuple(TeachingMemberScope(*row) for row in rows)
 
     def student_exists(self, student_id: int) -> bool:
         return self._session.scalar(select(User.id).where(User.id == student_id, User.role == "student")) is not None

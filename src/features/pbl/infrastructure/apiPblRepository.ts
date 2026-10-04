@@ -5,18 +5,11 @@ import type {
   PblRepository,
   PblSession,
   PblSuggestion,
-  PblSession as SessionType,
-  PblTargets,
-  PblFilters,
   InteractionStyle,
   LearningDialogueSubmission,
   PblTeacherFeedback,
   PblWorkItem,
   TeacherPblSession,
-  TeacherPblDashboard,
-  PblFollowUp,
-  PblFollowUpStatus,
-  PblPlan,
 } from '../domain/ports'
 import { mapLearningReport, mapReportPage, reportDetailSchema, reportPageSchema } from './reportContract'
 const session = z.object({
@@ -43,6 +36,10 @@ const session = z.object({
   session_kind: z.enum(['classroom', 'student_initiated']).default('classroom'),
   interaction_style: z.enum(['guided', 'direct']).nullable().optional(),
   style_selected_at: z.string().nullable().optional(),
+  evidence_locked: z.boolean().default(false),
+  conversation_mode: z.enum(['evidence', 'private_follow_up']).default('evidence'),
+  completion_snapshot_id: z.number().nullable().optional(),
+  evidence_completed_revision: z.number().nullable().optional(),
 })
 const suggestion = z.object({
   id: z.number(),
@@ -86,7 +83,7 @@ const diagnostic = z.object({
   phase_evidence_summary: z.string(),
   phase_missing_elements: z.array(z.string()),
   session_kind: z.enum(['classroom', 'student_initiated']).optional(),
-  interaction_style: z.enum(['guided', 'direct']).optional(),
+  interaction_style: z.enum(['guided', 'direct']),
 })
 const toSession = (v: z.infer<typeof session>): PblSession => ({
   id: String(v.id),
@@ -107,6 +104,10 @@ const toSession = (v: z.infer<typeof session>): PblSession => ({
   sessionKind: v.session_kind,
   interactionStyle: v.interaction_style ?? undefined,
   styleSelectedAt: v.style_selected_at ?? undefined,
+  evidenceLocked: v.evidence_locked,
+  conversationMode: v.conversation_mode,
+  completionSnapshotId: v.completion_snapshot_id == null ? undefined : String(v.completion_snapshot_id),
+  evidenceCompletedRevision: v.evidence_completed_revision ?? undefined,
 })
 const toSuggestion = (v: z.infer<typeof suggestion>): PblSuggestion => ({
   id: String(v.id),
@@ -126,6 +127,10 @@ const teacherFeedback = z.object({
   created_at: z.string().nullable(),
 })
 const workItem = z.object({
+  learning_route_id: z.string().uuid().nullable().optional(),
+  final_test_id: z.string().uuid().nullable().optional(),
+  test_generation_state: z.string().nullable().optional(),
+  test_review_state: z.string().nullable().optional(),
   snapshot_id: z.number(),
   session_id: z.number(),
   source: z.enum(['student_submission', 'classroom_diagnostic']),
@@ -138,6 +143,7 @@ const workItem = z.object({
   knowledge_gap_count: z.number(),
   reasoning_issue_count: z.number(),
   next_action: z.string(),
+  read_only: z.boolean().optional().default(false),
 })
 const toFeedback = (value: z.infer<typeof teacherFeedback>): PblTeacherFeedback => ({
   id: String(value.id),
@@ -149,6 +155,10 @@ const toFeedback = (value: z.infer<typeof teacherFeedback>): PblTeacherFeedback 
 })
 const toWorkItem = (value: z.infer<typeof workItem>): PblWorkItem => ({
   snapshotId: String(value.snapshot_id),
+  learningRouteId: value.learning_route_id ?? undefined,
+  finalTestId: value.final_test_id ?? undefined,
+  testGenerationState: value.test_generation_state ?? undefined,
+  testReviewState: value.test_review_state ?? undefined,
   sessionId: String(value.session_id),
   source: value.source,
   status: value.status,
@@ -160,6 +170,7 @@ const toWorkItem = (value: z.infer<typeof workItem>): PblWorkItem => ({
   knowledgeGapCount: value.knowledge_gap_count,
   reasoningIssueCount: value.reasoning_issue_count,
   nextAction: value.next_action,
+  readOnly: value.read_only,
 })
 const toDiagnostic = (v: z.infer<typeof diagnostic>): PblDiagnostic => ({
   id: String(v.id),
@@ -193,19 +204,46 @@ const messageSchema = z.object({
   content: z.string(),
   processing_status: z.string(),
   client_message_id: z.string().nullable().optional(),
-})
-const participationSchema = z.object({
-  messages: z.array(messageSchema),
-  diagnostic: diagnostic.nullable(),
-  current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
-  phase_started_revision: z.number(),
-  phase_status: z.enum(['active', 'completed']),
-  phase_completed_at: z.string().nullable(),
   interaction_style: z.enum(['guided', 'direct']),
-  style_selected_at: z.string().nullable(),
+  turn_scope: z.enum(['evidence', 'private_follow_up']),
+  reply_to_message_id: z.number().nullable().optional(),
 })
+const participationSchema = z
+  .object({
+    session_id: z.number(),
+    messages: z.array(messageSchema),
+    revision: z.number(),
+    diagnostic: diagnostic.nullable(),
+    current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
+    phase_started_revision: z.number(),
+    phase_status: z.enum(['active', 'completed']),
+    phase_completed_at: z.string().nullable(),
+    interaction_style: z.enum(['guided', 'direct']),
+    style_selected_at: z.string().nullable(),
+    evidence_locked: z.boolean(),
+    conversation_mode: z.enum(['evidence', 'private_follow_up']),
+    completion_snapshot_id: z.number().nullable(),
+    evidence_completed_revision: z.number().nullable(),
+    learning_route_id: z.string().uuid().nullable().optional(),
+    final_test_id: z.string().uuid().nullable().optional(),
+    route_generation_state: z.string().nullable().optional(),
+    test_generation_state: z.string().nullable().optional(),
+  })
+  .superRefine((value, context) => {
+    const completed = value.phase_status === 'completed'
+    const hasLocator = value.completion_snapshot_id != null && value.evidence_completed_revision != null
+    if (completed !== value.evidence_locked || completed !== hasLocator)
+      context.addIssue({ code: z.ZodIssueCode.custom, message: 'PBL completion boundary is inconsistent' })
+    if (value.conversation_mode !== (completed ? 'private_follow_up' : 'evidence'))
+      context.addIssue({ code: z.ZodIssueCode.custom, message: 'PBL conversation mode is inconsistent' })
+  })
 const toParticipation = (value: z.infer<typeof participationSchema>) => ({
-  messages: value.messages,
+  messages: value.messages.map(({ interaction_style, turn_scope, reply_to_message_id, ...message }) => ({
+    ...message,
+    interactionStyle: interaction_style,
+    turnScope: turn_scope,
+    replyToMessageId: reply_to_message_id == null ? undefined : String(reply_to_message_id),
+  })),
   diagnostic: value.diagnostic ? toDiagnostic(value.diagnostic) : undefined,
   currentPhase: value.current_phase,
   phaseStartedRevision: value.phase_started_revision,
@@ -213,7 +251,61 @@ const toParticipation = (value: z.infer<typeof participationSchema>) => ({
   phaseCompletedAt: value.phase_completed_at ?? undefined,
   interactionStyle: value.interaction_style,
   styleSelectedAt: value.style_selected_at ?? undefined,
+  evidenceLocked: value.evidence_locked,
+  conversationMode: value.conversation_mode,
+  completionSnapshotId: value.completion_snapshot_id == null ? undefined : String(value.completion_snapshot_id),
+  evidenceCompletedRevision: value.evidence_completed_revision ?? undefined,
+  learningRouteId: value.learning_route_id ?? undefined,
+  finalTestId: value.final_test_id ?? undefined,
+  routeGenerationState: value.route_generation_state ?? undefined,
+  testGenerationState: value.test_generation_state ?? undefined,
 })
+const privateFollowUpSchema = z.object({
+  student_message_id: z.number(),
+  assistant_message_id: z.number(),
+  processing_status: z.enum(['completed', 'unavailable']),
+  safety_status: z.string(),
+  fallback_used: z.boolean(),
+})
+const messageSubmissionSchema = z
+  .object({
+    response_kind: z.enum(['evidence_assessment', 'private_follow_up']),
+    turn_scope: z.enum(['evidence', 'private_follow_up']),
+    messages: z.array(messageSchema),
+    diagnostic,
+    current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
+    phase_started_revision: z.number(),
+    phase_status: z.enum(['active', 'completed']),
+    phase_completed_at: z.string().nullable(),
+    interaction_style: z.enum(['guided', 'direct']),
+    style_selected_at: z.string().nullable(),
+    evidence_locked: z.boolean(),
+    conversation_mode: z.enum(['evidence', 'private_follow_up']),
+    completion_snapshot_id: z.number().nullable(),
+    evidence_completed_revision: z.number().nullable(),
+    learning_route_id: z.string().uuid().nullable().optional(),
+    final_test_id: z.string().uuid().nullable().optional(),
+    route_generation_state: z.string().nullable().optional(),
+    test_generation_state: z.string().nullable().optional(),
+    private_follow_up: privateFollowUpSchema.nullable(),
+  })
+  .superRefine((value, context) => {
+    const isPrivate = value.response_kind === 'private_follow_up'
+    if (isPrivate !== (value.turn_scope === 'private_follow_up') || isPrivate !== Boolean(value.private_follow_up))
+      context.addIssue({ code: z.ZodIssueCode.custom, message: 'PBL response kind is inconsistent' })
+    if (
+      value.phase_status !== 'completed' ||
+      !value.evidence_locked ||
+      value.conversation_mode !== 'private_follow_up' ||
+      value.completion_snapshot_id == null ||
+      value.evidence_completed_revision == null
+    ) {
+      if (isPrivate)
+        context.addIssue({ code: z.ZodIssueCode.custom, message: 'Private follow-up lacks completion boundary' })
+    }
+    if (isPrivate && value.diagnostic.id !== value.completion_snapshot_id)
+      context.addIssue({ code: z.ZodIssueCode.custom, message: 'Private follow-up changed the frozen diagnostic' })
+  })
 const dialogueDetailSchema = z.object({ session, participation: participationSchema.nullable() })
 const submissionSchema = z.object({
   session_id: z.number(),
@@ -338,21 +430,6 @@ const plan = z.object({
     }),
   ),
 })
-const summary = z.object({
-  participants: z.number(),
-  diagnoses: z.number(),
-  published_suggestions: z.number(),
-  plans: z.number(),
-  tasks: z.number(),
-  completed_tasks: z.number(),
-  pending_verification: z.number(),
-  improved: z.number(),
-  needs_reinforcement: z.number(),
-  objective_retest_count: z.number(),
-  objective_retest_average: z.number().nullable(),
-  phase_counts: z.record(z.string(), z.number()),
-  automation_exhausted: z.number(),
-})
 export class ApiPblRepository implements PblRepository {
   async classes() {
     const values = await apiRequest({
@@ -378,7 +455,6 @@ export class ApiPblRepository implements PblRepository {
   }
   async createDialogue(input: {
     clientSessionId: string
-    classId?: string
     interactionStyle: InteractionStyle
     goalPointCodes: string[]
   }) {
@@ -387,7 +463,6 @@ export class ApiPblRepository implements PblRepository {
       method: 'POST',
       body: {
         client_session_id: input.clientSessionId,
-        class_id: input.classId ? Number(input.classId) : null,
         interaction_style: input.interactionStyle,
         goal_point_codes: input.goalPointCodes,
       },
@@ -438,94 +513,53 @@ export class ApiPblRepository implements PblRepository {
     })
     return toParticipation(value)
   }
-  async message(id: string, content: string, clientMessageId: string) {
+  async message(id: string, content: string, clientMessageId: string, interactionStyle: InteractionStyle) {
     const value = await apiRequest({
       path: `/student/learning-dialogues/${id}/messages`,
       timeoutMs: 35000,
       method: 'POST',
-      body: { content, client_message_id: clientMessageId },
-      schema: z.object({
-        diagnostic,
-        messages: z.array(messageSchema),
-        current_phase: z.enum(['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed']),
-        phase_status: z.enum(['active', 'completed']),
-        phase_completed_at: z.string().nullable(),
-        interaction_style: z.enum(['guided', 'direct']),
-        style_selected_at: z.string().nullable(),
-      }),
+      body: { content, client_message_id: clientMessageId, interaction_style: interactionStyle },
+      schema: messageSubmissionSchema,
     })
     return {
-      messages: value.messages,
+      messages: value.messages.map(({ interaction_style, turn_scope, reply_to_message_id, ...message }) => ({
+        ...message,
+        interactionStyle: interaction_style,
+        turnScope: turn_scope,
+        replyToMessageId: reply_to_message_id == null ? undefined : String(reply_to_message_id),
+      })),
       diagnostic: toDiagnostic(value.diagnostic),
       currentPhase: value.current_phase,
-      phaseStartedRevision: value.diagnostic.revision,
+      phaseStartedRevision: value.phase_started_revision,
       phaseStatus: value.phase_status,
       phaseCompletedAt: value.phase_completed_at ?? undefined,
       interactionStyle: value.interaction_style,
       styleSelectedAt: value.style_selected_at ?? undefined,
+      evidenceLocked: value.evidence_locked,
+      conversationMode: value.conversation_mode,
+      completionSnapshotId: value.completion_snapshot_id == null ? undefined : String(value.completion_snapshot_id),
+      evidenceCompletedRevision: value.evidence_completed_revision ?? undefined,
+      learningRouteId: value.learning_route_id ?? undefined,
+      finalTestId: value.final_test_id ?? undefined,
+      routeGenerationState: value.route_generation_state ?? undefined,
+      testGenerationState: value.test_generation_state ?? undefined,
+      responseKind: value.response_kind,
+      turnScope: value.turn_scope,
+      privateFollowUp: value.private_follow_up
+        ? {
+            studentMessageId: String(value.private_follow_up.student_message_id),
+            assistantMessageId: String(value.private_follow_up.assistant_message_id),
+            processingStatus: value.private_follow_up.processing_status,
+            safetyStatus: value.private_follow_up.safety_status,
+            fallbackUsed: value.private_follow_up.fallback_used,
+          }
+        : undefined,
     }
   }
   async dialogueSubmission(id: string) {
     return toSubmission(
       await apiRequest({ path: `/student/learning-dialogues/${id}/submission`, schema: submissionSchema }),
     )
-  }
-  async submitDialogue(input: { id: string; snapshotId: string; classId: string; clientSubmissionId: string }) {
-    return toSubmission(
-      await apiRequest({
-        path: `/student/learning-dialogues/${input.id}/submission`,
-        method: 'POST',
-        body: {
-          snapshot_id: Number(input.snapshotId),
-          class_id: Number(input.classId),
-          client_submission_id: input.clientSubmissionId,
-        },
-        schema: submissionSchema,
-        invalidateCache: ['/teacher/pbl-diagnostics'],
-      }),
-    )
-  }
-  async diagnostics(filters: PblFilters = {}) {
-    const value = await apiRequest({
-      path: '/teacher/pbl-diagnostics',
-      query: {
-        class_id: filters.classId,
-        session_id: filters.sessionId,
-        student_id: filters.studentId,
-        status: filters.status,
-        offset: filters.offset ?? 0,
-        limit: 20,
-      },
-      schema: z.object({ items: z.array(diagnostic), total: z.number(), limit: z.number(), offset: z.number() }),
-    })
-    return { items: value.items.map(toDiagnostic), total: value.total }
-  }
-  async workItems(filters: PblFilters & { source?: PblWorkItem['source']; workStatus?: PblWorkItem['status'] } = {}) {
-    const value = await apiRequest({
-      path: '/teacher/pbl-work-items',
-      query: {
-        class_id: filters.classId,
-        session_id: filters.sessionId,
-        student_id: filters.studentId,
-        source: filters.source,
-        status: filters.workStatus,
-        offset: filters.offset ?? 0,
-        limit: 20,
-      },
-      schema: z.object({
-        items: z.array(workItem),
-        total: z.number(),
-        limit: z.number(),
-        offset: z.number(),
-        summary: z.object({
-          pending: z.number(),
-          responded: z.number(),
-          task_published: z.number(),
-          closed: z.number(),
-        }),
-      }),
-    })
-    return { items: value.items.map(toWorkItem), total: value.total, summary: value.summary }
   }
   async workItem(snapshotId: string) {
     const value = await apiRequest({
@@ -538,63 +572,8 @@ export class ApiPblRepository implements PblRepository {
       feedbacks: value.feedbacks.map(toFeedback),
     }
   }
-  async feedback(input: {
-    snapshotId: string
-    clientFeedbackId: string
-    body: string
-    actionType: 'feedback_only' | 'task_published' | 'closed'
-    suggestion?: PblSuggestion
-    targets?: PblTargets
-  }) {
-    return toFeedback(
-      await apiRequest({
-        path: `/teacher/pbl-work-items/${input.snapshotId}/feedback`,
-        method: 'POST',
-        body: {
-          client_feedback_id: input.clientFeedbackId,
-          body: input.body,
-          action_type: input.actionType,
-          suggestion_id: input.suggestion ? Number(input.suggestion.id) : undefined,
-          suggestion_version: input.suggestion?.version,
-          title: input.suggestion?.title ?? '',
-          prompt: input.suggestion?.prompt ?? '',
-          target_student_ids: input.targets?.studentIds ?? [],
-          whole_class: input.targets?.wholeClass ?? false,
-          include_case_retry: input.targets?.includeCaseRetry ?? false,
-        },
-        schema: teacherFeedback,
-      }),
-    )
-  }
   async diagnostic(id: string) {
     return toDiagnostic(await apiRequest({ path: `/teacher/pbl-diagnostics/${id}`, schema: diagnostic }))
-  }
-  async editSuggestion(item: PblSuggestion, reject = false) {
-    return toSuggestion(
-      await apiRequest({
-        path: `/teacher/pbl-question-suggestions/${item.id}`,
-        method: 'PATCH',
-        body: { version: item.version, title: item.title, prompt: item.prompt, reject },
-        schema: suggestion,
-      }),
-    )
-  }
-  async adopt(item: PblSuggestion, targets: PblTargets = {}) {
-    return toSuggestion(
-      await apiRequest({
-        path: `/teacher/pbl-question-suggestions/${item.id}/adopt-and-publish`,
-        method: 'POST',
-        body: {
-          version: item.version,
-          title: item.title,
-          prompt: item.prompt,
-          target_student_ids: targets.studentIds ?? [],
-          whole_class: targets.wholeClass ?? false,
-          include_case_retry: targets.includeCaseRetry ?? false,
-        },
-        schema: suggestion,
-      }),
-    )
   }
   async revisions(id: string) {
     return (await apiRequest({ path: `/teacher/pbl-diagnostics/${id}/revisions`, schema: z.array(diagnostic) })).map(
@@ -613,13 +592,6 @@ export class ApiPblRepository implements PblRepository {
     return mapLearningReport(
       await apiRequest({ path: `/student/pbl-learning-reports/${sessionId}`, schema: reportDetailSchema }),
     )
-  }
-  async results(sessionId?: string) {
-    return apiRequest({
-      path: '/teacher/pbl-learning-results',
-      query: { session_id: sessionId },
-      schema: z.array(plan),
-    })
   }
   async teacherSessions(filters: { classId?: string; status?: string; offset?: number } = {}) {
     const value = await apiRequest({
@@ -660,115 +632,61 @@ export class ApiPblRepository implements PblRepository {
       path: `/classes/${classId}/pbl-sessions/${sessionId}/dashboard`,
       schema: z.object({
         session: z.object({ id: z.number(), class_id: z.number(), status: z.string() }),
-        summary,
+        summary: z.object({
+          participants: z.number().int().nonnegative(),
+          diagnoses: z.number().int().nonnegative(),
+          published_routes: z.number().int().nonnegative(),
+          completed_routes: z.number().int().nonnegative(),
+          completion_rate: z.number().min(0).max(100).nullable(),
+          average_score: z.number().min(0).max(100).nullable(),
+          phase_counts: z.record(z.string(), z.number().int().nonnegative()),
+        }),
         students: z.array(
           z.object({
             student_id: z.number(),
             student_name: z.string(),
             current_phase: z.string(),
             phase_status: z.string(),
+            last_activity_at: z.string().nullable(),
             snapshot_id: z.number().nullable(),
             work_item_status: z.enum(['pending', 'responded', 'task_published', 'closed']).nullable(),
             task_progress: z.object({ completed: z.number(), total: z.number() }),
-            current_cycle: z.number().nullable(),
-            verification_status: z.string().nullable(),
+            learning_route_id: z.string().uuid().nullable(),
+            final_test_id: z.string().uuid().nullable(),
+            result_id: z.string().uuid().nullable(),
+            route_status: z.string().nullable(),
+            score: z.number().nullable(),
           }),
         ),
       }),
     })
     return {
       session: { id: String(value.session.id), classId: String(value.session.class_id), status: value.session.status },
-      summary: value.summary as TeacherPblDashboard['summary'],
+      summary: {
+        participants: value.summary.participants,
+        diagnoses: value.summary.diagnoses,
+        publishedRoutes: value.summary.published_routes,
+        completedRoutes: value.summary.completed_routes,
+        completionRate: value.summary.completion_rate,
+        averageScore: value.summary.average_score,
+        phaseCounts: value.summary.phase_counts,
+      },
       students: value.students.map((item) => ({
         studentId: String(item.student_id),
         studentName: item.student_name,
         currentPhase: item.current_phase,
         phaseStatus: item.phase_status,
+        lastActivityAt: item.last_activity_at ?? undefined,
         snapshotId: item.snapshot_id == null ? undefined : String(item.snapshot_id),
         workItemStatus: item.work_item_status ?? undefined,
         taskProgress: item.task_progress,
-        currentCycle: item.current_cycle ?? undefined,
-        verificationStatus: item.verification_status ?? undefined,
+        learningRouteId: item.learning_route_id ?? undefined,
+        finalTestId: item.final_test_id ?? undefined,
+        resultId: item.result_id ?? undefined,
+        routeStatus: item.route_status ?? undefined,
+        score: item.score ?? undefined,
       })),
     }
-  }
-  async followUps(
-    filters: {
-      classId?: string
-      sessionId?: string
-      studentId?: string
-      status?: PblFollowUpStatus
-      offset?: number
-    } = {},
-  ) {
-    const value = await apiRequest({
-      path: '/teacher/pbl-follow-ups',
-      query: {
-        class_id: filters.classId,
-        session_id: filters.sessionId,
-        student_id: filters.studentId,
-        status: filters.status,
-        offset: filters.offset ?? 0,
-        limit: 20,
-      },
-      schema: z.object({
-        items: z.array(
-          z.object({
-            plan_id: z.number(),
-            student_id: z.number(),
-            student_name: z.string(),
-            class_id: z.number(),
-            class_name: z.string(),
-            session_id: z.number(),
-            session_topic: z.string(),
-            status: z.enum(['in_progress', 'cycle_2', 'support_needed', 'improved']),
-            current_cycle: z.number(),
-            verification_status: z.string(),
-            automation_exhausted: z.boolean(),
-            failed_targets: z.array(
-              z.object({ target_type: z.string(), target_code: z.string(), label: z.string().nullable().optional() }),
-            ),
-          }),
-        ),
-        total: z.number(),
-        limit: z.number(),
-        offset: z.number(),
-      }),
-    })
-    return {
-      items: value.items.map((item): PblFollowUp => ({
-        planId: item.plan_id,
-        studentId: item.student_id,
-        studentName: item.student_name,
-        classId: item.class_id,
-        className: item.class_name,
-        sessionId: item.session_id,
-        sessionTopic: item.session_topic,
-        status: item.status,
-        currentCycle: item.current_cycle,
-        verificationStatus: item.verification_status,
-        automationExhausted: item.automation_exhausted,
-        failedTargets: item.failed_targets.map((target) => ({ ...target, label: target.label ?? undefined })),
-      })),
-      total: value.total,
-    }
-  }
-  async followUp(planId: number) {
-    const value = await apiRequest({
-      path: `/teacher/pbl-follow-ups/${planId}`,
-      schema: z.object({ plan, feedbacks: z.array(teacherFeedback) }),
-    })
-    return { plan: value.plan as PblPlan, feedbacks: value.feedbacks.map(toFeedback) }
-  }
-  async followUpFeedback(planId: number, clientFeedbackId: string, body: string) {
-    return toFeedback(
-      await apiRequest({
-        path: `/teacher/pbl-follow-ups/${planId}/feedback`,
-        method: 'POST',
-        body: { client_feedback_id: clientFeedbackId, body },
-        schema: teacherFeedback,
-      }),
-    )
   }
   async submitTask(taskId: number, submissionId: string, answer: { text?: string; selected_option?: number }) {
     return apiRequest({
@@ -777,8 +695,5 @@ export class ApiPblRepository implements PblRepository {
       body: { client_submission_id: submissionId, answer },
       schema: plan,
     })
-  }
-  async summary(item: SessionType) {
-    return apiRequest({ path: `/classes/${item.classId}/pbl-sessions/${item.id}/summary`, schema: summary })
   }
 }

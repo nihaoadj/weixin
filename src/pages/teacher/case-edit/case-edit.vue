@@ -10,7 +10,7 @@
             class="page-title"
             >{{ headerTitle }}</text
           >
-          <text class="page-description">先形成结构化草稿，再完成医学审核与发布。</text>
+          <text class="page-description">核对病例内容并保存，保存后即可选入课堂。</text>
           <button
             role="button"
             tabindex="0"
@@ -24,35 +24,16 @@
             返回内容列表
           </button>
         </view>
-        <view
-          class="workflow-status"
-          aria-label="病例发布流程"
-        >
-          <text class="workflow-current">{{ statusLabel }}</text>
-          <view
-            class="workflow-track"
-            aria-hidden="true"
-          >
-            <text class="workflow-node complete">草稿</text>
-            <text class="workflow-line"></text>
-            <text
-              :class="['workflow-node', { complete: reviewStatus !== 'not_submitted' && reviewStatus !== 'rejected' }]"
-              >医学审核</text
-            >
-            <text class="workflow-line"></text>
-            <text :class="['workflow-node', { complete: currentStatus === '已发布' }]">发布</text>
-          </view>
-        </view>
       </view>
 
       <view
         v-if="hydrating"
         class="load-state"
         aria-busy="true"
-        aria-label="正在加载病例草稿"
+        aria-label="正在加载病例"
       >
-        <text class="section-title">正在载入病例草稿</text>
-        <text class="helper-text">正在恢复可编辑版本及审核状态。</text>
+        <text class="section-title">正在载入病例</text>
+        <text class="helper-text">正在读取病例内容。</text>
       </view>
 
       <view
@@ -60,7 +41,7 @@
         class="load-state load-error"
         role="alert"
       >
-        <text class="section-title">病例草稿未能载入</text>
+        <text class="section-title">病例未能载入</text>
         <text class="helper-text">{{ loadError }}</text>
         <button
           role="button"
@@ -99,6 +80,38 @@
       />
 
       <template v-else>
+        <view class="knowledge-binding">
+          <text class="field-label">对应知识点</text>
+          <text class="helper-text">用于课堂学习目标；请选择与病例对应的知识点。</text>
+          <text
+            v-if="catalogLoading"
+            class="helper-text"
+            >正在读取知识点目录…</text
+          >
+          <template v-else-if="catalogError || !knowledgeCatalog.length">
+            <text
+              class="binding-error"
+              role="alert"
+              >{{ catalogError || '知识点目录为空，暂时无法保存病例。' }}</text
+            >
+            <button
+              class="secondary-button binding-retry"
+              :disabled="saving"
+              @click="loadKnowledgeCatalog"
+            >
+              重新读取知识点
+            </button>
+          </template>
+          <picker
+            v-else
+            :range="knowledgeOptions"
+            :value="knowledgeIndex"
+            :disabled="editingBlocked"
+            @change="selectKnowledgePoint"
+          >
+            <view class="knowledge-picker">{{ knowledgeSelectionLabel }}<text aria-hidden="true">⌄</text></view>
+          </picker>
+        </view>
         <view
           class="step-overview"
           aria-label="病例编辑进度"
@@ -135,14 +148,6 @@
           :key="step"
           class="authoring-sheet step-enter"
         >
-          <view
-            v-if="isReadOnly"
-            class="review-lock"
-            role="status"
-          >
-            <text>当前版本处于“{{ statusLabel }}”状态，只读查看；如需修改，请从病例列表创建新版本。</text>
-          </view>
-
           <template v-if="step === 1">
             <view class="section-intro">
               <text
@@ -166,7 +171,7 @@
                   name="case-title"
                   data-native-name="case-title"
                   aria-labelledby="case-title-label"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="例如：细胞损伤与适应"
                 />
               </view>
@@ -182,7 +187,7 @@
                   name="case-specialty"
                   data-native-name="case-specialty"
                   aria-labelledby="case-specialty-label"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="例如：病理学"
                 />
               </view>
@@ -198,7 +203,7 @@
                   name="case-duration"
                   data-native-name="case-duration"
                   aria-labelledby="case-duration-label"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   type="number"
                   placeholder="例如：20"
                 />
@@ -216,7 +221,7 @@
                 name="case-description"
                 data-native-name="case-description"
                 aria-labelledby="case-description-label"
-                :disabled="isReadOnly"
+                :disabled="editingBlocked"
                 placeholder="说明本病例的教学重点与适用场景"
               />
             </view>
@@ -237,7 +242,7 @@
                 name="case-patient-intro"
                 data-native-name="case-patient-intro"
                 aria-labelledby="case-intro-label"
-                :disabled="isReadOnly"
+                :disabled="editingBlocked"
                 placeholder="描述就诊背景和基础情况"
               />
             </view>
@@ -253,7 +258,7 @@
                 name="case-chief-complaint"
                 data-native-name="case-chief-complaint"
                 aria-labelledby="case-chief-complaint-label"
-                :disabled="isReadOnly"
+                :disabled="editingBlocked"
                 placeholder="学生需要首先处理的临床问题"
               />
             </view>
@@ -270,7 +275,7 @@
               <text class="helper-text">阶段说明引导学生推进；隐藏事实只在相应触发词出现后提供。</text>
             </view>
             <view class="visibility-heading">
-              <text class="visibility-label teacher-label">仅作者与审核专家</text>
+              <text class="visibility-label teacher-label">仅教师可见</text>
               <text class="helper-text">学生不会直接看到阶段指令、隐藏事实和触发条件。</text>
             </view>
             <view class="stage-list">
@@ -290,7 +295,7 @@
                   :name="`${stage.id}-instruction`"
                   :data-native-name="`${stage.id}-instruction`"
                   :aria-labelledby="`${stage.id}-label`"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   :placeholder="`${stage.label}阶段的教学引导`"
                 />
               </view>
@@ -302,7 +307,7 @@
                 <text class="helper-text">每条事实应有明确触发词，避免无条件泄露答案。</text>
               </view>
               <button
-                v-if="!isReadOnly"
+                v-if="!editingBlocked"
                 role="button"
                 tabindex="0"
                 class="inline-action pressable"
@@ -335,7 +340,7 @@
                       :name="`fact-${fact.id}-label-input`"
                       :data-native-name="`fact-${fact.id}-label-input`"
                       :aria-labelledby="`fact-${fact.id}-label`"
-                      :disabled="isReadOnly"
+                      :disabled="editingBlocked"
                       placeholder="例如：发热病程"
                     />
                   </view>
@@ -351,7 +356,7 @@
                       :name="`fact-${fact.id}-triggers`"
                       :data-native-name="`fact-${fact.id}-triggers`"
                       :aria-labelledby="`fact-${fact.id}-trigger`"
-                      :disabled="isReadOnly"
+                      :disabled="editingBlocked"
                       placeholder="用顿号或逗号分隔"
                       @input="updateTriggers(fact, $event)"
                     />
@@ -369,7 +374,7 @@
                     :name="`fact-${fact.id}-value-input`"
                     :data-native-name="`fact-${fact.id}-value-input`"
                     :aria-labelledby="`fact-${fact.id}-value`"
-                    :disabled="isReadOnly"
+                    :disabled="editingBlocked"
                     placeholder="记录需要按触发条件揭示的临床事实"
                   />
                 </view>
@@ -385,10 +390,10 @@
                 class="section-title"
                 >参考推理</text
               >
-              <text class="helper-text">用于审核与教师校验，不会展示给学生。</text>
+              <text class="helper-text">用于教师校验，不会展示给学生。</text>
             </view>
             <view class="visibility-heading">
-              <text class="visibility-label teacher-label">仅作者与审核专家</text>
+              <text class="visibility-label teacher-label">仅教师可见</text>
             </view>
             <view class="field-block">
               <text
@@ -402,7 +407,7 @@
                 name="case-reference-representation"
                 data-native-name="case-reference-representation"
                 aria-labelledby="case-representation-label"
-                :disabled="isReadOnly"
+                :disabled="editingBlocked"
                 placeholder="总结支持判断的关键临床表征"
               />
             </view>
@@ -426,7 +431,7 @@
                     :name="`differential-${index}-name-input`"
                     :data-native-name="`differential-${index}-name-input`"
                     :aria-labelledby="`differential-${index}-name`"
-                    :disabled="isReadOnly"
+                    :disabled="editingBlocked"
                     placeholder="鉴别诊断"
                 /></view>
                 <view class="field-block"
@@ -440,7 +445,7 @@
                     :name="`differential-${index}-support-input`"
                     :data-native-name="`differential-${index}-support-input`"
                     :aria-labelledby="`differential-${index}-support`"
-                    :disabled="isReadOnly"
+                    :disabled="editingBlocked"
                     placeholder="用顿号或逗号分隔"
                     @input="updateIds(item, 'supportingFactIds', $event)"
                 /></view>
@@ -456,7 +461,7 @@
                   :name="`differential-${index}-opposing-input`"
                   :data-native-name="`differential-${index}-opposing-input`"
                   :aria-labelledby="`differential-${index}-opposing`"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="用顿号或逗号分隔"
                   @input="updateIds(item, 'opposingFactIds', $event)"
               /></view>
@@ -480,7 +485,7 @@
                   :name="`test-${index}-name-input`"
                   :data-native-name="`test-${index}-name-input`"
                   :aria-labelledby="`test-${index}-name`"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="检查名称"
               /></view>
               <view class="field-block"
@@ -494,7 +499,7 @@
                   :name="`test-${index}-purpose-input`"
                   :data-native-name="`test-${index}-purpose-input`"
                   :aria-labelledby="`test-${index}-purpose`"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="说明该检查如何支持决策"
                 />
               </view>
@@ -516,7 +521,7 @@
                   :name="`management-${index}-action-input`"
                   :data-native-name="`management-${index}-action-input`"
                   :aria-labelledby="`management-${index}-action`"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="处置行动"
               /></view>
               <view class="field-block"
@@ -530,7 +535,7 @@
                   :name="`management-${index}-rationale-input`"
                   :data-native-name="`management-${index}-rationale-input`"
                   :aria-labelledby="`management-${index}-rationale`"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="说明为何采用该处置"
                 />
               </view>
@@ -548,7 +553,7 @@
               <text class="helper-text">六维权重由病例结构固定；请核对每项评价语句与关键词。</text>
             </view>
             <view class="visibility-heading">
-              <text class="visibility-label teacher-label">仅作者与审核专家</text>
+              <text class="visibility-label teacher-label">仅教师可见</text>
               <text class="helper-text">学生不会看到评分关键词或评价规则。</text>
             </view>
             <view
@@ -576,7 +581,7 @@
                   :name="`criterion-${criterion.id}-input`"
                   :data-native-name="`criterion-${criterion.id}-input`"
                   :aria-labelledby="`criterion-${criterion.id}`"
-                  :disabled="isReadOnly"
+                  :disabled="editingBlocked"
                   placeholder="评价标准"
                 />
               </view>
@@ -591,7 +596,7 @@
                 class="section-title"
                 >预览核对</text
               >
-              <text class="helper-text">最后确认学生会看到的开场，以及仅供作者与审核专家核对的内容边界。</text>
+              <text class="helper-text">最后确认学生会看到的开场，以及仅供教师核对的内容边界。</text>
             </view>
             <view class="preview-section">
               <view class="visibility-heading"><text class="visibility-label public-label">学生可见预览</text></view>
@@ -601,9 +606,7 @@
             </view>
             <view class="content-divider"></view>
             <view class="preview-section">
-              <view class="visibility-heading"
-                ><text class="visibility-label teacher-label">作者与审核专家核对</text></view
-              >
+              <view class="visibility-heading"><text class="visibility-label teacher-label">教师核对</text></view>
               <text class="helper-text">学生视图不显示隐藏事实、参考推理和评分关键词。</text>
               <view class="preview-facts">
                 <text
@@ -651,52 +654,20 @@
             下一步
           </button>
           <button
-            v-if="step === 5 && !isReadOnly"
+            v-if="step === 5 && !editingBlocked"
             role="button"
-            :tabindex="saving ? -1 : 0"
+            :tabindex="canSave ? 0 : -1"
             class="primary-button pressable authoring-action"
             hover-class="is-pressed"
             :hover-start-time="0"
             :hover-stay-time="80"
             :loading="saving"
-            :disabled="saving"
-            :aria-disabled="saving"
+            :disabled="!canSave"
+            :aria-disabled="!canSave"
             @click="save"
             @keydown="activateButtonOnKey"
           >
-            {{ saving ? '正在保存草稿' : '保存草稿' }}
-          </button>
-          <button
-            v-if="step === 5 && canSubmitReview"
-            role="button"
-            :tabindex="submittingReview ? -1 : 0"
-            class="secondary-button pressable authoring-action"
-            hover-class="is-pressed"
-            :hover-start-time="0"
-            :hover-stay-time="80"
-            :loading="submittingReview"
-            :disabled="submittingReview"
-            :aria-disabled="submittingReview"
-            @click="submitReview"
-            @keydown="activateButtonOnKey"
-          >
-            {{ submittingReview ? '正在提交审核' : '提交医学审核' }}
-          </button>
-          <button
-            v-if="step === 5 && canPublish"
-            role="button"
-            :tabindex="publishing ? -1 : 0"
-            class="primary-button pressable authoring-action"
-            hover-class="is-pressed"
-            :hover-start-time="0"
-            :hover-stay-time="80"
-            :loading="publishing"
-            :disabled="publishing"
-            :aria-disabled="publishing"
-            @click="publish"
-            @keydown="activateButtonOnKey"
-          >
-            {{ publishing ? '正在发布' : '发布病例' }}
+            {{ saving ? '正在保存' : '保存病例' }}
           </button>
         </view>
       </template>
@@ -705,30 +676,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import { onBackPress, onLoad } from '@dcloudio/uni-app'
-import CaseSetupForm from '@/components/teacher/CaseSetupForm.vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
+import CaseSetupForm from '@/features/content/presentation/CaseSetupForm.vue'
 import { activateButtonOnKey } from '@/components/ui/keyboard'
-import { requireRole } from '@/features/identity/public'
+import { getSession, requireRole } from '@/features/identity/public'
 import { backOrRoute, handleBackPress, ROUTES } from '@/platform/navigation'
+import { teacherContentReturnParams } from '@/platform/navigation/teacher'
+let contentReturn = teacherContentReturnParams({}, 'cases')
 import {
-  cloneCaseVersionAsync,
   generateCaseDraftAsync,
   getCaseAuthoringAsync,
   getGuidedCasesAsync,
-  publishGuidedCaseAsync,
   saveGuidedCaseAsync,
-  submitGuidedCaseForReviewAsync,
 } from '@/features/content/public'
+import { getKnowledgeCatalog } from '@/features/learning/public'
+import type { KnowledgePoint } from '@/types/knowledge'
 import type { CaseDraftGenerateResult, CaseFact, CaseStageId } from '@/types/case'
-import type { Problem } from '@/types/domain'
 
 const authoringSteps = [
   { id: 1, label: '病例概况', shortLabel: '概况', description: '设定学生进入病例时会看到的公开开场。' },
   { id: 2, label: '阶段与事实', shortLabel: '事实', description: '组织教学阶段，并为触发式信息补足边界。' },
-  { id: 3, label: '参考推理', shortLabel: '推理', description: '核对教师与审核专家使用的参考路径。' },
+  { id: 3, label: '参考推理', shortLabel: '推理', description: '核对教师使用的参考路径。' },
   { id: 4, label: '评价量表', shortLabel: '量表', description: '检查固定权重下的评价语句与关键词。' },
-  { id: 5, label: '预览核对', shortLabel: '核对', description: '区分学生可见内容与教师审核内容。' },
+  { id: 5, label: '预览核对', shortLabel: '核对', description: '区分学生可见内容与教师参考内容。' },
 ] as const
 const stageItems: Array<{ id: CaseStageId; label: string }> = [
   { id: 'history', label: '病史采集' },
@@ -749,16 +720,17 @@ const sourceId = ref<string>()
 const loading = ref(false)
 const hydrating = ref(false)
 const saving = ref(false)
-const publishing = ref(false)
-const submittingReview = ref(false)
 const generationError = ref('')
 const loadError = ref('')
 const referenceText = ref('')
-const currentStatus = ref<Problem['status']>('待审核')
-const reviewStatus = ref<NonNullable<Problem['medicalReviewStatus']>>('not_submitted')
+const knowledgePointCodes = ref<string[]>([])
+const knowledgeCatalog = ref<KnowledgePoint[]>([])
+const catalogLoading = ref(false)
+const catalogError = ref('')
 const savedSnapshot = ref(caseSnapshot())
 function back() {
-  if (saving.value || publishing.value || submittingReview.value || loading.value || hydrating.value) {
+  const actorAtRequest = teacherOpenid
+  if (saving.value || loading.value || hydrating.value) {
     uni.showToast({ title: '正在处理病例，请稍候', icon: 'none' })
     return
   }
@@ -768,7 +740,7 @@ function back() {
       content: '当前修改尚未保存，离开后不会保留。',
       confirmText: '离开',
       success: ({ confirm }) => {
-        if (confirm) leaveEditor()
+        if (confirm && actorAtRequest === teacherOpenid && currentActor()) leaveEditor()
       },
     })
     return
@@ -777,7 +749,8 @@ function back() {
 }
 
 function leaveEditor() {
-  backOrRoute(ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
+  if (disposed) return
+  backOrRoute(ROUTES.teacherContent, contentReturn)
 }
 
 function caseSnapshot() {
@@ -787,6 +760,7 @@ function caseSnapshot() {
     objectives: objectives.value,
     draft: draft.value ?? null,
     referenceText: referenceText.value,
+    knowledgePointCodes: knowledgePointCodes.value,
   })
 }
 
@@ -805,21 +779,76 @@ const referenceTests = computed(() => reference.value?.tests || [])
 const referenceManagement = computed(() => reference.value?.management || [])
 const activeStep = computed(() => authoringSteps[step.value - 1])
 const headerTitle = computed(() => (draft.value ? '编排教学病例' : '创建教学病例'))
-const isReadOnly = computed(() => reviewStatus.value === 'pending' || reviewStatus.value === 'approved')
-const canSubmitReview = computed(
-  () => Boolean(currentId.value) && (reviewStatus.value === 'not_submitted' || reviewStatus.value === 'rejected'),
-)
-const canPublish = computed(() => Boolean(currentId.value) && reviewStatus.value === 'approved')
-const statusLabel = computed(() => {
-  if (currentStatus.value === '已发布') return '已发布'
-  if (reviewStatus.value === 'pending') return '医学审核中'
-  if (reviewStatus.value === 'approved') return '审核通过，待发布'
-  if (reviewStatus.value === 'rejected') return '已退回，可修改后重新提交'
-  return '草稿，尚未提交审核'
+let teacherOpenid = ''
+let disposed = false
+onBeforeUnmount(() => {
+  disposed = true
 })
+function currentActor() {
+  const session = getSession()
+  return !disposed && session?.role === 'teacher' && session.openid === teacherOpenid
+}
+function verifyActor() {
+  if (currentActor()) return true
+  draft.value = undefined
+  referenceText.value = ''
+  knowledgePointCodes.value = []
+  knowledgeCatalog.value = []
+  currentId.value = undefined
+  loadError.value = '教师账号已变更，请返回内容列表。'
+  return false
+}
+const editingBlocked = computed(() => saving.value || hydrating.value)
+const knowledgeOptions = computed(() => [
+  '请选择知识点',
+  ...knowledgeCatalog.value.map((point) => `${point.systemLabel} · ${point.title}`),
+])
+const knowledgeIndex = computed(() =>
+  knowledgePointCodes.value.length === 1
+    ? Math.max(0, knowledgeCatalog.value.findIndex((point) => point.code === knowledgePointCodes.value[0]) + 1)
+    : 0,
+)
+const knowledgeSelectionLabel = computed(() =>
+  knowledgePointCodes.value.length
+    ? knowledgePointCodes.value
+        .map((code) => knowledgeCatalog.value.find((point) => point.code === code)?.title || code)
+        .join('、')
+    : '请选择知识点',
+)
+const canSave = computed(
+  () =>
+    !saving.value &&
+    !catalogLoading.value &&
+    !catalogError.value &&
+    knowledgeCatalog.value.length > 0 &&
+    knowledgePointCodes.value.length > 0 &&
+    knowledgePointCodes.value.every((code) => knowledgeCatalog.value.some((point) => point.code === code)),
+)
+function selectKnowledgePoint(event: { detail: { value: string | number } }) {
+  if (!verifyActor() || editingBlocked.value) return
+  const selected = knowledgeCatalog.value[Number(event.detail.value) - 1]
+  knowledgePointCodes.value = selected ? [selected.code] : []
+}
+async function loadKnowledgeCatalog() {
+  if (catalogLoading.value || !verifyActor()) return
+  catalogLoading.value = true
+  catalogError.value = ''
+  try {
+    const catalog = await getKnowledgeCatalog()
+    if (!verifyActor()) return
+    knowledgeCatalog.value = catalog
+  } catch (reason) {
+    if (verifyActor()) {
+      knowledgeCatalog.value = []
+      catalogError.value = reason instanceof Error ? reason.message : '知识点目录读取失败，请重试。'
+    }
+  } finally {
+    catalogLoading.value = false
+  }
+}
 
 async function generate() {
-  if (loading.value) return
+  if (loading.value || !verifyActor()) return
   generationError.value = ''
   if (!topic.value.trim() || !level.value.trim() || !objectives.value.trim()) {
     generationError.value = '请填写病例主题、学习层级和至少一个教学目标。'
@@ -827,7 +856,7 @@ async function generate() {
   }
   loading.value = true
   try {
-    draft.value = await generateCaseDraftAsync({
+    const generated = await generateCaseDraftAsync({
       topic: topic.value.trim(),
       learnerLevel: level.value.trim(),
       learningObjectives: objectives.value
@@ -835,10 +864,12 @@ async function generate() {
         .map((item) => item.trim())
         .filter(Boolean),
     })
-    referenceText.value = String(draft.value.caseDefinition.referenceReasoning.problemRepresentation || '')
+    if (!verifyActor()) return
+    draft.value = generated
+    referenceText.value = String(generated.caseDefinition.referenceReasoning.problemRepresentation || '')
     step.value = 1
   } catch (error) {
-    generationError.value = error instanceof Error ? error.message : '请检查网络后重试。'
+    if (verifyActor()) generationError.value = error instanceof Error ? error.message : '请检查网络后重试。'
   } finally {
     loading.value = false
   }
@@ -852,7 +883,7 @@ function previous() {
 
 function next() {
   if (!draft.value || step.value >= authoringSteps.length) return
-  if (!isReadOnly.value && !validateStep()) return
+  if (editingBlocked.value || !verifyActor() || !validateStep()) return
   if (step.value === 3) draft.value.caseDefinition.referenceReasoning.problemRepresentation = referenceText.value
   step.value += 1
   void alignStepContext()
@@ -922,98 +953,97 @@ function validateStep() {
   return true
 }
 
+function validateAll() {
+  if (knowledgePointCodes.value.length > 3) {
+    uni.showToast({ title: '请选择最多3个知识点', icon: 'none' })
+    return false
+  }
+  const originalStep = step.value
+  for (let candidate = 1; candidate <= 4; candidate += 1) {
+    step.value = candidate
+    if (!validateStep()) {
+      void alignStepContext()
+      return false
+    }
+  }
+  step.value = originalStep
+  return true
+}
+
 async function save() {
-  if (!draft.value || saving.value || !validateStep()) return
+  if (!draft.value || saving.value || !verifyActor() || !validateAll()) return
+  if (catalogLoading.value || catalogError.value || !knowledgeCatalog.value.length) {
+    uni.showToast({ title: '请先读取知识点目录', icon: 'none' })
+    return
+  }
+  if (
+    !knowledgePointCodes.value.length ||
+    knowledgePointCodes.value.some((code) => !knowledgeCatalog.value.some((point) => point.code === code))
+  ) {
+    uni.showToast({ title: '请选择有效的知识点', icon: 'none' })
+    return
+  }
   saving.value = true
   try {
     if (step.value === 3) draft.value.caseDefinition.referenceReasoning.problemRepresentation = referenceText.value
-    const result = await saveGuidedCaseAsync(draft.value, currentId.value, { slug: currentSlug.value })
+    const result = await saveGuidedCaseAsync(draft.value, currentId.value, {
+      slug: currentSlug.value,
+      knowledgePointCodes: [...knowledgePointCodes.value],
+    })
+    if (!verifyActor()) return
     currentId.value = result.id
     currentSlug.value = result.slug || currentSlug.value
-    currentStatus.value = result.status || '待审核'
-    reviewStatus.value = result.medicalReviewStatus || 'not_submitted'
     markSaved()
-    uni.showToast({ title: '病例草稿已保存', icon: 'success' })
+    uni.showToast({ title: '病例已保存', icon: 'success' })
   } catch (error) {
-    uni.showToast({ title: error instanceof Error ? error.message : '保存失败', icon: 'none' })
+    if (verifyActor()) uni.showToast({ title: error instanceof Error ? error.message : '保存失败', icon: 'none' })
   } finally {
     saving.value = false
   }
 }
 
-async function publish() {
-  if (!currentId.value || !canPublish.value || publishing.value) return
-  publishing.value = true
-  try {
-    await publishGuidedCaseAsync(currentId.value)
-    uni.showToast({ title: '病例已发布', icon: 'success' })
-    back()
-  } catch (error) {
-    uni.showToast({ title: error instanceof Error ? error.message : '发布失败', icon: 'none' })
-  } finally {
-    publishing.value = false
-  }
-}
-
-async function submitReview() {
-  if (submittingReview.value) return
-  if (!currentId.value) await save()
-  if (!currentId.value || !canSubmitReview.value) return
-  submittingReview.value = true
-  try {
-    const result = await submitGuidedCaseForReviewAsync(currentId.value)
-    if (result) {
-      currentStatus.value = result.status || '待审核'
-      reviewStatus.value = result.medicalReviewStatus || 'pending'
-    }
-    uni.showToast({ title: '已提交医学审核', icon: 'success' })
-  } catch (error) {
-    uni.showToast({ title: error instanceof Error ? error.message : '提交审核失败', icon: 'none' })
-  } finally {
-    submittingReview.value = false
-  }
-}
-
 async function loadExisting() {
-  if (!sourceId.value || hydrating.value) return
+  if (!sourceId.value || hydrating.value || !verifyActor()) return
   hydrating.value = true
   loadError.value = ''
   try {
     const item = (await getGuidedCasesAsync()).find((problem) => problem.id === sourceId.value)
+    if (!verifyActor()) return
+    if (!item?.allowedActions?.includes('edit')) throw new Error('当前账号无权编辑此病例。')
+    const loaded = await getCaseAuthoringAsync(sourceId.value)
+    if (!verifyActor()) return
     currentId.value = sourceId.value
-    currentSlug.value = item?.slug
-    if (item?.status === '已发布') {
-      const clone = await cloneCaseVersionAsync(sourceId.value)
-      currentId.value = clone.id
-      currentSlug.value = clone.slug || currentSlug.value
-      currentStatus.value = '待审核'
-      reviewStatus.value = 'not_submitted'
-    } else if (item) {
-      currentStatus.value = item.status
-      reviewStatus.value = item.medicalReviewStatus || 'not_submitted'
-    }
-    draft.value = await getCaseAuthoringAsync(currentId.value)
-    if (!draft.value) throw new Error('病例草稿不存在或当前账号无权查看。')
+    currentSlug.value = item.slug
+    knowledgePointCodes.value = [...new Set(item.knowledgePointCodes || [])]
+    draft.value = loaded
+    if (!draft.value) throw new Error('病例不存在或当前账号无权查看。')
     referenceText.value = String(draft.value.caseDefinition.referenceReasoning.problemRepresentation || '')
     step.value = 1
     markSaved()
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : '请稍后重试。'
+    if (verifyActor()) loadError.value = error instanceof Error ? error.message : '请稍后重试。'
   } finally {
     hydrating.value = false
   }
 }
 
 onLoad((query) => {
+  contentReturn = teacherContentReturnParams(query, 'cases')
   if (!requireRole('teacher')) return
+  teacherOpenid = getSession()?.openid || ''
+  if (!verifyActor()) return
+  void loadKnowledgeCatalog()
   const id = query?.id ? String(query.id) : ''
   if (!id) return
   sourceId.value = id
   void loadExisting()
 })
+onShow(() => {
+  if (teacherOpenid) verifyActor()
+})
 onBackPress(({ from }) => {
   if (from === 'navigateBack') return false
-  if (saving.value || publishing.value || submittingReview.value || loading.value || hydrating.value) {
+  if (saving.value || loading.value || hydrating.value) {
     uni.showToast({ title: '正在处理病例，请稍候', icon: 'none' })
     return true
   }
@@ -1021,11 +1051,42 @@ onBackPress(({ from }) => {
     back()
     return true
   }
-  return handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'problems', section: 'resources' })
+  return handleBackPress(from, ROUTES.teacherContent, contentReturn)
 })
 </script>
 
 <style scoped>
+.knowledge-binding {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  padding: 20rpx;
+  border: 1rpx solid var(--med-border);
+  border-radius: 12rpx;
+}
+.knowledge-picker {
+  display: flex;
+  min-height: 76rpx;
+  padding: 12rpx 18rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  background: var(--med-wash);
+  border-radius: 10rpx;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+.binding-error {
+  color: var(--med-alert);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+.binding-retry {
+  min-height: 72rpx;
+  margin: 0;
+  font-size: 24rpx;
+}
+
 .case-authoring-page {
   min-height: 100vh;
   padding: var(--med-space-3);
@@ -1090,7 +1151,7 @@ onBackPress(({ from }) => {
 }
 .workflow-node {
   color: var(--med-muted);
-  font-size: 20rpx;
+  font-size: 24rpx;
   white-space: nowrap;
 }
 .workflow-node.complete {
@@ -1129,7 +1190,7 @@ onBackPress(({ from }) => {
   display: block;
   color: var(--med-clinical);
   font-family: var(--med-font-utility);
-  font-size: 21rpx;
+  font-size: 24rpx;
   font-weight: 700;
   letter-spacing: 1rpx;
 }
@@ -1172,7 +1233,7 @@ onBackPress(({ from }) => {
   background: var(--med-wash);
   border-radius: 50%;
   font-family: var(--med-font-utility);
-  font-size: 20rpx;
+  font-size: 24rpx;
 }
 .step-marker-label {
   color: var(--med-muted);
@@ -1242,7 +1303,7 @@ onBackPress(({ from }) => {
 .visibility-label {
   width: fit-content;
   padding: 5rpx 10rpx;
-  font-size: 21rpx;
+  font-size: 24rpx;
   font-weight: 700;
   line-height: 1.3;
 }

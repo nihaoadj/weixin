@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="280" viewBox="0 0 750 280" preserveAspectRatio="none" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="34" y1="5" x2="710" y2="276" gradientUnits="userSpaceOnUse"><stop stop-color="#FBFEFF"/><stop offset=".54" stop-color="#F2FAFF"/><stop offset=".84" stop-color="#E3F3FF"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <linearGradient id="wave" x1="270" y1="5" x2="576" y2="228" gradientUnits="userSpaceOnUse"><stop stop-color="#D9ECFF" stop-opacity=".16"/><stop offset="1" stop-color="#AED8FD" stop-opacity=".58"/></linearGradient>
+    <linearGradient id="edgeFade" x1="610" y1="0" x2="750" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#FFFFFF" stop-opacity="0"/><stop offset=".68" stop-color="#FFFFFF" stop-opacity=".34"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientTransform="translate(288 54) rotate(52) scale(36)" gradientUnits="userSpaceOnUse"><stop stop-color="#FFFFFF"/><stop offset=".55" stop-color="#E9F7FF"/><stop offset="1" stop-color="#96CCFA"/></radialGradient>
+    <linearGradient id="paper" x1="570" y1="118" x2="674" y2="238" gradientUnits="userSpaceOnUse"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#DDEFFF"/></linearGradient>
+    <linearGradient id="cover" x1="572" y1="156" x2="695" y2="245" gradientUnits="userSpaceOnUse"><stop stop-color="#E1F5FF"/><stop offset="1" stop-color="#56A9EF"/></linearGradient>
+    <linearGradient id="bookShadow" x1="531" y1="225" x2="707" y2="268" gradientUnits="userSpaceOnUse"><stop stop-color="#A5D5FC" stop-opacity=".12"/><stop offset=".58" stop-color="#63B4F3" stop-opacity=".56"/><stop offset="1" stop-color="#CCE9FD" stop-opacity=".08"/></linearGradient>
+    <linearGradient id="note" x1="682" y1="69" x2="724" y2="116" gradientUnits="userSpaceOnUse"><stop stop-color="#C9E9FF"/><stop offset="1" stop-color="#7BBEF4"/></linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h750v280H0z"/>
+  <path d="M162 0c68 23 112 77 188 113 79 38 139 31 213-20 66-46 124-48 187-23v210H0V34C54 16 112 9 162 0Z" fill="url(#wave)"/>
+  <path d="M0 39c99-36 168-29 235 18 69 48 110 99 198 93 65-4 104-30 151-48 60-22 112-21 166 0" stroke="#FFFFFF" stroke-width="3" opacity=".8"/>
+  <path d="M0 238c119-40 191-29 282-7 113 27 190 7 276-17 70-20 126-18 192 12" stroke="#FFFFFF" stroke-width="3" opacity=".74"/>
+  <path d="M0 269c127-22 193-18 280-2 119 23 192-2 272-13 67-10 130-7 198 9" stroke="#CFE8FF" stroke-width="3" opacity=".85"/>
+  <path fill="url(#edgeFade)" d="M610 0h140v280H610z"/>
+  <circle cx="288" cy="54" r="26" fill="url(#orb)" opacity=".82"/><circle cx="492" cy="171" r="28" fill="url(#orb)" opacity=".75"/><circle cx="604" cy="47" r="17" fill="url(#orb)" opacity=".45"/>
+  <path d="M277 39c6-8 17-10 25-6" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+  <path d="M481 162c5-8 15-11 23-8" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity=".76"/>
+  <path d="m514 91 17 2 9-21 11 45 13-31 10 11h32" stroke="#AAD4FA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".92"/>
+  <ellipse cx="585" cy="244" rx="91" ry="18" fill="#9FCDF5" opacity=".17"/>
+  <path d="M496 239c35-17 66-17 90 3 24-17 51-18 78-8l-3 23c-28-11-52-8-78 7-27-17-54-21-91-5l4-20Z" fill="url(#bookShadow)"/>
+  <path d="M521 122c29-11 53-5 80 15 27-15 52-18 81-10l-19 117c-28-9-52-6-79 12-29-22-57-25-89-12l26-122Z" fill="url(#cover)" opacity=".86"/>
+  <path d="M531 115c25-9 48-2 70 20l-17 104c-26-19-53-24-80-17 8-43 18-78 27-107Z" fill="url(#paper)" stroke="#D2EAFB" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M601 135c25-15 50-18 75-10l-20 104c-26-8-51-5-72 10l17-104Z" fill="url(#paper)" stroke="#D2EAFB" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M534 140c20-3 38 3 55 17m-59 2c20-2 38 5 55 18m-60 2c20-1 39 6 56 20m-62 2c20-1 39 7 58 21" stroke="#C9E6FB" stroke-width="5" stroke-linecap="round"/>
+  <path d="M609 151c18-6 36-7 53-4m-56 23c18-6 35-7 53-4m-57 23c18-6 34-7 52-4m-56 23c17-5 32-6 48-3" stroke="#C9E6FB" stroke-width="5" stroke-linecap="round"/>
+  <path d="M601 135c-8 37-13 73-17 104" stroke="#94C9F2" stroke-width="4" stroke-linecap="round"/>
+  <path d="M498 227c33-9 61-3 86 18 25-16 49-21 75-13" stroke="#62AFE9" stroke-width="7" stroke-linecap="round" opacity=".75"/>
+  <path d="M496 236c32-9 61-4 88 15 28-16 52-17 77-10" stroke="#A8D9F9" stroke-width="5" stroke-linecap="round"/>
+  <path d="M507 225c31-4 55 2 75 17 25-15 47-19 72-14" stroke="#F4FCFF" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+  <path d="m673 71 41 16-15 34-42-17 16-33Z" fill="url(#note)" opacity=".94"/><path d="m675 88 25 9m-28 0 18 7" stroke="#F6FCFF" stroke-width="4" stroke-linecap="round"/>
+  <text x="666" y="207" fill="#3185D2" font-family="Arial, sans-serif" font-size="10" letter-spacing="-.6">KNOWLEDGE</text>
+  <text x="666" y="224" fill="#3185D2" font-family="Arial, sans-serif" font-size="10" letter-spacing="-.6">EMPOWERS</text>
+  <text x="666" y="241" fill="#3185D2" font-family="Arial, sans-serif" font-size="10" letter-spacing="-.6">BETTER CARE</text>
+  <path d="M666 250h13" stroke="#96C9F3" stroke-width="2" stroke-linecap="round"/>
+</svg>

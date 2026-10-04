@@ -1,0 +1,16 @@
+[
+  {
+    "directory": "dist/dev/mp-weixin",
+    "files": 514,
+    "bytes": 3617658,
+    "MiB": 3.45,
+    "below_4MB": true
+  },
+  {
+    "directory": "dist/build/mp-weixin",
+    "files": 514,
+    "bytes": 2744878,
+    "MiB": 2.618,
+    "below_4MB": true
+  }
+]

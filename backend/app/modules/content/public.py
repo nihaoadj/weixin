@@ -10,58 +10,42 @@ from app.modules.content.application.records import (
     ReviewRecord,
 )
 from app.modules.content.domain.digest import case_digest
-from app.modules.content.domain.knowledge_catalog import (
-    KnowledgeCard,
-    card_for_code,
-    cards_for_points,
-    point_view,
-    tree_view,
-)
 
 
 @dataclass(frozen=True, slots=True)
-class PublishQuestionCommand:
-    teacher_id: int
-    source_id: int
-    title: str
+class CatalogCardRecord:
+    code: str
+    point_code: str
     prompt: str
-    class_code: str
-    target_external_ids: tuple[str, ...] = ()
-    point_codes: tuple[str, ...] = ()
+    options: tuple[str, ...]
+    correct_option: int
+    explanation: str
+    reference: str
+    card_type: str = "single_choice"
 
 
-@dataclass(frozen=True, slots=True)
-class PublishedQuestionRecord:
-    problem_id: int
+class KnowledgeCatalogPort(Protocol):
+    """Stable cross-module read contract for the active persisted catalog."""
+
+    def catalog_version(self) -> str: ...
+
+    def tree_view(self) -> tuple[dict[str, object], ...]: ...
+
+    def point_view(self, code: str) -> dict[str, object] | None: ...
+
+    def module_labels(self) -> dict[str, str]: ...
+
+    def study_material_view(self, point_code: str) -> dict[str, object] | None: ...
+
+    def card_for_code(self, code: str) -> CatalogCardRecord | None: ...
+
+    def cards_for_points(self, point_codes: tuple[str, ...]) -> tuple[CatalogCardRecord, ...]: ...
+
+    def contains_points(self, point_codes: tuple[str, ...]) -> bool: ...
 
 
 class QuestionPublicationPort(Protocol):
-    def case_context(self, case_id: int, class_code: str, topic_code: str) -> dict[str, object]: ...
-    def task_resources(
-        self, case_id: int | None, point_codes: tuple[str, ...], dimensions: tuple[str, ...]
-    ) -> tuple[dict[str, object], ...]: ...
-
-    def adopt_open_question(self, command: PublishQuestionCommand) -> PublishedQuestionRecord: ...
-
-
-def knowledge_point_view(code: str) -> dict[str, object] | None:
-    """Stable read-only catalog lookup for other module contracts."""
-
-    return point_view(code)
-
-
-def knowledge_tree_view() -> list[dict[str, object]]:
-    """Return the versioned catalog through the stable content contract."""
-
-    return tree_view()
-
-
-def knowledge_card_for_code(code: str) -> KnowledgeCard | None:
-    return card_for_code(code)
-
-
-def knowledge_cards_for_topics(topic_codes: tuple[str, ...]) -> tuple[KnowledgeCard, ...]:
-    return cards_for_points(topic_codes)
+    def case_context(self, case_id: int, class_code: str, topic_code: str, teacher_id: int) -> dict[str, object]: ...
 
 
 def knowledge_card_contribution_view(
@@ -84,10 +68,20 @@ def knowledge_card_contribution_view(
         "reviewed_at": None if student_view else card.reviewed_at,
         "created_at": card.created_at,
         "updated_at": card.updated_at,
+        "ai_title": card.ai_title,
+        "source_type": None if student_view else card.source_type,
+        "source_snapshot_id": None if student_view else card.source_snapshot_id,
+        "source_position": None if student_view else card.source_position,
+        "source_finding_ids": [] if student_view else list(card.source_finding_ids),
+        "origin_student_id": None if student_view else card.origin_student_id,
+        "origin_student_name": None if student_view else card.origin_student_name,
+        "target_student_ids": [] if student_view else list(card.target_student_ids),
     }
 
 
-def problem_view(problem: ProblemRecord, *, public_for_student: bool = False) -> dict[str, object]:
+def problem_view(
+    problem: ProblemRecord, *, public_for_student: bool = False, allowed_actions: tuple[str, ...] = ()
+) -> dict[str, object]:
     return {
         "id": problem.id,
         "type": problem.type,
@@ -108,9 +102,8 @@ def problem_view(problem: ProblemRecord, *, public_for_student: bool = False) ->
         "version": problem.version,
         "parent_problem_id": problem.parent_problem_id,
         "author_id": None if public_for_student else problem.author_id,
-        "medical_review_status": "approved"
-        if public_for_student and problem.content_type == "guided_case"
-        else problem.medical_review_status,
+        "allowed_actions": [] if public_for_student else list(allowed_actions),
+        "medical_review_status": problem.medical_review_status,
         "capability_tags": [] if public_for_student else list(problem.capability_tags),
         "knowledge_point_codes": list(problem.knowledge_point_codes),
         "case_definition": None,
@@ -171,9 +164,3 @@ def review_record_view(review: ReviewRecord) -> dict[str, object]:
         "case_digest": review.case_digest,
         "created_at": review.created_at,
     }
-
-def study_material_view(point_code: str) -> dict | None:
-    """Public, versioned reading material for a single stable knowledge code."""
-    from app.modules.content.domain.study_materials import study_material
-
-    return study_material(point_code)

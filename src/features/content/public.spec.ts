@@ -8,8 +8,6 @@ import {
   publishGuidedCaseAsync,
   saveGuidedCaseAsync,
   submitGuidedCaseForReviewAsync,
-  getMedicalReviewQueueAsync,
-  decideGuidedCaseReviewAsync,
 } from '@/features/content/public'
 import {
   completeCaseAttemptAsync,
@@ -40,26 +38,11 @@ describe('Demo case adapter', () => {
     expect(await getCaseAuthoringAsync(saved.id)).toBeTruthy()
     expect((await getGuidedCasesAsync()).some((item) => item.id === saved.id)).toBe(true)
 
-    await expect(publishGuidedCaseAsync(saved.id)).rejects.toThrow('先通过医学审核')
-    expect((await submitGuidedCaseForReviewAsync(saved.id))?.medicalReviewStatus).toBe('pending')
-    saveSession({
-      openid: 'demo_reviewer',
-      role: 'teacher',
-      nickName: '审核专家',
-      avatarUrl: '',
-      permissions: ['medical_review'],
-      createdAt: new Date(0).toISOString(),
-    })
-    expect((await getMedicalReviewQueueAsync()).some((item) => item.id === saved.id)).toBe(true)
-    await decideGuidedCaseReviewAsync(saved.id, 'approved', '')
-    saveSession({
-      openid: 'async-demo',
-      role: 'teacher',
-      nickName: '教师',
-      avatarUrl: '',
-      createdAt: new Date(0).toISOString(),
-    })
-    expect(await publishGuidedCaseAsync(saved.id)).toMatchObject({ id: saved.id, status: '已发布' })
+    expect(saved).toMatchObject({ status: '已发布', medicalReviewStatus: 'not_required' })
+    await expect(publishGuidedCaseAsync(saved.id)).rejects.toMatchObject({ code: 'RETIRED_FLOW' })
+    await expect(submitGuidedCaseForReviewAsync(saved.id)).rejects.toMatchObject({ code: 'RETIRED_FLOW' })
+    const updated = await saveGuidedCaseAsync({ ...draft, title: '直接修订' }, saved.id)
+    expect(updated.id).toBe(saved.id)
     const clone = await cloneCaseVersionAsync(saved.id)
     expect(clone.id).not.toBe(saved.id)
 

@@ -1,0 +1,41 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 750 198"
+>
+  <defs>
+    <linearGradient
+      id="wash"
+      x2="1"
+      y2="1"
+    >
+      <stop stop-color="#d9f2ff" />
+      <stop
+        offset="1"
+        stop-color="#ebfaff"
+      />
+    </linearGradient>
+  </defs>
+  <path
+    fill="#edfaff"
+    d="M0 0h750v198H0z"
+  />
+  <path
+    fill="url(#wash)"
+    d="M0 17C139-34 245 94 385 57S622-8 750 4v77C550 6 449 155 279 103S98 4 0 37z"
+  />
+  <path
+    fill="#fff"
+    opacity=".67"
+    d="M0 42c128-32 252 88 399 76S634 52 750 24v37c-170 52-247 103-412 77S117 9 0 71z"
+  />
+  <path
+    fill="#c9ecff"
+    opacity=".53"
+    d="M0 108c154 102 282 67 414 13S640 91 750 134v44c-145-49-187-48-321-5S155 199 0 143z"
+  />
+  <path
+    fill="#fff"
+    opacity=".53"
+    d="M0 158c148 75 283-6 426 6s225 23 324-2v36H0z"
+  />
+</svg>

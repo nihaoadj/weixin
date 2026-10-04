@@ -1,0 +1,1 @@
+node scripts/frontend-boundaries.mjs | exit 0

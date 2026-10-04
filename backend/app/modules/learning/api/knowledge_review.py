@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.bootstrap.composition import knowledge_review_application, study_application
-from app.core.config import get_settings
+from app.bootstrap.composition import knowledge_review_application
 from app.db import get_db
 from app.dependencies import require_student
-from app.modules.content.wiring import content_application
 from app.modules.identity.infrastructure.models import User
 from app.modules.learning.api.schemas import (
     CaptureReviewItemRequest,
@@ -20,37 +18,15 @@ from app.modules.learning.api.schemas import (
     ReviewDashboardRead,
     ReviewItemRead,
 )
-from app.modules.learning.application.review_records import SupplementalChoiceCard
-from app.modules.learning.public import (
-    knowledge_map_view,
-    review_card_view,
-    review_dashboard_view,
-    review_item_view,
-    review_result_view,
-)
+from app.modules.learning.public import knowledge_map_view
 from app.shared.actor import Actor
 from app.shared.errors import AppError
 
 router = APIRouter(tags=["knowledge-review"])
 
 
-def _visible_choice_cards(student: User, db: Session) -> tuple[SupplementalChoiceCard, ...]:
-    return tuple(
-        SupplementalChoiceCard(
-            card_code=f"teacher-choice:{card.id}",
-            point_code=card.point_code,
-            prompt=card.prompt,
-            options=card.options,
-            correct_option=card.correct_option,
-            explanation=card.explanation,
-        )
-        for card in content_application(db).list_knowledge_cards(Actor.from_user(student), None)
-        if card.card_type == "single_choice" and card.correct_option is not None
-    )
-
-
-def _visible_choice_card(card_code: str, student: User, db: Session) -> SupplementalChoiceCard | None:
-    return next((card for card in _visible_choice_cards(student, db) if card.card_code == card_code), None)
+def _retired_review_flow() -> None:
+    raise AppError("RETIRED_FLOW", "独立知识复习已退役，请打开学习计划", 409)
 
 
 @router.post("/learning/exit-quiz", response_model=ExitQuizRead)
@@ -59,24 +35,12 @@ def create_exit_quiz(
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ) -> dict[str, list[dict[str, object]]]:
-    if not get_settings().t08_exit_quiz_enabled:
-        raise AppError("FEATURE_DISABLED", "结束小测当前未开放", 409)
-    topic_codes = tuple(dict.fromkeys(payload.topic_codes))
-    # This legacy endpoint remains available for formally assigned or previously
-    # practiced points, but a new point must enter through its PBL study path.
-    for point_code in topic_codes:
-        study = study_application(db).read(student.id, point_code)
-        if not study["practice_unlocked"]:
-            raise AppError("STATE_CONFLICT", "请先完成本知识点的四阶段研讨", 409)
-    cards = knowledge_review_application(db).exit_quiz(
-        Actor.from_user(student), topic_codes, _visible_choice_cards(student, db)
-    )
-    return {"cards": [review_card_view(card) for card in cards]}
+    _retired_review_flow()
 
 
 @router.get("/learning/review-dashboard", response_model=ReviewDashboardRead)
 def read_review_dashboard(student: User = Depends(require_student), db: Session = Depends(get_db)) -> dict[str, object]:
-    return review_dashboard_view(knowledge_review_application(db).dashboard(Actor.from_user(student)))
+    return {"due_count": 0, "weak_point_codes": [], "items": []}
 
 
 @router.get("/learning/knowledge-map", response_model=KnowledgeMapRead)
@@ -90,8 +54,7 @@ def read_due_reviews(
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ) -> list[dict[str, object]]:
-    cards = knowledge_review_application(db).due(Actor.from_user(student), limit, _visible_choice_cards(student, db))
-    return [review_card_view(card) for card in cards]
+    return []
 
 
 @router.post("/learning/reviews/{card_code}/grade", response_model=GradeReviewCardRead)
@@ -101,46 +64,14 @@ def grade_review_card(
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
-    if not get_settings().t08_review_capture_enabled:
-        raise AppError("FEATURE_DISABLED", "复习记录当前未开放", 409)
-    supplemental = _visible_choice_card(card_code, student, db)
-    result = (
-        knowledge_review_application(db).grade_supplemental(
-            Actor.from_user(student), supplemental, payload.selected_option, payload.confidence
-        )
-        if supplemental is not None
-        else knowledge_review_application(db).grade(
-            Actor.from_user(student), card_code, payload.selected_option, payload.confidence
-        )
-    )
-    return review_result_view(result)
-
-
-def _visible_recall_card(card_id: int, student: User, db: Session):
-    card = next(
-        (
-            item
-            for item in content_application(db).list_knowledge_cards(Actor.from_user(student), None)
-            if item.id == card_id and item.card_type == "recall"
-        ),
-        None,
-    )
-    if card is None:
-        raise AppError("RESOURCE_NOT_FOUND", "回忆卡不存在或当前不可见", 404)
-    return card
+    _retired_review_flow()
 
 
 @router.post("/learning/recall-cards/{card_id}/reveal", response_model=RecallRevealRead)
 def reveal_recall_card(
     card_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)
 ) -> dict[str, object]:
-    card = _visible_recall_card(card_id, student, db)
-    return {
-        "card_code": f"teacher-recall:{card.id}",
-        "point_code": card.point_code,
-        "prompt": card.prompt,
-        "explanation": card.explanation,
-    }
+    _retired_review_flow()
 
 
 @router.post("/learning/recall-cards/{card_id}/rate", response_model=GradeReviewCardRead)
@@ -150,19 +81,12 @@ def rate_recall_card(
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
-    if not get_settings().t08_review_capture_enabled:
-        raise AppError("FEATURE_DISABLED", "复习记录当前未开放", 409)
-    card = _visible_recall_card(card_id, student, db)
-    return review_result_view(
-        knowledge_review_application(db).rate_recall(
-            Actor.from_user(student), f"teacher-recall:{card.id}", card.point_code, payload.rating
-        )
-    )
+    _retired_review_flow()
 
 
 @router.get("/learning/review-items", response_model=ReviewDashboardRead)
 def list_review_items(student: User = Depends(require_student), db: Session = Depends(get_db)) -> dict[str, object]:
-    return review_dashboard_view(knowledge_review_application(db).dashboard(Actor.from_user(student)))
+    return {"due_count": 0, "weak_point_codes": [], "items": []}
 
 
 @router.post("/learning/review-items", response_model=ReviewItemRead, status_code=status.HTTP_201_CREATED)
@@ -171,14 +95,9 @@ def capture_review_item(
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
-    if not get_settings().t08_review_capture_enabled:
-        raise AppError("FEATURE_DISABLED", "复习记录当前未开放", 409)
-    item = knowledge_review_application(db).capture(
-        Actor.from_user(student), payload.point_code, payload.source_type, payload.source_id, payload.note
-    )
-    return review_item_view(item)
+    _retired_review_flow()
 
 
 @router.post("/learning/review-items/{item_id}/dismiss", status_code=status.HTTP_204_NO_CONTENT)
 def dismiss_review_item(item_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)) -> None:
-    knowledge_review_application(db).dismiss(Actor.from_user(student), item_id)
+    _retired_review_flow()

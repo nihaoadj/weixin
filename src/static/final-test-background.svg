@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="560" viewBox="0 0 750 560" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="71" y1="0" x2="679" y2="503" gradientUnits="userSpaceOnUse"><stop stop-color="#FAFDFF"/><stop offset=".58" stop-color="#E7F6FF"/><stop offset="1" stop-color="#D5EEFF"/></linearGradient>
+    <linearGradient id="fade" x1="0" y1="425" x2="0" y2="560" gradientUnits="userSpaceOnUse"><stop stop-color="#F1FAFF" stop-opacity="0"/><stop offset="1" stop-color="#F1FAFF"/></linearGradient>
+  </defs>
+  <rect width="750" height="560" fill="url(#sky)"/>
+  <path d="M-81 205C66 96 166 98 273 147c93 42 173 48 273-26 88-64 163-67 268-26" stroke="#FFFFFF" stroke-opacity=".58" stroke-width="102"/>
+  <path d="M-93 332c143-113 256-112 375-41 87 51 152 45 264-31 88-60 181-61 277-3" stroke="#A8DFFF" stroke-opacity=".36" stroke-width="84"/>
+  <path d="M-48 510c179-178 281-142 399-130 99 10 151-62 227-75 99-18 178 66 236 130" stroke="#FFFFFF" stroke-opacity=".52" stroke-width="78"/>
+  <circle cx="625" cy="245" r="47" fill="#BAF4F8" fill-opacity=".42"/>
+  <circle cx="726" cy="160" r="30" fill="#94D4FA" fill-opacity=".33"/>
+  <rect y="425" width="750" height="135" fill="url(#fade)"/>
+</svg>

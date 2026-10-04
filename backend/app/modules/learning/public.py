@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Protocol
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal, Protocol
 
 from app.modules.learning.application.records import (
     LearningPlanRecord,
@@ -11,23 +13,171 @@ from app.modules.learning.application.records import (
 )
 from app.modules.learning.application.review_records import (
     KnowledgeMapPoint,
-    ReviewCardPrompt,
-    ReviewDashboard,
-    ReviewItemRecord,
-    ReviewResult,
 )
 from app.modules.training.public import CaseAttemptContract, case_attempt_view
 
+AuthorityLevel = Literal["personal_unverified", "reviewed_practice", "formal_instruction", "pbl_formal"]
+VisibilityScope = Literal["student_only", "class_aggregate", "class_detail"]
+EvidenceEventKind = Literal["engagement", "assessment", "outcome"]
+EvidenceMetricKind = Literal["knowledge", "dimension", "participation", "goal"]
+EvidenceMetricResult = Literal["observed", "correct", "incorrect", "partial", "passed", "failed"]
+EvidenceSourceType = Literal[
+    "qa_topic_activity",
+    "self_pbl_completion",
+    "ai_personal_practice",
+    "reviewed_question_attempt",
+    "case_assessment",
+    "pbl_task_attempt",
+    "pbl_cycle_evaluation",
+    "classroom_final_test",
+    "private_final_test",
+]
 
-class PblLearningPort(Protocol):
-    def create(
-        self, student_ids: tuple[int, ...], source_id: int, context: dict, resources: tuple[dict, ...]
-    ) -> tuple[int, ...]: ...
-    def list(
-        self, *, student_id: int | None = None, teacher_id: int | None = None, session_id: int | None = None
+
+class CompletionLearningRoutePort(Protocol):
+    def ensure_shell(self, context: dict) -> dict: ...
+    def review_locator(self, teacher_id: int, participation_id: int) -> dict | None: ...
+    def classroom_progress(self, teacher_id: int, class_id: int, session_id: int) -> list[dict]: ...
+
+
+class LearningRouteGenerationDispatchPort(Protocol):
+    def generate(self, route_id: str, component: str = "route", token: str | None = None) -> None: ...
+
+
+class LearningRouteResultReadPort(Protocol):
+    def teacher_results(self, teacher_id: int, filters: dict) -> dict: ...
+
+    def completed_for_teacher(
+        self, teacher_id: int, class_ids: tuple[int, ...], start: datetime, end: datetime
     ) -> tuple[dict, ...]: ...
-    def submit(self, student_id: int, task_id: int, submission_id: str, answer: dict) -> dict: ...
-    def notify(self, student_id: int, entity_id: int, title: str, body: str, dedupe_key: str) -> None: ...
+
+    def published_for_teacher(
+        self, teacher_id: int, class_ids: tuple[int, ...], start: datetime, end: datetime, session_id: int | None = None
+    ) -> tuple[dict, ...]: ...
+
+    def classroom_progress_for_teacher(self, teacher_id: int, class_id: int, session_id: int) -> tuple[dict, ...]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class StudentInsightQuestionScore:
+    target_code: str
+    earned_points: float
+    possible_points: float
+
+
+@dataclass(frozen=True, slots=True)
+class StudentInsightTestResult:
+    result_id: str
+    score: float
+    correct_count: int
+    question_count: int
+    completed_at: datetime
+    question_scores: tuple[StudentInsightQuestionScore, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class StudentInsightRouteRecord:
+    route_id: str
+    session_id: int
+    source_kind: str
+    goal_point_codes: tuple[str, ...]
+    created_at: datetime
+    updated_at: datetime
+    route_generation_state: str
+    status: str
+    completed_steps: int
+    total_steps: int
+    reading_seconds: int
+    current_step_kind: str | None
+    current_case_phase: str | None
+    result: StudentInsightTestResult | None
+    title: str = "学习路线"
+
+
+class StudentInsightRouteReadPort(Protocol):
+    def student_insight_routes(self, student_id: int) -> tuple[StudentInsightRouteRecord, ...]: ...
+
+
+class RouteTestQuestionSourcePort(Protocol):
+    def bank_source(self, teacher_id: int, question_id: str) -> dict: ...
+
+
+def retired_learning_flow():
+    from app.shared.errors import AppError
+
+    error = AppError("STATE_CONFLICT", "该旧学习流程已退役，请打开学习计划", 409)
+    error.reason = "RETIRED_FLOW"
+    raise error
+
+
+@dataclass(frozen=True, slots=True)
+class LearningEvidenceMetricCommand:
+    metric_kind: EvidenceMetricKind
+    metric_code: str
+    normalized_score: float | None = None
+    result: EvidenceMetricResult = "observed"
+    evidence_present: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class LearningEvidenceCommand:
+    student_id: int
+    class_id: int | None
+    source_type: EvidenceSourceType
+    source_id: str
+    source_version: int
+    authority_level: AuthorityLevel
+    visibility_scope: VisibilityScope
+    event_kind: EvidenceEventKind
+    occurred_at: datetime
+    dedupe_key: str
+    contract_version: int = 1
+    metrics: tuple[LearningEvidenceMetricCommand, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class LearningEvidenceMetricRecord:
+    id: int
+    metric_kind: str
+    metric_code: str
+    normalized_score: float | None
+    result: str
+    evidence_present: bool
+
+
+@dataclass(frozen=True, slots=True)
+class LearningEvidenceEventRecord:
+    id: int
+    student_id: int
+    class_id: int | None
+    source_type: str
+    source_id: str
+    source_version: int
+    authority_level: str
+    visibility_scope: str
+    event_kind: str
+    occurred_at: datetime
+    dedupe_key: str
+    contract_version: int
+    created_at: datetime
+    metrics: tuple[LearningEvidenceMetricRecord, ...]
+
+
+class LearningEvidencePort(Protocol):
+    def append(self, command: LearningEvidenceCommand) -> LearningEvidenceEventRecord: ...
+
+    def append_and_commit(self, command: LearningEvidenceCommand) -> LearningEvidenceEventRecord: ...
+
+
+class LearningEvidenceReadPort(Protocol):
+    def list_events(
+        self,
+        student_ids: tuple[int, ...],
+        start: datetime,
+        end: datetime,
+        *,
+        include_student_only: bool = True,
+    ) -> tuple[LearningEvidenceEventRecord, ...]: ...
 
 
 def task_view(task: LearningTaskRecord) -> dict[str, object]:
@@ -121,47 +271,5 @@ def profile_view(profile: LearningProfileRecord) -> dict[str, object]:
     }
 
 
-def review_card_view(card: ReviewCardPrompt) -> dict[str, object]:
-    return {
-        "card_code": card.card_code,
-        "point_code": card.point_code,
-        "prompt": card.prompt,
-        "options": list(card.options),
-        "due_at": card.due_at,
-    }
-
-
-def review_item_view(item: ReviewItemRecord) -> dict[str, object]:
-    return {
-        "id": item.id,
-        "point_code": item.point_code,
-        "card_code": item.card_code,
-        "source_type": item.source_type,
-        "source_id": item.source_id,
-        "note": item.note,
-        "active": item.active,
-        "created_at": item.created_at,
-        "updated_at": item.updated_at,
-    }
-
-
-def review_dashboard_view(dashboard: ReviewDashboard) -> dict[str, object]:
-    return {
-        "due_count": dashboard.due_count,
-        "weak_point_codes": list(dashboard.weak_point_codes),
-        "items": [review_item_view(item) for item in dashboard.items],
-    }
-
-
 def knowledge_map_view(items: tuple[KnowledgeMapPoint, ...]) -> dict[str, object]:
     return {"items": [{"code": item.code, "status": item.status} for item in items]}
-
-
-def review_result_view(result: ReviewResult) -> dict[str, object]:
-    return {
-        "card_code": result.card_code,
-        "correct": result.correct,
-        "rating": result.rating,
-        "explanation": result.explanation,
-        "due_at": result.next_due_at,
-    }

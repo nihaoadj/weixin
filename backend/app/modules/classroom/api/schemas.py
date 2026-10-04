@@ -41,6 +41,12 @@ class ClassStudentRead(BaseModel):
     joined_at: datetime
 
 
+class StudentActiveClassRead(BaseModel):
+    id: int
+    name: str
+    code: str
+
+
 class ReviewSubmit(BaseModel):
     decision: str = Field(pattern="^(approved|rejected)$")
     comment: str = Field(default="", max_length=2000)
@@ -79,10 +85,10 @@ class AnalyticsScope(BaseModel):
 class AnalyticsOverview(BaseModel):
     scope: AnalyticsScope
     student_count: int
-    published_case_count: int
-    eligible_pairs: int
-    started_pairs: int
-    completed_pairs: int
+    published_case_count: int | None
+    eligible_pairs: int | None
+    started_pairs: int | None
+    completed_pairs: int | None
     completion_rate: float | None
     current_average_score: float | None
     average_improvement: float | None
@@ -90,13 +96,21 @@ class AnalyticsOverview(BaseModel):
     weak_dimensions: list[dict]
     cases: list[dict] = Field(default_factory=list)
     students: list[dict] = Field(default_factory=list)
+    coverage: dict | None = None
+    completion: dict | None = None
+    attention: dict | None = None
+    knowledge: list[dict] = Field(default_factory=list)
+    activity_sources: list[dict] = Field(default_factory=list)
+    source_summary: list[dict] = Field(default_factory=list)
+    privacy: dict | None = None
+    updated_at: datetime | None = None
 
 
 class AnalyticsCaseRead(BaseModel):
     problem: dict
-    eligible_pairs: int
-    started_pairs: int
-    completed_pairs: int
+    eligible_pairs: int | None
+    started_pairs: int | None
+    completed_pairs: int | None
     completion_rate: float | None
     current_average_score: float | None
     average_improvement: float | None
@@ -108,9 +122,9 @@ class AnalyticsCaseRead(BaseModel):
 
 class AnalyticsStudentRead(BaseModel):
     student: dict
-    assigned: int
-    started: int
-    completed: int
+    assigned: int | None
+    started: int | None
+    completed: int | None
     completion_rate: float | None
     current_average_score: float | None
     average_improvement: float | None
@@ -119,13 +133,16 @@ class AnalyticsStudentRead(BaseModel):
     timeline: list[dict]
     learning_plan: dict | None = None
     practice_mastery: dict = Field(default_factory=dict)
+    formal_evidence: dict | None = None
+    attention_codes: list[str] = Field(default_factory=list)
+    pbl_status: str | None = None
 
 
 class AnalyticsKnowledgeRead(BaseModel):
     class_id: int
     class_name: str
     participant_count: int
-    due_backlog: int
+    due_backlog: int | None
     objective_correct_rate: float | None = None
     weak_points: list[dict] = Field(default_factory=list)
     rankings_suppressed: bool

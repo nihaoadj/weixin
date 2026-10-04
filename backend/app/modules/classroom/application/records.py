@@ -23,6 +23,15 @@ class ClassStudentRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class TeachingMemberScope:
+    class_id: int
+    class_name: str
+    class_status: str
+    student_id: int
+    student_name: str
+
+
+@dataclass(frozen=True, slots=True)
 class ClassCommand:
     name: str
     code: str

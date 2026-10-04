@@ -30,8 +30,11 @@ export function toReport(report: ApiReport): Report {
     studentId: String(report.student_id),
     studentName: report.student_name || '学生',
     status,
+    kind: report.report_kind,
     teacherScore: report.teacher_score ?? undefined,
     teacherFeedback: report.teacher_feedback ?? undefined,
     reviewTopicCodes: report.review_topic_codes || [],
+    classId: report.class_id != null ? String(report.class_id) : undefined,
+    className: report.class_name ?? undefined,
   }
 }

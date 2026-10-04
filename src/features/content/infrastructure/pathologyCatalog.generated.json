@@ -3,510 +3,2088 @@
     "code": "pathology.cell-injury.adaptation",
     "system_code": "pathology.cell-injury",
     "system_label": "细胞损伤与适应",
-    "topic": "细胞损伤与适应",
+    "topic": "pathology.cell-injury",
     "title": "细胞适应",
     "objective": "解释细胞适应的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释细胞适应的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分细胞适应与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.cell-injury",
     "description": "肥大以细胞体积增大为主，增生以细胞数量增加为主；适应并不等于肿瘤性生长。",
+    "position": 1,
     "prerequisite_codes": [],
     "related_codes": ["pathology.cell-injury.reversible"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S01",
+        "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+        "publisher": "NCBI/PMC",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+        "source_type": "peer_reviewed",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.cell-injury-showcase"
   },
   {
     "code": "pathology.cell-injury.reversible",
     "system_code": "pathology.cell-injury",
     "system_label": "细胞损伤与适应",
-    "topic": "细胞损伤与适应",
+    "topic": "pathology.cell-injury",
     "title": "可逆性损伤",
     "objective": "解释可逆性损伤的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释可逆性损伤的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分可逆性损伤与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.cell-injury",
-    "description": "细胞肿胀可由能量不足及离子泵功能障碍引起；早期形态改变不能单独证明细胞已经死亡。",
-    "prerequisite_codes": ["pathology.cell-injury.adaptation"],
+    "description": "细胞肿胀可由能量不足及离子泵功能障碍引起；早期改变不能单独证明细胞已经死亡。",
+    "position": 2,
+    "prerequisite_codes": [
+      "pathology.cell-injury.adaptation",
+      "pathology.cell-injury.hypoxia",
+      "pathology.cell-injury.oxidative"
+    ],
     "related_codes": ["pathology.cell-injury.necrosis"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "dependencies": [
+      {
+        "id": 1,
+        "prerequisite_code": "pathology.cell-injury.adaptation",
+        "dependent_code": "pathology.cell-injury.reversible",
+        "relation_kind": "response_continuum",
+        "rationale": "适应能力被超过后可出现细胞损伤。",
+        "limitation": "适应不必然进展为损伤，取决于刺激性质、强度和持续时间。",
+        "confidence": "moderate",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S01",
+            "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+            "publisher": "NCBI/PMC",
+            "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+            "source_type": "peer_reviewed",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "prerequisite_code": "pathology.cell-injury.hypoxia",
+        "dependent_code": "pathology.cell-injury.reversible",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "短暂或较轻缺氧可经 ATP 下降和离子泵障碍产生可逆性改变。",
+        "limitation": "严重或持续缺氧可越过可逆阶段，且组织耐受性不同。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S01",
+            "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+            "publisher": "NCBI/PMC",
+            "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+            "source_type": "peer_reviewed",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S02",
+            "title": "Histology, Cell Death",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK526045/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "prerequisite_code": "pathology.cell-injury.oxidative",
+        "dependent_code": "pathology.cell-injury.reversible",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "活性氧可损伤膜脂、蛋白和核酸，是细胞损伤的重要机制。",
+        "limitation": "结局取决于活性氧负荷、抗氧化能力和暴露时间。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S01",
+            "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+            "publisher": "NCBI/PMC",
+            "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+            "source_type": "peer_reviewed",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S01",
+        "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+        "publisher": "NCBI/PMC",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+        "source_type": "peer_reviewed",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S02",
+        "title": "Histology, Cell Death",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK526045/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.cell-injury-showcase"
   },
   {
     "code": "pathology.cell-injury.necrosis",
     "system_code": "pathology.cell-injury",
     "system_label": "细胞损伤与适应",
-    "topic": "细胞损伤与适应",
+    "topic": "pathology.cell-injury",
     "title": "坏死",
     "objective": "解释坏死的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释坏死的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分坏死与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.cell-injury",
-    "description": "坏死常伴细胞膜完整性破坏和细胞内容物外泄，并可引起周围炎症；需结合核与组织结构变化判断。",
+    "description": "坏死常伴细胞膜完整性破坏、内容物外泄和炎症；需结合核与组织结构变化判断。",
+    "position": 3,
     "prerequisite_codes": ["pathology.cell-injury.reversible"],
-    "related_codes": ["pathology.cell-injury.apoptosis"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": ["pathology.inflammation.acute", "pathology.circulatory.infarction"],
+    "dependencies": [
+      {
+        "id": 4,
+        "prerequisite_code": "pathology.cell-injury.reversible",
+        "dependent_code": "pathology.cell-injury.necrosis",
+        "relation_kind": "response_continuum",
+        "rationale": "持续或严重损伤越过不可逆点后可发生坏死。",
+        "limitation": "可逆性损伤不必然发展为坏死，去除刺激后可恢复。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S01",
+            "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+            "publisher": "NCBI/PMC",
+            "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+            "source_type": "peer_reviewed",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S02",
+            "title": "Histology, Cell Death",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK526045/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S01",
+        "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+        "publisher": "NCBI/PMC",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+        "source_type": "peer_reviewed",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S02",
+        "title": "Histology, Cell Death",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK526045/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.cell-injury-showcase"
   },
   {
     "code": "pathology.cell-injury.apoptosis",
     "system_code": "pathology.cell-injury",
     "system_label": "细胞损伤与适应",
-    "topic": "细胞损伤与适应",
+    "topic": "pathology.cell-injury",
     "title": "凋亡",
     "objective": "解释凋亡的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释凋亡的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分凋亡与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.cell-injury",
-    "description": "凋亡是受调控的细胞死亡，常形成膜包裹的凋亡小体并被清除，通常不引起显著周围炎症。",
-    "prerequisite_codes": ["pathology.cell-injury.necrosis"],
-    "related_codes": ["pathology.cell-injury.hypoxia"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "凋亡是受调控的细胞死亡，常形成膜包裹的凋亡小体，通常不引起显著周围炎症。",
+    "position": 4,
+    "prerequisite_codes": [],
+    "related_codes": [],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S01",
+        "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+        "publisher": "NCBI/PMC",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+        "source_type": "peer_reviewed",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S02",
+        "title": "Histology, Cell Death",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK526045/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.cell-injury-showcase"
   },
   {
     "code": "pathology.cell-injury.hypoxia",
     "system_code": "pathology.cell-injury",
     "system_label": "细胞损伤与适应",
-    "topic": "细胞损伤与适应",
+    "topic": "pathology.cell-injury",
     "title": "缺氧性损伤",
     "objective": "解释缺氧性损伤的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释缺氧性损伤的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分缺氧性损伤与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.cell-injury",
-    "description": "氧供应不足可抑制氧化磷酸化并减少 ATP；结局取决于缺氧程度、持续时间及组织耐受性。",
-    "prerequisite_codes": ["pathology.cell-injury.reversible"],
-    "related_codes": ["pathology.cell-injury.oxidative"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "氧供应不足可抑制氧化磷酸化并减少 ATP；结局取决于程度、持续时间和组织耐受性。",
+    "position": 5,
+    "prerequisite_codes": [],
+    "related_codes": ["pathology.cell-injury.reversible"],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S01",
+        "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+        "publisher": "NCBI/PMC",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+        "source_type": "peer_reviewed",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S02",
+        "title": "Histology, Cell Death",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK526045/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.cell-injury-showcase"
   },
   {
     "code": "pathology.cell-injury.oxidative",
     "system_code": "pathology.cell-injury",
     "system_label": "细胞损伤与适应",
-    "topic": "细胞损伤与适应",
+    "topic": "pathology.cell-injury",
     "title": "氧化应激损伤",
     "objective": "解释氧化应激损伤的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释氧化应激损伤的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分氧化应激损伤与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.cell-injury",
     "description": "活性氧产生与清除失衡可损伤膜脂、蛋白和核酸；再灌注也可能伴随氧化应激。",
-    "prerequisite_codes": ["pathology.cell-injury.reversible"],
-    "related_codes": ["pathology.cell-injury.adaptation"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "position": 6,
+    "prerequisite_codes": [],
+    "related_codes": ["pathology.cell-injury.reversible"],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S01",
+        "title": "Mechanisms and Morphology of Cellular Injury, Adaptation, and Death",
+        "publisher": "NCBI/PMC",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7171462/",
+        "source_type": "peer_reviewed",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.cell-injury-showcase"
   },
   {
     "code": "pathology.inflammation.vascular",
     "system_code": "pathology.inflammation",
     "system_label": "炎症",
-    "topic": "炎症",
+    "topic": "pathology.inflammation",
     "title": "炎症血管反应",
     "objective": "解释炎症血管反应的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释炎症血管反应的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分炎症血管反应与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.inflammation",
-    "description": "血管扩张增加局部血流，通透性增加促进液体与蛋白外渗；红热与肿的机制应分别解释。",
-    "prerequisite_codes": [],
-    "related_codes": ["pathology.inflammation.leukocytes"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "血管扩张增加局部血流，通透性增加促进液体与蛋白外渗。",
+    "position": 1,
+    "prerequisite_codes": ["pathology.inflammation.mediators"],
+    "related_codes": [
+      "pathology.inflammation.leukocytes",
+      "pathology.inflammation.acute",
+      "pathology.circulatory.edema"
+    ],
+    "dependencies": [
+      {
+        "id": 5,
+        "prerequisite_code": "pathology.inflammation.mediators",
+        "dependent_code": "pathology.inflammation.vascular",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "炎症介质调控血管扩张和通透性增加。",
+        "limitation": "不同介质作用重叠，单一表现不能反推唯一介质。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S03",
+            "title": "Acute Inflammatory Response",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S03",
+        "title": "Acute Inflammatory Response",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.inflammation-showcase"
   },
   {
     "code": "pathology.inflammation.leukocytes",
     "system_code": "pathology.inflammation",
     "system_label": "炎症",
-    "topic": "炎症",
+    "topic": "pathology.inflammation",
     "title": "白细胞募集",
     "objective": "解释白细胞募集的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释白细胞募集的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分白细胞募集与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.inflammation",
-    "description": "白细胞经边集、滚动、黏附、穿越血管壁和趋化进入损伤区域；不同步骤有不同分子参与。",
-    "prerequisite_codes": ["pathology.inflammation.vascular"],
-    "related_codes": ["pathology.inflammation.mediators"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "白细胞经边集、滚动、黏附、穿越血管壁和趋化进入损伤区域。",
+    "position": 2,
+    "prerequisite_codes": ["pathology.inflammation.mediators", "pathology.inflammation.vascular"],
+    "related_codes": ["pathology.inflammation.acute", "pathology.inflammation.chronic"],
+    "dependencies": [
+      {
+        "id": 6,
+        "prerequisite_code": "pathology.inflammation.mediators",
+        "dependent_code": "pathology.inflammation.leukocytes",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "细胞因子和趋化因子参与内皮激活、黏附及趋化。",
+        "limitation": "募集还依赖血流、黏附分子和白细胞状态。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S03",
+            "title": "Acute Inflammatory Response",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S04",
+            "title": "Chronic Inflammation",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "prerequisite_code": "pathology.inflammation.vascular",
+        "dependent_code": "pathology.inflammation.leukocytes",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "内皮激活和血流变化为白细胞边集、黏附及跨内皮迁移提供条件。",
+        "limitation": "血管反应本身不足以完成募集。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S04",
+            "title": "Chronic Inflammation",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S03",
+        "title": "Acute Inflammatory Response",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S04",
+        "title": "Chronic Inflammation",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.inflammation-showcase"
   },
   {
     "code": "pathology.inflammation.mediators",
     "system_code": "pathology.inflammation",
     "system_label": "炎症",
-    "topic": "炎症",
+    "topic": "pathology.inflammation",
     "title": "炎症介质",
     "objective": "解释炎症介质的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释炎症介质的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分炎症介质与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.inflammation",
-    "description": "细胞及血浆来源介质共同调节血管变化、白细胞反应和疼痛等表现；一种表现不能反推唯一介质。",
-    "prerequisite_codes": ["pathology.inflammation.vascular"],
-    "related_codes": ["pathology.inflammation.acute"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "细胞及血浆来源介质共同调节血管变化、白细胞反应和疼痛等表现。",
+    "position": 3,
+    "prerequisite_codes": [],
+    "related_codes": [
+      "pathology.inflammation.vascular",
+      "pathology.inflammation.leukocytes",
+      "pathology.inflammation.chronic"
+    ],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S03",
+        "title": "Acute Inflammatory Response",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S04",
+        "title": "Chronic Inflammation",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.inflammation-showcase"
   },
   {
     "code": "pathology.inflammation.acute",
     "system_code": "pathology.inflammation",
     "system_label": "炎症",
-    "topic": "炎症",
+    "topic": "pathology.inflammation",
     "title": "急性炎症形态",
     "objective": "解释急性炎症形态的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释急性炎症形态的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分急性炎症形态与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.inflammation",
-    "description": "急性炎症可表现为浆液性、纤维素性、化脓性等形态；渗出物性质和优势细胞是描述依据。",
-    "prerequisite_codes": ["pathology.inflammation.leukocytes", "pathology.inflammation.mediators"],
-    "related_codes": ["pathology.inflammation.chronic"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "急性炎症可呈浆液性、纤维素性、化脓性等形态；渗出物和优势细胞是描述依据。",
+    "position": 4,
+    "prerequisite_codes": [
+      "pathology.inflammation.vascular",
+      "pathology.inflammation.leukocytes",
+      "pathology.cell-injury.necrosis"
+    ],
+    "related_codes": ["pathology.repair.granulation"],
+    "dependencies": [
+      {
+        "id": 8,
+        "prerequisite_code": "pathology.inflammation.vascular",
+        "dependent_code": "pathology.inflammation.acute",
+        "relation_kind": "structural_component",
+        "rationale": "血管扩张、通透性增高和渗出是急性炎症的重要组成。",
+        "limitation": "急性炎症形态还取决于病因、渗出物和优势细胞。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S03",
+            "title": "Acute Inflammatory Response",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "prerequisite_code": "pathology.inflammation.leukocytes",
+        "dependent_code": "pathology.inflammation.acute",
+        "relation_kind": "structural_component",
+        "rationale": "白细胞尤其早期中性粒细胞浸润是急性炎症形态的重要组成。",
+        "limitation": "不同病因和时间点的优势细胞可能不同。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S03",
+            "title": "Acute Inflammatory Response",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "prerequisite_code": "pathology.cell-injury.necrosis",
+        "dependent_code": "pathology.inflammation.acute",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "坏死细胞释放的损伤相关信号可诱导急性炎症。",
+        "limitation": "急性炎症也可由感染、免疫反应等其他刺激引起。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S03",
+            "title": "Acute Inflammatory Response",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S03",
+        "title": "Acute Inflammatory Response",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.inflammation-showcase"
   },
   {
     "code": "pathology.inflammation.chronic",
     "system_code": "pathology.inflammation",
     "system_label": "炎症",
-    "topic": "炎症",
+    "topic": "pathology.inflammation",
     "title": "慢性炎症",
     "objective": "解释慢性炎症的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释慢性炎症的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分慢性炎症与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.inflammation",
-    "description": "慢性炎症常同时出现单核细胞浸润、组织损伤与修复；持续刺激可能推动纤维化。",
-    "prerequisite_codes": ["pathology.inflammation.acute"],
-    "related_codes": ["pathology.inflammation.granuloma"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "慢性炎症常同时出现单核细胞浸润、组织损伤与修复；持续刺激可推动纤维化。",
+    "position": 5,
+    "prerequisite_codes": ["pathology.inflammation.mediators", "pathology.inflammation.leukocytes"],
+    "related_codes": ["pathology.inflammation.granuloma", "pathology.repair.fibrosis"],
+    "dependencies": [
+      {
+        "id": 10,
+        "prerequisite_code": "pathology.inflammation.mediators",
+        "dependent_code": "pathology.inflammation.chronic",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "持续的细胞因子和其他介质信号可维持慢性炎症。",
+        "limitation": "慢性炎症并非必须由急性炎症演变而来。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S04",
+            "title": "Chronic Inflammation",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "prerequisite_code": "pathology.inflammation.leukocytes",
+        "dependent_code": "pathology.inflammation.chronic",
+        "relation_kind": "structural_component",
+        "rationale": "巨噬细胞、淋巴细胞和浆细胞浸润是慢性炎症的核心形态基础。",
+        "limitation": "需要结合持续刺激、组织损伤和修复共同判断。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S04",
+            "title": "Chronic Inflammation",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S04",
+        "title": "Chronic Inflammation",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.inflammation-showcase"
   },
   {
     "code": "pathology.inflammation.granuloma",
     "system_code": "pathology.inflammation",
     "system_label": "炎症",
-    "topic": "炎症",
+    "topic": "pathology.inflammation",
     "title": "肉芽肿性炎症",
     "objective": "解释肉芽肿性炎症的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释肉芽肿性炎症的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分肉芽肿性炎症与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.inflammation",
-    "description": "肉芽肿以聚集的活化巨噬细胞及上皮样细胞为特征，可见多核巨细胞；与肉芽组织不同。",
+    "description": "肉芽肿以聚集的活化巨噬细胞和上皮样细胞为特征，与修复性肉芽组织不同。",
+    "position": 6,
     "prerequisite_codes": ["pathology.inflammation.chronic"],
-    "related_codes": ["pathology.inflammation.vascular"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": [],
+    "dependencies": [
+      {
+        "id": 12,
+        "prerequisite_code": "pathology.inflammation.chronic",
+        "dependent_code": "pathology.inflammation.granuloma",
+        "relation_kind": "specialized_pattern",
+        "rationale": "肉芽肿是持续刺激下以活化巨噬细胞聚集为特征的特殊慢性炎症模式。",
+        "limitation": "并非所有慢性炎症都形成肉芽肿。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S04",
+            "title": "Chronic Inflammation",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S05",
+            "title": "Mechanisms of granulomatous inflammation",
+            "publisher": "PubMed",
+            "url": "https://pubmed.ncbi.nlm.nih.gov/2488875/",
+            "source_type": "peer_reviewed",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S04",
+        "title": "Chronic Inflammation",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S05",
+        "title": "Mechanisms of granulomatous inflammation",
+        "publisher": "PubMed",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/2488875/",
+        "source_type": "peer_reviewed",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.inflammation-showcase"
   },
   {
     "code": "pathology.repair.regeneration",
     "system_code": "pathology.repair",
     "system_label": "修复",
-    "topic": "修复",
+    "topic": "pathology.repair",
     "title": "组织再生",
     "objective": "解释组织再生的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释组织再生的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分组织再生与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.repair",
     "description": "再生依赖存活细胞的增殖能力和支架完整性；结构破坏严重时更可能发生瘢痕修复。",
-    "prerequisite_codes": ["pathology.cell-injury.adaptation"],
-    "related_codes": ["pathology.repair.granulation"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "position": 1,
+    "prerequisite_codes": [],
+    "related_codes": ["pathology.repair.wound"],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S06",
+        "title": "Physiology, Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.repair-showcase"
   },
   {
     "code": "pathology.repair.granulation",
     "system_code": "pathology.repair",
     "system_label": "修复",
-    "topic": "修复",
+    "topic": "pathology.repair",
     "title": "肉芽组织",
     "objective": "解释肉芽组织的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释肉芽组织的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分肉芽组织与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.repair",
-    "description": "肉芽组织富含新生毛细血管、成纤维细胞及疏松基质，是修复阶段的组织，与肉芽肿不同。",
+    "description": "肉芽组织富含新生毛细血管、成纤维细胞及疏松基质，是修复阶段的组织。",
+    "position": 2,
     "prerequisite_codes": ["pathology.inflammation.acute"],
-    "related_codes": ["pathology.repair.matrix"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": ["pathology.repair.matrix", "pathology.repair.wound"],
+    "dependencies": [
+      {
+        "id": 14,
+        "prerequisite_code": "pathology.inflammation.acute",
+        "dependent_code": "pathology.repair.granulation",
+        "relation_kind": "repair_phase_basis",
+        "rationale": "损伤后的炎症期为增殖期、血管新生及肉芽组织形成提供细胞和信号环境。",
+        "limitation": "炎症与修复阶段相互重叠，并非严格串行。",
+        "confidence": "moderate",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S06",
+            "title": "Physiology, Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S06",
+        "title": "Physiology, Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S07",
+        "title": "Principles of Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.repair-showcase"
   },
   {
     "code": "pathology.repair.matrix",
     "system_code": "pathology.repair",
     "system_label": "修复",
-    "topic": "修复",
+    "topic": "pathology.repair",
     "title": "细胞外基质重塑",
     "objective": "解释细胞外基质重塑的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释细胞外基质重塑的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分细胞外基质重塑与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.repair",
-    "description": "修复过程中基质合成与降解共同决定组织结构；重塑需要时间，不能等同于单纯胶原堆积。",
+    "description": "修复过程中基质合成与降解共同决定组织结构；重塑不等同于单纯胶原堆积。",
+    "position": 3,
     "prerequisite_codes": ["pathology.repair.granulation"],
-    "related_codes": ["pathology.repair.wound"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": ["pathology.repair.wound", "pathology.repair.fibrosis"],
+    "dependencies": [
+      {
+        "id": 15,
+        "prerequisite_code": "pathology.repair.granulation",
+        "dependent_code": "pathology.repair.matrix",
+        "relation_kind": "structural_component",
+        "rationale": "肉芽组织含成纤维细胞和临时细胞外基质，随后进入基质重塑。",
+        "limitation": "重塑也受组织类型、损伤范围和机械环境影响。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S06",
+            "title": "Physiology, Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S07",
+            "title": "Principles of Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S06",
+        "title": "Physiology, Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S07",
+        "title": "Principles of Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.repair-showcase"
   },
   {
     "code": "pathology.repair.wound",
     "system_code": "pathology.repair",
     "system_label": "修复",
-    "topic": "修复",
+    "topic": "pathology.repair",
     "title": "创伤愈合",
     "objective": "解释创伤愈合的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释创伤愈合的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分创伤愈合与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.repair",
-    "description": "创伤愈合经历炎症、增殖修复和重塑等相互重叠阶段；创缘对合及组织缺损影响愈合方式。",
-    "prerequisite_codes": ["pathology.repair.regeneration", "pathology.repair.matrix"],
-    "related_codes": ["pathology.repair.fibrosis"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "创伤愈合包括相互重叠的炎症、增殖修复和重塑阶段。",
+    "position": 4,
+    "prerequisite_codes": ["pathology.repair.regeneration", "pathology.repair.granulation", "pathology.repair.matrix"],
+    "related_codes": ["pathology.repair.factors"],
+    "dependencies": [
+      {
+        "id": 16,
+        "prerequisite_code": "pathology.repair.regeneration",
+        "dependent_code": "pathology.repair.wound",
+        "relation_kind": "structural_component",
+        "rationale": "再上皮化及存活细胞增殖是创伤愈合的重要组成。",
+        "limitation": "再生能力受细胞类型和基质支架完整性限制。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S06",
+            "title": "Physiology, Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "prerequisite_code": "pathology.repair.granulation",
+        "dependent_code": "pathology.repair.wound",
+        "relation_kind": "structural_component",
+        "rationale": "肉芽组织是创伤愈合增殖期的重要结构。",
+        "limitation": "不同创口类型所需肉芽组织的量不同。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S06",
+            "title": "Physiology, Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S07",
+            "title": "Principles of Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "prerequisite_code": "pathology.repair.matrix",
+        "dependent_code": "pathology.repair.wound",
+        "relation_kind": "structural_component",
+        "rationale": "基质合成、降解和重组参与瘢痕成熟及强度形成。",
+        "limitation": "重塑可持续较长时间，外观闭合不等于完成。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S06",
+            "title": "Physiology, Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S07",
+            "title": "Principles of Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S06",
+        "title": "Physiology, Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S07",
+        "title": "Principles of Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.repair-showcase"
   },
   {
     "code": "pathology.repair.fibrosis",
     "system_code": "pathology.repair",
     "system_label": "修复",
-    "topic": "修复",
+    "topic": "pathology.repair",
     "title": "纤维化",
     "objective": "解释纤维化的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释纤维化的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分纤维化与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.repair",
     "description": "反复损伤及持续修复可导致细胞外基质过度沉积，改变组织结构并影响功能。",
-    "prerequisite_codes": ["pathology.repair.matrix"],
-    "related_codes": ["pathology.repair.factors"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "position": 5,
+    "prerequisite_codes": ["pathology.inflammation.chronic", "pathology.repair.matrix"],
+    "related_codes": [],
+    "dependencies": [
+      {
+        "id": 19,
+        "prerequisite_code": "pathology.inflammation.chronic",
+        "dependent_code": "pathology.repair.fibrosis",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "持续炎症和修复信号可激活成纤维细胞并促进基质沉积。",
+        "limitation": "纤维化程度受病因、器官和修复调控影响。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S04",
+            "title": "Chronic Inflammation",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S07",
+            "title": "Principles of Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "prerequisite_code": "pathology.repair.matrix",
+        "dependent_code": "pathology.repair.fibrosis",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "细胞外基质合成与降解失衡可造成过度沉积和纤维化。",
+        "limitation": "正常重塑不等于病理性纤维化。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S06",
+            "title": "Physiology, Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S07",
+            "title": "Principles of Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S04",
+        "title": "Chronic Inflammation",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK493173/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S07",
+        "title": "Principles of Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK534261/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.repair-showcase"
   },
   {
     "code": "pathology.repair.factors",
     "system_code": "pathology.repair",
     "system_label": "修复",
-    "topic": "修复",
+    "topic": "pathology.repair",
     "title": "影响修复的因素",
     "objective": "解释影响修复的因素的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释影响修复的因素的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分影响修复的因素与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.repair",
-    "description": "局部感染、灌注不足、异物及全身营养等条件会影响愈合；应将局部和全身因素分开分析。",
+    "description": "感染、灌注不足、异物及营养等局部和全身条件会影响愈合。",
+    "position": 6,
     "prerequisite_codes": ["pathology.repair.wound"],
-    "related_codes": ["pathology.repair.regeneration"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": [],
+    "dependencies": [
+      {
+        "id": 21,
+        "prerequisite_code": "pathology.repair.wound",
+        "dependent_code": "pathology.repair.factors",
+        "relation_kind": "assessment_framework",
+        "rationale": "先掌握正常愈合阶段，才能分析感染、氧合、灌注和营养等影响因素。",
+        "limitation": "该边是评估框架，不表示愈合导致这些因素。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S06",
+            "title": "Physiology, Wound Healing",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S06",
+        "title": "Physiology, Wound Healing",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK535406/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.repair-showcase"
   },
   {
     "code": "pathology.circulatory.congestion",
     "system_code": "pathology.circulatory",
     "system_label": "循环障碍",
-    "topic": "循环障碍",
+    "topic": "pathology.circulatory",
     "title": "充血与淤血",
     "objective": "解释充血与淤血的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释充血与淤血的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分充血与淤血与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.circulatory",
-    "description": "充血主要与动脉流入增加有关，淤血主要与静脉回流受阻有关；二者的血流机制不同。",
+    "description": "充血主要与动脉流入增加有关，淤血主要与静脉回流受阻有关。",
+    "position": 1,
     "prerequisite_codes": [],
     "related_codes": ["pathology.circulatory.edema"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S08",
+        "title": "Physiology, Edema",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK537065/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.circulatory-showcase"
   },
   {
     "code": "pathology.circulatory.edema",
     "system_code": "pathology.circulatory",
     "system_label": "循环障碍",
-    "topic": "循环障碍",
+    "topic": "pathology.circulatory",
     "title": "水肿",
     "objective": "解释水肿的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释水肿的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分水肿与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.circulatory",
-    "description": "静水压升高、血浆胶体渗透压降低、通透性增加或淋巴回流障碍均可导致组织液积聚。",
-    "prerequisite_codes": ["pathology.inflammation.vascular"],
-    "related_codes": ["pathology.circulatory.thrombosis"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "静水压升高、胶体渗透压降低、通透性增加或淋巴回流障碍均可导致组织液积聚。",
+    "position": 2,
+    "prerequisite_codes": ["pathology.circulatory.congestion", "pathology.inflammation.vascular"],
+    "related_codes": [],
+    "dependencies": [
+      {
+        "id": 22,
+        "prerequisite_code": "pathology.circulatory.congestion",
+        "dependent_code": "pathology.circulatory.edema",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "静脉回流受阻可升高毛细血管静水压并促进液体滤出。",
+        "limitation": "该边仅指静脉淤血造成的静水压升高，不把主动性充血视为同一水肿机制；低蛋白、通透性增加和淋巴障碍也是其他病因。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S08",
+            "title": "Physiology, Edema",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK537065/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "prerequisite_code": "pathology.inflammation.vascular",
+        "dependent_code": "pathology.circulatory.edema",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "炎症性血管通透性增加可导致富蛋白液体外渗和水肿。",
+        "limitation": "并非所有水肿均由炎症引起。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S03",
+            "title": "Acute Inflammatory Response",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK556083/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S08",
+            "title": "Physiology, Edema",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK537065/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S08",
+        "title": "Physiology, Edema",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK537065/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.circulatory-showcase"
   },
   {
     "code": "pathology.circulatory.thrombosis",
     "system_code": "pathology.circulatory",
     "system_label": "循环障碍",
-    "topic": "循环障碍",
+    "topic": "pathology.circulatory",
     "title": "血栓形成",
     "objective": "解释血栓形成的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释血栓形成的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分血栓形成与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.circulatory",
-    "description": "血栓形成与内皮损伤、血流异常及高凝状态有关；应结合发生部位和附壁关系分析。",
+    "description": "血栓形成与内皮损伤、血流异常及高凝状态有关。",
+    "position": 3,
     "prerequisite_codes": [],
-    "related_codes": ["pathology.circulatory.embolism"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": ["pathology.circulatory.embolism", "pathology.circulatory.infarction"],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S09",
+        "title": "Virchow Triad",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK539697/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.circulatory-showcase"
   },
   {
     "code": "pathology.circulatory.embolism",
     "system_code": "pathology.circulatory",
     "system_label": "循环障碍",
-    "topic": "循环障碍",
+    "topic": "pathology.circulatory",
     "title": "栓塞",
     "objective": "解释栓塞的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释栓塞的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分栓塞与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.circulatory",
-    "description": "栓塞是异常物质随血流迁移并阻塞远处血管；栓子可来自血栓，也可为脂肪、气体等。",
+    "description": "栓塞是异常物质随血流迁移并阻塞远处血管；栓子不只来自血栓。",
+    "position": 4,
     "prerequisite_codes": ["pathology.circulatory.thrombosis"],
     "related_codes": ["pathology.circulatory.infarction"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "dependencies": [
+      {
+        "id": 24,
+        "prerequisite_code": "pathology.circulatory.thrombosis",
+        "dependent_code": "pathology.circulatory.embolism",
+        "relation_kind": "common_source",
+        "rationale": "血栓可脱落并随血流迁移形成血栓栓塞。",
+        "limitation": "脂肪、气体等也可形成栓子，并非所有栓塞都来自血栓。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S09",
+            "title": "Virchow Triad",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK539697/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S09",
+        "title": "Virchow Triad",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK539697/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.circulatory-showcase"
   },
   {
     "code": "pathology.circulatory.infarction",
     "system_code": "pathology.circulatory",
     "system_label": "循环障碍",
-    "topic": "循环障碍",
+    "topic": "pathology.circulatory",
     "title": "梗死",
     "objective": "解释梗死的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释梗死的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分梗死与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.circulatory",
-    "description": "梗死是局部血供障碍引起的缺血性坏死；血管分布、侧支循环和组织特点影响形态。",
-    "prerequisite_codes": ["pathology.circulatory.embolism", "pathology.cell-injury.necrosis"],
-    "related_codes": ["pathology.circulatory.shock"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "梗死是局部血供障碍引起的缺血性坏死；形态受血管分布、侧支循环和组织特点影响。",
+    "position": 5,
+    "prerequisite_codes": [
+      "pathology.circulatory.thrombosis",
+      "pathology.circulatory.embolism",
+      "pathology.cell-injury.necrosis"
+    ],
+    "related_codes": [],
+    "dependencies": [
+      {
+        "id": 25,
+        "prerequisite_code": "pathology.circulatory.thrombosis",
+        "dependent_code": "pathology.circulatory.infarction",
+        "relation_kind": "occlusive_mechanism",
+        "rationale": "原位血栓闭塞可造成组织缺血并形成梗死。",
+        "limitation": "梗死还受侧支循环、组织耐受性和血管性质影响。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S09",
+            "title": "Virchow Triad",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK539697/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S14",
+            "title": "Infarction MeSH Descriptor",
+            "publisher": "U.S. National Library of Medicine",
+            "url": "https://meshb.nlm.nih.gov/record/ui?ui=D007238",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "prerequisite_code": "pathology.circulatory.embolism",
+        "dependent_code": "pathology.circulatory.infarction",
+        "relation_kind": "occlusive_mechanism",
+        "rationale": "栓塞性血管闭塞可造成组织缺血并形成梗死。",
+        "limitation": "并非所有栓塞均导致梗死，取决于闭塞部位和代偿。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S09",
+            "title": "Virchow Triad",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK539697/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S14",
+            "title": "Infarction MeSH Descriptor",
+            "publisher": "U.S. National Library of Medicine",
+            "url": "https://meshb.nlm.nih.gov/record/ui?ui=D007238",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "prerequisite_code": "pathology.cell-injury.necrosis",
+        "dependent_code": "pathology.circulatory.infarction",
+        "relation_kind": "outcome_definition",
+        "rationale": "梗死是局部血供中断造成的缺血性组织坏死。",
+        "limitation": "脑梗死等器官的坏死形态可不同；该边描述结局定义而非坏死导致缺血。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S09",
+            "title": "Virchow Triad",
+            "publisher": "NCBI Bookshelf",
+            "url": "https://www.ncbi.nlm.nih.gov/books/NBK539697/",
+            "source_type": "academic_reference",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S14",
+            "title": "Infarction MeSH Descriptor",
+            "publisher": "U.S. National Library of Medicine",
+            "url": "https://meshb.nlm.nih.gov/record/ui?ui=D007238",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S09",
+        "title": "Virchow Triad",
+        "publisher": "NCBI Bookshelf",
+        "url": "https://www.ncbi.nlm.nih.gov/books/NBK539697/",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S14",
+        "title": "Infarction MeSH Descriptor",
+        "publisher": "U.S. National Library of Medicine",
+        "url": "https://meshb.nlm.nih.gov/record/ui?ui=D007238",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.circulatory-showcase"
   },
   {
     "code": "pathology.circulatory.shock",
     "system_code": "pathology.circulatory",
     "system_label": "循环障碍",
-    "topic": "循环障碍",
+    "topic": "pathology.circulatory",
     "title": "休克",
     "objective": "解释休克的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释休克的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分休克与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.circulatory",
-    "description": "休克涉及有效组织灌注不足和细胞代谢障碍；分析应联系循环变化、微循环与多器官损伤。",
-    "prerequisite_codes": ["pathology.circulatory.congestion", "pathology.cell-injury.hypoxia"],
-    "related_codes": ["pathology.circulatory.congestion"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "休克是急性循环衰竭所致组织低灌注和氧输送不足，可导致细胞及多器官损伤。",
+    "position": 6,
+    "prerequisite_codes": [],
+    "related_codes": [],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S13",
+        "title": "Shock",
+        "publisher": "Merck Manual Professional Edition",
+        "url": "https://www.merckmanuals.com/professional/critical-care-medicine/shock-and-fluid-resuscitation/shock",
+        "source_type": "academic_reference",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.circulatory-showcase"
   },
   {
     "code": "pathology.neoplasm.atypia",
     "system_code": "pathology.neoplasm",
     "system_label": "肿瘤",
-    "topic": "肿瘤",
+    "topic": "pathology.neoplasm",
     "title": "肿瘤异型性",
     "objective": "解释肿瘤异型性的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释肿瘤异型性的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分肿瘤异型性与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.neoplasm",
-    "description": "异型性包括细胞和组织结构偏离正常的程度；判断需结合整体结构，不能只凭单个核大。",
-    "prerequisite_codes": [],
-    "related_codes": ["pathology.neoplasm.behavior"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "异型性包括细胞和组织结构偏离正常的程度；判断需结合整体结构。",
+    "position": 1,
+    "prerequisite_codes": ["pathology.neoplasm.carcinogenesis"],
+    "related_codes": ["pathology.neoplasm.behavior", "pathology.neoplasm.grading"],
+    "dependencies": [
+      {
+        "id": 28,
+        "prerequisite_code": "pathology.neoplasm.carcinogenesis",
+        "dependent_code": "pathology.neoplasm.atypia",
+        "relation_kind": "mechanistic_basis",
+        "rationale": "驱动性遗传和表观遗传改变可形成异常增殖及异常表型。",
+        "limitation": "异型性程度在肿瘤间不同，机制改变不能单独预测形态。",
+        "confidence": "moderate",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S10",
+            "title": "What Is Cancer?",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S10",
+        "title": "What Is Cancer?",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S11",
+        "title": "Tumor Grade",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/diagnosis-staging/diagnosis/tumor-grade",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.neoplasm-showcase"
   },
   {
     "code": "pathology.neoplasm.behavior",
     "system_code": "pathology.neoplasm",
     "system_label": "肿瘤",
-    "topic": "肿瘤",
+    "topic": "pathology.neoplasm",
     "title": "良恶性肿瘤区别",
     "objective": "解释良恶性肿瘤区别的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释良恶性肿瘤区别的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分良恶性肿瘤区别与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.neoplasm",
-    "description": "判断良恶性需综合分化、异型性、生长方式及浸润转移；转移是恶性行为的重要证据。",
+    "description": "判断良恶性需综合分化、异型性、生长方式以及浸润和转移。",
+    "position": 2,
     "prerequisite_codes": ["pathology.neoplasm.atypia"],
-    "related_codes": ["pathology.neoplasm.spread"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": ["pathology.neoplasm.spread", "pathology.neoplasm.effects"],
+    "dependencies": [
+      {
+        "id": 29,
+        "prerequisite_code": "pathology.neoplasm.atypia",
+        "dependent_code": "pathology.neoplasm.behavior",
+        "relation_kind": "classification_basis",
+        "rationale": "细胞和组织异型性是良恶性形态评估的重要依据。",
+        "limitation": "异型性不能单独决定良恶性，需结合生长方式、浸润和转移。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S10",
+            "title": "What Is Cancer?",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          },
+          {
+            "source_key": "S11",
+            "title": "Tumor Grade",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/diagnosis-staging/diagnosis/tumor-grade",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S10",
+        "title": "What Is Cancer?",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.neoplasm-showcase"
   },
   {
     "code": "pathology.neoplasm.spread",
     "system_code": "pathology.neoplasm",
     "system_label": "肿瘤",
-    "topic": "肿瘤",
+    "topic": "pathology.neoplasm",
     "title": "浸润与转移",
     "objective": "解释浸润与转移的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释浸润与转移的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分浸润与转移与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.neoplasm",
-    "description": "浸润是向邻近组织扩展，转移是在不连续部位形成继发灶；常见播散路径包括淋巴、血行和种植。",
+    "description": "浸润是向邻近组织扩展，转移是在不连续部位形成继发灶。",
+    "position": 3,
     "prerequisite_codes": ["pathology.neoplasm.behavior"],
-    "related_codes": ["pathology.neoplasm.carcinogenesis"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": ["pathology.neoplasm.grading", "pathology.neoplasm.effects"],
+    "dependencies": [
+      {
+        "id": 30,
+        "prerequisite_code": "pathology.neoplasm.behavior",
+        "dependent_code": "pathology.neoplasm.spread",
+        "relation_kind": "classification_basis",
+        "rationale": "理解良恶性行为有助于识别浸润和转移作为恶性行为的核心特征。",
+        "limitation": "该边是分类学习顺序，不表示良性肿瘤必然演变为恶性或发生转移。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S10",
+            "title": "What Is Cancer?",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S10",
+        "title": "What Is Cancer?",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.neoplasm-showcase"
   },
   {
     "code": "pathology.neoplasm.carcinogenesis",
     "system_code": "pathology.neoplasm",
     "system_label": "肿瘤",
-    "topic": "肿瘤",
+    "topic": "pathology.neoplasm",
     "title": "肿瘤发生机制",
     "objective": "解释肿瘤发生机制的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释肿瘤发生机制的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分肿瘤发生机制与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.neoplasm",
-    "description": "肿瘤发生通常涉及多步骤遗传及表观遗传改变，影响增殖、存活和基因组稳定性等过程。",
+    "description": "肿瘤发生通常涉及多步骤遗传及表观遗传改变，影响增殖、存活和基因组稳定性。",
+    "position": 4,
     "prerequisite_codes": [],
-    "related_codes": ["pathology.neoplasm.grading"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": ["pathology.neoplasm.atypia"],
+    "dependencies": [],
+    "sources": [
+      {
+        "source_key": "S10",
+        "title": "What Is Cancer?",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.neoplasm-showcase"
   },
   {
     "code": "pathology.neoplasm.grading",
     "system_code": "pathology.neoplasm",
     "system_label": "肿瘤",
-    "topic": "肿瘤",
+    "topic": "pathology.neoplasm",
     "title": "肿瘤分级与分期",
     "objective": "解释肿瘤分级与分期的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释肿瘤分级与分期的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分肿瘤分级与分期与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.neoplasm",
-    "description": "分级侧重组织学特征，分期侧重病变范围；具体体系随肿瘤类型而异，不能互相替代。",
+    "description": "分级侧重组织学特征，分期侧重病变范围；具体体系随肿瘤类型而异。",
+    "position": 5,
     "prerequisite_codes": ["pathology.neoplasm.atypia", "pathology.neoplasm.spread"],
-    "related_codes": ["pathology.neoplasm.effects"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "related_codes": [],
+    "dependencies": [
+      {
+        "id": 31,
+        "prerequisite_code": "pathology.neoplasm.atypia",
+        "dependent_code": "pathology.neoplasm.grading",
+        "relation_kind": "grading_basis",
+        "rationale": "组织学分级使用分化和细胞异常程度等形态依据。",
+        "limitation": "分级体系随肿瘤类型而异，不能替代分期。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S11",
+            "title": "Tumor Grade",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/diagnosis-staging/diagnosis/tumor-grade",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 32,
+        "prerequisite_code": "pathology.neoplasm.spread",
+        "dependent_code": "pathology.neoplasm.grading",
+        "relation_kind": "staging_basis",
+        "rationale": "临床病理分期关注原发范围、区域淋巴结及远处播散。",
+        "limitation": "播散信息属于分期基础，不应被解释为组织学分级依据。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S12",
+            "title": "Cancer Staging",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/diagnosis-staging/staging",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S11",
+        "title": "Tumor Grade",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/diagnosis-staging/diagnosis/tumor-grade",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      },
+      {
+        "source_key": "S12",
+        "title": "Cancer Staging",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/diagnosis-staging/staging",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.neoplasm-showcase"
   },
   {
     "code": "pathology.neoplasm.effects",
     "system_code": "pathology.neoplasm",
     "system_label": "肿瘤",
-    "topic": "肿瘤",
+    "topic": "pathology.neoplasm",
     "title": "肿瘤对机体的影响",
     "objective": "解释肿瘤对机体的影响的机制，并用形态或情境证据支持判断。",
-    "reference": "合成病理学总论教学材料；正式使用前须教师审核",
+    "learning_objectives": [
+      "解释肿瘤对机体的影响的机制，并用形态或情境证据支持判断。",
+      "结合典型形态或病理情境，区分肿瘤对机体的影响与相邻概念并说明判断依据。"
+    ],
+    "reference": "基于列明公开权威资料建立；尚待课程负责人或病理学专家签署复核。",
     "card_count": 5,
-    "catalog_version": "pathology-general-v3",
+    "catalog_version": "pathology-general-v4",
+    "catalog_evidence_status": "source_supported",
+    "catalog_medical_review_status": "pending_expert_review",
     "parent_code": "pathology.neoplasm",
-    "description": "肿瘤可产生压迫、阻塞、破坏及全身影响；功能性肿瘤还可通过异常分泌影响机体。",
-    "prerequisite_codes": ["pathology.neoplasm.spread"],
-    "related_codes": ["pathology.neoplasm.atypia"],
-    "relationship_note": "先复习前置概念，再比较本主题相关机制；关系不代表个人掌握程度。",
+    "description": "肿瘤可产生压迫、阻塞、破坏、异常分泌和其他全身影响。",
+    "position": 6,
+    "prerequisite_codes": ["pathology.neoplasm.behavior", "pathology.neoplasm.spread"],
+    "related_codes": [],
+    "dependencies": [
+      {
+        "id": 33,
+        "prerequisite_code": "pathology.neoplasm.behavior",
+        "dependent_code": "pathology.neoplasm.effects",
+        "relation_kind": "classification_basis",
+        "rationale": "良恶性生物学行为影响局部压迫、破坏、复发风险和全身效应的分析。",
+        "limitation": "良性肿瘤也可因位置或分泌产生严重影响。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S10",
+            "title": "What Is Cancer?",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      },
+      {
+        "id": 34,
+        "prerequisite_code": "pathology.neoplasm.spread",
+        "dependent_code": "pathology.neoplasm.effects",
+        "relation_kind": "classification_basis",
+        "rationale": "浸润和转移可造成局部组织破坏及远隔器官功能损害。",
+        "limitation": "肿瘤对机体的影响并不以发生转移为必要条件。",
+        "confidence": "high",
+        "evidence_status": "source_supported",
+        "medical_review_status": "pending_expert_review",
+        "sources": [
+          {
+            "source_key": "S10",
+            "title": "What Is Cancer?",
+            "publisher": "National Cancer Institute",
+            "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+            "source_type": "government",
+            "accessed_on": "2026-09-16"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "source_key": "S10",
+        "title": "What Is Cancer?",
+        "publisher": "National Cancer Institute",
+        "url": "https://www.cancer.gov/about-cancer/understanding/what-is-cancer",
+        "source_type": "government",
+        "accessed_on": "2026-09-16"
+      }
+    ],
+    "evidence_status": "source_supported",
+    "medical_review_status": "pending_expert_review",
+    "relationship_note": "箭头表示建议学习前置；具体医学语义、限制和来源见依赖详情，不代表唯一病因或必然进展。",
     "case_slug": "pathology.neoplasm-showcase"
   }
 ]

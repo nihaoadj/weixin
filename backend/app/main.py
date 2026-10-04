@@ -18,9 +18,10 @@ from app.errors import (
 )
 from app.modules.analytics.api import analytics
 from app.modules.classroom.api import classes
-from app.modules.content.api import knowledge, medical_review, problems
+from app.modules.content.api import knowledge, medical_review, problems, question_bank
 from app.modules.identity.api import auth
-from app.modules.learning.api import knowledge_review, personalized, study
+from app.modules.learning.api import classroom_packages, knowledge_review, personalized, study
+from app.modules.learning.api import routes as learning_routes
 from app.modules.pbl.api import router as pbl_router
 from app.modules.qa.api import ai, conversations, student_questions
 from app.modules.reports.api import reports
@@ -95,10 +96,15 @@ app.include_router(student_questions.router)
 app.include_router(case_attempts.router)
 app.include_router(classes.router)
 app.include_router(medical_review.router)
+app.include_router(medical_review.question_router)
+app.include_router(question_bank.router)
 app.include_router(problems.router)
 app.include_router(knowledge.router)
 app.include_router(analytics.router)
+app.include_router(analytics.classroom_progress_router)
 app.include_router(personalized.router)
 app.include_router(knowledge_review.router)
 app.include_router(study.router)
+app.include_router(classroom_packages.router)
+app.include_router(learning_routes.router)
 app.include_router(pbl_router)

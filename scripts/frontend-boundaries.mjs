@@ -51,11 +51,16 @@ function isImplementationFile(file) {
   )
 }
 
+function isJsonResourceFile(file) {
+  const relative = relativePath(file)
+  return relative.startsWith(`${config.sourceRoot}/`) && file.endsWith('.json')
+}
+
 function listFiles(directory) {
   if (!fs.existsSync(directory)) return []
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = path.join(directory, entry.name)
-    return entry.isDirectory() ? listFiles(file) : isImplementationFile(file) ? [file] : []
+    return entry.isDirectory() ? listFiles(file) : isImplementationFile(file) || isJsonResourceFile(file) ? [file] : []
   })
 }
 
@@ -64,6 +69,7 @@ function candidateFiles(candidate) {
     candidate,
     ...implementationExtensions.map((extension) => `${candidate}${extension}`),
     ...implementationExtensions.map((extension) => path.join(candidate, `index${extension}`)),
+    `${candidate}.json`,
   ]
 }
 
@@ -89,7 +95,11 @@ function resolveImport(specifier, importer, entries) {
 
 function classify(relative) {
   const normalized = slash(relative)
-  if (config.generatedPaths.includes(normalized)) return { kind: 'generated', path: normalized }
+  if (config.generatedPaths.includes(normalized)) {
+    const featureOwner = normalized.match(/^src\/features\/([^/]+)\//)?.[1]
+    return { kind: 'generated', path: normalized, featureOwner }
+  }
+  if (normalized.endsWith('.json')) return { kind: 'resource', path: normalized }
   if (config.presentationRoots.some((rootPath) => normalized === rootPath || normalized.startsWith(`${rootPath}/`))) {
     return { kind: 'presentation', path: normalized }
   }
@@ -110,6 +120,10 @@ function classify(relative) {
     return { kind: 'feature', feature: featureName, layer, path: normalized }
   }
   return { kind: 'other', path: normalized }
+}
+
+function isPresentationContext(sourceInfo) {
+  return sourceInfo.kind === 'presentation' || (sourceInfo.kind === 'feature' && sourceInfo.layer === 'presentation')
 }
 
 function startsWithPath(candidate, prefix) {
@@ -312,6 +326,8 @@ function browserMember(node, browserObjects) {
 }
 
 function parseEntry(entry, sourceInfo, violations, graphNode) {
+  if (sourceInfo.kind === 'generated' || sourceInfo.kind === 'resource') return
+
   for (const unit of sourceUnits(entry)) {
     const sourceFile = ts.createSourceFile(entry.file, unit.source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
     if (sourceFile.parseDiagnostics.length) {
@@ -379,7 +395,7 @@ function parseEntry(entry, sourceInfo, violations, graphNode) {
       graphNode.edges.push(edge)
       if (!targetEntry) {
         const localImport = type === 'sfc-script' || specifier.startsWith('@/') || specifier.startsWith('.')
-        const assetImport = /\.(?:css|scss|less|json|svg|png|jpe?g|gif|webp)$/iu.test(specifier)
+        const assetImport = /\.(?:css|scss|less|svg|png|jpe?g|gif|webp)$/iu.test(specifier)
         if (localImport && !assetImport) {
           addViolation(
             violations,
@@ -391,7 +407,7 @@ function parseEntry(entry, sourceInfo, violations, graphNode) {
             undefined,
             'unresolved local import must be reviewed before merge',
           )
-        } else if (isFrameworkModule(specifier) && !['presentation', 'other'].includes(sourceInfo.kind)) {
+        } else if (isFrameworkModule(specifier) && !isPresentationContext(sourceInfo) && sourceInfo.kind !== 'other') {
           addViolation(
             violations,
             entry,
@@ -407,7 +423,26 @@ function parseEntry(entry, sourceInfo, violations, graphNode) {
       }
 
       const target = classify(targetEntry.relative)
-      if (isFrameworkModule(specifier) && !['presentation', 'other'].includes(sourceInfo.kind)) {
+      if (target.kind === 'generated' && target.featureOwner) {
+        const canReadFeatureGenerated =
+          sourceInfo.kind === 'bootstrap' ||
+          (sourceInfo.kind === 'feature' &&
+            sourceInfo.feature === target.featureOwner &&
+            ['public', 'infrastructure'].includes(sourceInfo.layer))
+        if (!canReadFeatureGenerated)
+          addViolation(
+            violations,
+            entry,
+            unit,
+            sourceFile,
+            node,
+            specifier,
+            target,
+            'feature-owned generated artifacts may be read only by their public/infrastructure layer or bootstrap',
+          )
+      }
+
+      if (isFrameworkModule(specifier) && !isPresentationContext(sourceInfo) && sourceInfo.kind !== 'other') {
         addViolation(
           violations,
           entry,
@@ -432,7 +467,7 @@ function parseEntry(entry, sourceInfo, violations, graphNode) {
             target,
             'pages/components may not import legacy services/data/config',
           )
-        if (target.kind === 'feature' && target.layer !== 'public')
+        if (target.kind === 'feature' && !['public', 'presentation'].includes(target.layer))
           addViolation(
             violations,
             entry,
@@ -441,7 +476,7 @@ function parseEntry(entry, sourceInfo, violations, graphNode) {
             node,
             specifier,
             target,
-            'pages/components may import only feature public APIs',
+            'pages/components may import only feature public APIs or presentation views',
           )
         if (
           target.kind === 'platform' &&
@@ -534,7 +569,7 @@ function parseEntry(entry, sourceInfo, violations, graphNode) {
             )
         }
         if (sourceInfo.layer === 'presentation') {
-          if (target.kind === 'feature' && target.layer === 'infrastructure')
+          if (target.kind === 'feature' && !['public', 'presentation'].includes(target.layer))
             addViolation(
               violations,
               entry,
@@ -543,7 +578,7 @@ function parseEntry(entry, sourceInfo, violations, graphNode) {
               node,
               specifier,
               target,
-              'feature presentation may not depend on infrastructure',
+              'feature presentation may depend only on public APIs or presentation views, not business layers',
             )
           if (target.kind === 'bootstrap' || target.kind === 'legacy')
             addViolation(
@@ -835,6 +870,21 @@ void getApplicationServices
 void (null as Conversation | null)
 </script>`,
     'src/pages/external-ok.vue': `<script lang="ts" src="../features/qa/public.ts"></script>`,
+    'src/pages/composition.vue': `<script setup lang="ts">
+import QaPanel from '@/features/qa/presentation/QaPanel.vue'
+import { runUseCase } from '@/features/qa/public'
+void QaPanel
+void runUseCase
+</script>`,
+    'src/features/qa/presentation/QaPanel.vue': `<script setup lang="ts">
+import { computed } from 'vue'
+import { runUseCase } from '@/features/qa/public'
+import MedState from '@/components/ui/MedState.vue'
+void computed
+void runUseCase
+void MedState
+</script>`,
+    'src/components/ui/MedState.vue': '<template><view /></template>',
     'src/features/qa/public.ts': `export { runUseCase } from './application/useCase'
 export type { QaPort } from './domain/ports'`,
     'src/features/qa/application/useCase.ts': `import type { QaPort } from '../domain/ports'
@@ -844,6 +894,14 @@ export interface QaPort { run(): Promise<Conversation[]> }`,
     'src/features/qa/infrastructure/adapter.ts': `import { z } from 'zod'
 import { apiRequest } from '@/platform/http/apiClient'
 export const adapter = { z, apiRequest }`,
+    'src/features/content/infrastructure/pathologyCatalog.generated.json':
+      '{ generated catalog content is intentionally not parsed',
+    'src/features/content/infrastructure/catalogReader.ts': `import catalog from './pathologyCatalog.generated.json'
+export const readCatalog = () => catalog`,
+    'src/features/content/public.ts': `import catalog from './infrastructure/pathologyCatalog.generated.json'
+export const contentCatalog = catalog`,
+    'src/bootstrap/catalogReader.ts': `import catalog from '@/features/content/infrastructure/pathologyCatalog.generated.json'
+export const readCatalog = () => catalog`,
     'src/types/records.ts': 'export interface Conversation { id: string }',
     'src/platform/http/apiClient.ts': 'export const apiRequest = () => undefined',
     'src/platform/http/browserIo.ts': `fetch('/api')
@@ -856,6 +914,89 @@ new XMLHttpRequest()`,
   }
 
   const cases = [
+    {
+      name: 'pages and components cannot import feature business layers',
+      files: {
+        'src/pages/bad-domain.vue': `<script setup lang="ts">
+import type { QaPort } from '@/features/qa/domain/ports'
+void (null as QaPort | null)
+</script>`,
+        'src/components/bad-infrastructure.vue': `<script setup lang="ts">
+import { adapter } from '@/features/qa/infrastructure/adapter'
+void adapter
+</script>`,
+        'src/features/qa/domain/ports.ts': 'export interface QaPort { run(): void }',
+        'src/features/qa/infrastructure/adapter.ts': 'export const adapter = true',
+      },
+      predicate: (violation) =>
+        violation.message.includes('pages/components may import only feature public APIs or presentation views'),
+      count: 2,
+    },
+    {
+      name: 'feature presentation cannot import business layers',
+      files: {
+        'src/features/qa/presentation/bad.vue': `<script setup lang="ts">
+import { runUseCase } from '../application/useCase'
+import type { QaPort } from '../domain/ports'
+import { adapter } from '../infrastructure/adapter'
+void runUseCase
+void (null as QaPort | null)
+void adapter
+</script>`,
+        'src/features/qa/application/useCase.ts': 'export const runUseCase = () => undefined',
+        'src/features/qa/domain/ports.ts': 'export interface QaPort { run(): void }',
+        'src/features/qa/infrastructure/adapter.ts': 'export const adapter = true',
+      },
+      predicate: (violation) =>
+        violation.message.includes('feature presentation may depend only on public APIs or presentation views'),
+      count: 3,
+    },
+    {
+      name: 'cross-feature generated JSON import',
+      files: {
+        'src/features/learning/infrastructure/catalogReader.ts': `import catalog from '@/features/content/infrastructure/pathologyCatalog.generated.json'
+export const readCatalog = () => catalog`,
+        'src/features/content/infrastructure/pathologyCatalog.generated.json': '{ not parsed generated content',
+      },
+      predicate: (violation) =>
+        violation.message.includes(
+          'feature-owned generated artifacts may be read only by their public/infrastructure layer or bootstrap',
+        ),
+      count: 1,
+    },
+    {
+      name: 'own generated JSON is unavailable to UI and core layers',
+      files: {
+        'src/features/content/infrastructure/pathologyCatalog.generated.json': '{ generated content is not parsed',
+        'src/pages/own-generated.vue': `<script setup lang="ts">
+import catalog from '@/features/content/infrastructure/pathologyCatalog.generated.json'
+void catalog
+</script>`,
+        'src/features/content/presentation/OwnGenerated.vue': `<script setup lang="ts">
+import catalog from '../infrastructure/pathologyCatalog.generated.json'
+void catalog
+</script>`,
+        'src/features/content/domain/catalog.ts': `import catalog from '../infrastructure/pathologyCatalog.generated.json'
+export const domainCatalog = catalog`,
+        'src/features/content/application/catalog.ts': `import catalog from '../infrastructure/pathologyCatalog.generated.json'
+export const applicationCatalog = catalog`,
+      },
+      predicate: (violation) =>
+        violation.message.includes(
+          'feature-owned generated artifacts may be read only by their public/infrastructure layer or bootstrap',
+        ),
+      count: 4,
+    },
+    {
+      name: 'missing relative JSON resource',
+      files: {
+        'src/features/qa/infrastructure/missingResource.ts': `import resource from './missing.json'
+export const read = () => resource`,
+      },
+      predicate: (violation) =>
+        violation.message.includes('unresolved local import') && violation.import === './missing.json',
+      count: 1,
+    },
     {
       name: 'framework import in domain',
       files: {
@@ -967,7 +1108,7 @@ export type RulesPage = Page`,
         'src/features/qa/infrastructure/probe.ts': 'export const probe = true',
       },
       predicate: (violation) =>
-        violation.message.includes('pages/components may import only feature public APIs') &&
+        violation.message.includes('pages/components may import only feature public APIs or presentation views') &&
         violation.target === 'src/features/qa/infrastructure/probe.ts',
       count: 1,
     },
@@ -1020,7 +1161,11 @@ function runCli() {
     printViolations(violations)
     process.exitCode = 1
   } else {
-    console.log(`frontend-boundaries PASS (${files.length} implementation files checked)`)
+    const implementationCount = files.filter((entry) => isImplementationFile(entry.file)).length
+    const resourceCount = files.length - implementationCount
+    console.log(
+      `frontend-boundaries PASS (${implementationCount} implementation files and ${resourceCount} JSON resources checked)`,
+    )
   }
 }
 

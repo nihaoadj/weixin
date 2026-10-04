@@ -1,11 +1,12 @@
 import type { ClassroomRepository } from '@/features/classroom/domain/ports'
 import {
+  apiStudentActiveClassListSchema,
   apiTeacherClassListSchema,
   apiTeacherClassSchema,
   apiTeacherStudentListSchema,
 } from '@/platform/contracts/teacher'
 import { apiRequest, encodePathSegment } from '@/platform/http/apiClient'
-import type { TeacherClass, TeacherStudent } from '@/types/teacher'
+import type { StudentActiveClass, TeacherClass, TeacherStudent } from '@/types/teacher'
 
 const LIST_TTL = 30_000
 
@@ -77,6 +78,13 @@ export const apiClassroomRepository: ClassroomRepository = {
       path: `/classes/${encodePathSegment(classId)}/members/${encodePathSegment(studentId)}`,
       method: 'DELETE',
       invalidateCache: ['/classes', '/analytics'],
+    })
+  },
+  async getStudentActiveClasses(): Promise<StudentActiveClass[]> {
+    return apiRequest({
+      path: '/classes/my-active',
+      cacheTtlMs: LIST_TTL,
+      schema: apiStudentActiveClassListSchema,
     })
   },
 }

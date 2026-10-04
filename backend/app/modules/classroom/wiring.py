@@ -7,7 +7,9 @@ from app.platform.transactions import SqlAlchemyUnitOfWork
 
 
 def classroom_application(session: Session) -> ClassroomApplication:
-    return ClassroomApplication(SqlAlchemyClassroomRepository(session), SqlAlchemyUnitOfWork(session))
+    return ClassroomApplication(
+        SqlAlchemyClassroomRepository(session), SqlAlchemyUnitOfWork(session), SqlAlchemyClassroomScope(session)
+    )
 
 
 def classroom_scope_port(session: Session) -> SqlAlchemyClassroomScope:

@@ -10,3 +10,15 @@ dist/
 coverage/
 test-results/
 playwright-report/
+
+# Local scratch, generated artifacts, and standalone byte-preserved examples
+.contract-tmp/
+/artifacts/
+/output/
+/tmp/
+/data/
+docs/examples/pelican/*.html
+
+# Archived originals and supplied design references retain their original bytes
+docs/archive/
+ui参考图/

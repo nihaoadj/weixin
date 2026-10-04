@@ -9,10 +9,7 @@ from app.modules.qa.application.records import (
     MedicalChatRequestRecord,
     MedicalChatResult,
     MessageInput,
-    QuestionThreadRecord,
-    StudentQuestionRecord,
 )
-from app.shared.actor import Actor
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,22 +40,6 @@ class ConversationRepository(Protocol):
 @dataclass(frozen=True, slots=True)
 class QuestionThreadCommand:
     messages: tuple[MessageInput, ...]
-
-
-class QuestionRepository(Protocol):
-    def class_codes(self, student_id: int) -> set[str]: ...
-
-    def list_student_questions(self, student: Actor, class_codes: set[str]) -> tuple[StudentQuestionRecord, ...]: ...
-
-    def find_student_question(
-        self, student: Actor, problem_id: int, class_codes: set[str]
-    ) -> StudentQuestionRecord | None: ...
-
-    def find_thread(self, problem_id: int, student_id: int) -> QuestionThreadRecord | None: ...
-
-    def upsert_thread(
-        self, problem_id: int, student_id: int, command: QuestionThreadCommand
-    ) -> QuestionThreadRecord: ...
 
 
 class MedicalChatGateway(Protocol):

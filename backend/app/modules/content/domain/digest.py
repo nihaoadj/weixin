@@ -36,6 +36,9 @@ class DigestSource(Protocol):
     @property
     def capability_tags(self) -> tuple[str, ...] | list[str] | None: ...
 
+    @property
+    def knowledge_point_codes(self) -> tuple[str, ...] | list[str] | None: ...
+
 
 def case_digest(problem: DigestSource) -> str:
     target_ids = (
@@ -56,6 +59,7 @@ def case_digest(problem: DigestSource) -> str:
                 "case_definition": problem.case_definition,
                 "rubric": problem.rubric,
                 "capability_tags": problem.capability_tags or [],
+                "knowledge_point_codes": sorted(getattr(problem, "knowledge_point_codes", ()) or ()),
                 "schema_version": (problem.case_definition or {}).get("schema_version"),
             },
             ensure_ascii=False,

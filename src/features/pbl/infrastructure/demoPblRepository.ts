@@ -2,25 +2,58 @@ import type {
   PblDiagnostic,
   PblRepository,
   PblSession,
-  PblSuggestion,
   PblParticipation,
+  PblMessageSubmission,
   PblPlan,
-  PblTargets,
   PblFilters,
-  PblTask,
   InteractionStyle,
   LearningDialogueSubmission,
   PblTeacherFeedback,
   PblWorkItem,
   TeacherPblSession,
   TeacherPblDashboard,
-  PblFollowUp,
-  PblFollowUpStatus,
 } from '../domain/ports'
-import { demoReportDetail, demoReportPage } from './demoPblReports'
 import { getSessionContext } from '@/platform/session/context'
+import { storage } from '@/platform/storage/storage'
 import { AppError } from '@/types/errors'
 import type { ContentRepository } from '@/features/content/domain/ports'
+import { demoPblStateSchema } from './demoPblStorage'
+import { demoReportPage } from './demoPblReports'
+
+type DemoLearningRouteCompletion = (input: {
+  sessionId: string
+  studentOpenid: string
+  sourceKind: 'classroom' | 'autonomous'
+  goalPointCodes: string[]
+  diagnosisSummary: Record<string, unknown>
+}) => Promise<{
+  learningRouteId: string
+  finalTestId: string
+  routeGenerationState: string
+  testGenerationState: string
+}>
+let learningRouteCompletion: DemoLearningRouteCompletion | undefined
+export function configureDemoLearningRouteCompletion(handler: DemoLearningRouteCompletion): void {
+  learningRouteCompletion = handler
+}
+type DemoClassroomRouteState = {
+  routeId: string
+  finalTestId: string
+  studentId: number
+  status: string
+  resultId?: string
+  score?: number
+  updatedAt: string
+  completedSteps?: number
+  totalSteps?: number
+}
+let readClassroomRouteState:
+  ((classId: number, sessionId: number | string) => Promise<DemoClassroomRouteState[]>) | undefined
+export function configureDemoClassroomRouteStateReader(
+  reader: (classId: number, sessionId: number | string) => Promise<DemoClassroomRouteState[]>,
+): void {
+  readClassroomRouteState = reader
+}
 
 export type DemoPblLearningNotification = {
   id: number
@@ -30,14 +63,30 @@ export type DemoPblLearningNotification = {
   createdAt: string
 }
 
+export type DemoPblStudentInsightsRecord = {
+  sessionId: string
+  topicCode: string
+  caseTitle: string
+  createdAt: string
+  updatedAt: string
+  learningRouteId?: string
+  diagnosisCreatedAt?: string
+  diagnosis?: {
+    knowledgeGapCodes: string[]
+    reasoningIssueCodes: string[]
+  }
+}
+
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+const renderResponse = (opening: string, keyPoints: string[], nextStep: string) =>
+  `回应\n${opening}\n\n关键要点\n${keyPoints.map((item) => `• ${item}`).join('\n')}\n\n下一步\n${nextStep}`
 const actor = () => {
   const user = getSessionContext()
   if (!user) throw new AppError('请先登录', { code: 'AUTH_REQUIRED' })
   return user
 }
 const analysis: PblDiagnostic = {
-  schemaVersion: 4,
+  schemaVersion: 8,
   diagnosticStatus: 'probing',
   assistantReply: '演示追问：请说明你如何把血管变化与红肿联系起来。',
   followUpQuestion: '你认为通透性变化会造成什么表现？',
@@ -50,307 +99,59 @@ const analysis: PblDiagnostic = {
   phaseMissingElements: [],
 }
 
-const demoTeacherDiagnostics: PblDiagnostic[] = [
-  {
-    id: '90001',
-    revision: 1,
-    schemaVersion: 4,
-    diagnosticStatus: 'ready',
-    assistantReply: '已整理为待教师审阅的合成诊断建议，供演示教师反馈与采用发布流程。',
-    knowledgeGaps: [
+function retiredDemoFlow(): never {
+  throw new AppError('RETIRED_FLOW：请打开学习路线及最终测试', { code: 'STATE_CONFLICT', statusCode: 409 })
+}
+function synthesisSeed(sessionId: string): PblParticipation {
+  const answers = [
+    '观察到局部红肿热痛，病理问题是急性炎症的血管反应。',
+    '假设血流增加引起红热，内皮通透性升高导致渗出。',
+    '蛋白丰富的渗出与局部肿胀支持通透性变化，还需结合组织形态核对。',
+  ]
+  return {
+    messages: answers.flatMap((content, index) => [
       {
-        id: 'demo-gap-vascular',
-        point_code: 'pathology.inflammation.vascular',
-        summary: '能描述局部红肿，但尚未把血管通透性增加与渗出形成明确连接。',
-        evidence_message_ids: ['demo-evidence-vascular'],
-        evidence_summary: '学生提到血流增加，却没有说明液体和蛋白外渗的机制。',
-        confidence: 'medium',
+        id: `${sessionId}-student-${index}`,
+        sequence: index * 2 + 1,
+        role: 'student',
+        content,
+        interactionStyle: 'guided' as const,
+        processing_status: 'completed',
+        client_message_id: `${sessionId}-seed-${index}`,
+        turnScope: 'evidence' as const,
       },
-    ],
-    reasoningIssues: [
       {
-        id: 'demo-reasoning-evidence',
-        dimension_id: 'evidence_reasoning',
-        issue_type: 'missing_link',
-        summary: '观察到的表现与病理机制之间缺少逐项证据连接。',
-        evidence_message_ids: ['demo-evidence-vascular'],
-        evidence_summary: '固定证据摘要仅用于演示诊断处置界面。',
-        improvement: '先分别列出血流、通透性与渗出，再说明每项如何支持解释。',
+        id: `${sessionId}-assistant-${index}`,
+        sequence: index * 2 + 2,
+        role: 'assistant',
+        content: 'Demo 合成教学数据：本阶段证据已记录，请继续整合机制与证据。',
+        interactionStyle: 'guided' as const,
+        processing_status: 'completed',
+        replyToMessageId: `${sessionId}-student-${index}`,
+        turnScope: 'evidence' as const,
       },
-    ],
-    recommendedQuestions: [
-      {
-        id: '900011',
-        title: '说明炎症中血管反应与渗出的关系',
-        prompt: '请分别说明血流变化和血管通透性增加如何共同造成局部红肿与渗出。',
-        linkedFindings: ['demo-gap-vascular', 'demo-reasoning-evidence'],
-        status: 'proposed',
-        version: 1,
-      },
-    ],
-    safetyNotice: 'Demo 合成教学记录，仅用于界面与流程演示，不代表真实 AI 诊断或医学建议。',
-    createdAt: '2026-09-10T08:30:00.000Z',
-    studentId: '1',
-    studentName: '演示学生·林晓',
-    classId: '1',
-    className: '病理学演示班',
-    sessionId: 'demo-pbl-1',
-    topicCode: 'pathology.inflammation',
-    phase: 'synthesis',
-    phaseDecision: 'complete',
-    phaseEvidenceSummary: '学生已经完成综合解释，但血管反应与渗出机制的证据链仍需教师带教。',
-    phaseMissingElements: [],
-    sessionKind: 'classroom',
+    ]),
+    startedAt: '2026-09-27T00:00:00Z',
+    currentPhase: 'synthesis',
+    phaseStartedRevision: 3,
+    phaseStatus: 'active',
     interactionStyle: 'guided',
-  },
-  {
-    id: '90002',
-    revision: 1,
-    schemaVersion: 4,
-    diagnosticStatus: 'ready',
-    assistantReply: '该合成诊断已由教师采用并形成两轮正式任务，用于展示后续学习跟进。',
-    knowledgeGaps: [
-      {
-        id: 'demo-gap-published',
-        point_code: 'pathology.inflammation.vascular',
-        summary: '对血管通透性变化的机制解释仍不完整。',
-        evidence_message_ids: ['demo-evidence-published'],
-        evidence_summary: '固定证据摘要仅用于演示正式任务的来源关系。',
-        confidence: 'medium',
-      },
-    ],
-    reasoningIssues: [],
-    recommendedQuestions: [
-      {
-        id: '900021',
-        title: '核对炎症中血管通透性改变',
-        prompt: '结合形态观察，说明血管通透性增加如何影响渗出。',
-        linkedFindings: ['demo-gap-published'],
-        status: 'published',
-        version: 2,
-        problemId: 'demo-pbl-question-900021',
-      },
-    ],
-    safetyNotice: 'Demo 合成教学记录，仅用于界面与流程演示，不代表真实 AI 诊断或医学建议。',
-    createdAt: '2026-09-09T08:30:00.000Z',
-    studentId: '3',
-    studentName: '演示学生·周宁',
-    classId: '1',
-    className: '病理学演示班',
-    sessionId: 'demo-pbl-1',
-    topicCode: 'pathology.inflammation',
-    phase: 'synthesis',
-    phaseDecision: 'complete',
-    phaseEvidenceSummary: '固定合成诊断已用于创建正式任务。',
-    phaseMissingElements: [],
-    sessionKind: 'classroom',
-    interactionStyle: 'guided',
-  },
-]
-
-const demoFollowUpPlan: PblPlan = {
-  id: 9001,
-  student_id: 3,
-  source_type: 'pbl_suggestion',
-  source_id: 900021,
-  source_context: {
-    teacher_id: 1,
-    class_id: 1,
-    class_name: '病理学演示班',
-    session_id: 1,
-    snapshot_id: 90002,
-    suggestion_id: 900021,
-    point_codes: ['pathology.inflammation.vascular'],
-    dimension_ids: ['evidence_reasoning'],
-    topic_code: 'pathology.inflammation',
-  },
-  status: 'completed',
-  verification_status: 'needs_reinforcement',
-  verification_note: '两轮正式任务已完成，血管通透性与渗出的证据连接仍需教师补充带教。',
-  verified_at: '2026-09-11T08:30:00.000Z',
-  version: 2,
-  due_at: '2026-09-12T08:30:00.000Z',
-  current_cycle: 2,
-  max_cycles: 2,
-  automation_exhausted: true,
-  decision_policy_version: 'pbl-mastery-v1',
-  decision_basis: {
-    result: 'needs_reinforcement',
-    cycle: 2,
-    offline_support_required: true,
-    failed_targets: [
-      {
-        target_type: 'knowledge_gap',
-        target_code: 'pathology.inflammation.vascular',
-        label: '炎症的血管反应',
-      },
-    ],
-    checks: [
-      {
-        target_type: 'knowledge_gap',
-        target_code: 'pathology.inflammation.vascular',
-        threshold: 100,
-        score: 60,
-        evidence_present: true,
-        passed: false,
-      },
-    ],
-  },
-  evaluated_at: '2026-09-11T08:30:00.000Z',
-  evaluations: [
-    {
-      cycle_number: 1,
-      policy_version: 'pbl-mastery-v1',
-      result: 'next_cycle_activated',
-      checks: [
-        {
-          target_type: 'knowledge_gap',
-          target_code: 'pathology.inflammation.vascular',
-          threshold: 100,
-          score: 60,
-          evidence_present: true,
-          passed: false,
-        },
-      ],
-      failed_targets: [
-        {
-          target_type: 'knowledge_gap',
-          target_code: 'pathology.inflammation.vascular',
-          label: '炎症的血管反应',
-        },
-      ],
-      automation_exhausted: false,
-      record_source: 'system',
-      evaluated_at: '2026-09-10T08:30:00.000Z',
+    evidenceLocked: false,
+    conversationMode: 'evidence',
+    diagnostic: {
+      ...copy(analysis),
+      revision: 3,
+      phase: 'evidence',
+      phaseDecision: 'advance',
+      assistantReply: 'Demo 合成教学数据：前三阶段已完成，请整合观察、机制与证据，并指出尚待核对的线索。',
     },
-    {
-      cycle_number: 2,
-      policy_version: 'pbl-mastery-v1',
-      result: 'needs_reinforcement',
-      checks: [
-        {
-          target_type: 'knowledge_gap',
-          target_code: 'pathology.inflammation.vascular',
-          threshold: 100,
-          score: 60,
-          evidence_present: true,
-          passed: false,
-        },
-      ],
-      failed_targets: [
-        {
-          target_type: 'knowledge_gap',
-          target_code: 'pathology.inflammation.vascular',
-          label: '炎症的血管反应',
-        },
-      ],
-      automation_exhausted: true,
-      record_source: 'system',
-      evaluated_at: '2026-09-11T08:30:00.000Z',
-    },
-  ],
-  tasks: [
-    {
-      id: 90011,
-      position: 1,
-      task_type: 'discussion',
-      status: 'completed',
-      problem_id: null,
-      public_definition: {
-        prompt: '先用观察到的形态表现说明血管反应，再补充不确定之处。',
-        target_label: '正式讨论',
-        reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-      },
-      result: {
-        score: null,
-        feedback: '已提交合成反思证据。',
-        evidence: ['Demo 第一轮讨论证据'],
-        answer: { text: '我会区分血流增加与血管通透性增加的表现。' },
-        submitted_at: '2026-09-10T08:30:00.000Z',
-      },
-      cycle_number: 1,
-      target_type: 'discussion',
-      target_code: 'discussion',
-      variant_code: 'demo:900021:discussion:v1',
-    },
-    {
-      id: 90012,
-      position: 2,
-      task_type: 'retest',
-      status: 'completed',
-      problem_id: null,
-      public_definition: {
-        prompt: '当新证据削弱原解释时，应怎样处理？',
-        options: ['比较新证据并修订假设', '忽略差异'],
-        point_code: 'pathology.inflammation.vascular',
-        target_label: '炎症的血管反应',
-        reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-      },
-      result: {
-        score: 60,
-        feedback: '仍需把通透性增加与渗出逐项连接。',
-        evidence: ['Demo 第一轮再测作答'],
-        answer: { selected_option: 1 },
-        submitted_at: '2026-09-10T08:31:00.000Z',
-      },
-      cycle_number: 1,
-      target_type: 'knowledge_gap',
-      target_code: 'pathology.inflammation.vascular',
-      variant_code: 'pathology.inflammation.vascular.retest',
-    },
-    {
-      id: 90013,
-      position: 3,
-      task_type: 'discussion',
-      status: 'completed',
-      problem_id: null,
-      public_definition: {
-        prompt: '第二轮：先写出反例，再修订血管反应与渗出的解释。',
-        target_label: '正式讨论',
-        reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-      },
-      result: {
-        score: null,
-        feedback: '已提交第二轮合成反思证据。',
-        evidence: ['Demo 第二轮讨论证据'],
-        answer: { text: '我会先核对反例是否能由血流变化单独解释。' },
-        submitted_at: '2026-09-11T08:30:00.000Z',
-      },
-      cycle_number: 2,
-      target_type: 'discussion',
-      target_code: 'discussion',
-      variant_code: 'demo:900021:discussion:v2',
-    },
-    {
-      id: 90014,
-      position: 4,
-      task_type: 'retest',
-      status: 'completed',
-      problem_id: null,
-      public_definition: {
-        prompt: '第二轮再测：新证据削弱原假设时应怎样处理？',
-        options: ['降低原假设优先级并继续核对', '忽略新证据'],
-        point_code: 'pathology.inflammation.vascular',
-        target_label: '炎症的血管反应',
-        reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-      },
-      result: {
-        score: 60,
-        feedback: '两轮后仍需教师补充反馈。',
-        evidence: ['Demo 第二轮再测作答'],
-        answer: { selected_option: 1 },
-        submitted_at: '2026-09-11T08:31:00.000Z',
-      },
-      cycle_number: 2,
-      target_type: 'knowledge_gap',
-      target_code: 'pathology.inflammation.vascular',
-      variant_code: 'pathology.inflammation.vascular.retest.v2',
-    },
-  ],
+  }
 }
 
 export class DemoPblRepository implements PblRepository {
-  constructor(private readonly content: Pick<ContentRepository, 'getGuidedCasesAsync' | 'upsertProblem'>) {}
+  constructor(private readonly content: Pick<ContentRepository, 'getGuidedCasesAsync' | 'upsertProblem'>) {
+    this.restore()
+  }
   private classrooms: PblSession[] = [
     {
       id: 'demo-pbl-1',
@@ -359,18 +160,36 @@ export class DemoPblRepository implements PblRepository {
       status: 'active',
       caseId: 'pathology.inflammation-showcase',
       caseVersion: 1,
-      caseContext: { title: '炎症：血管反应讨论' },
+      caseContext: { title: 'D02 Demo 合成教学数据：课堂炎症研讨' },
       goalPointCodes: ['pathology.inflammation.vascular'],
-      phase: 'problem_framing',
+      phase: 'synthesis',
       version: 1,
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-09-27T00:00:00Z',
       sessionKind: 'classroom',
     },
+    {
+      id: 'demo-t44-autonomous',
+      topicCode: 'pathology.inflammation',
+      status: 'active',
+      caseContext: { title: 'D01 Demo 合成教学数据：自主炎症研讨' },
+      goalPointCodes: ['pathology.inflammation.vascular'],
+      phase: 'synthesis',
+      version: 1,
+      createdAt: '2026-09-27T00:00:00Z',
+      sessionKind: 'student_initiated',
+      interactionStyle: 'guided',
+    },
   ]
-  private histories = new Map<string, PblParticipation>()
-  private responses = new Map<string, PblParticipation>()
-  private queue: PblDiagnostic[] = copy(demoTeacherDiagnostics)
-  private learning: PblPlan[] = [copy(demoFollowUpPlan)]
+  private histories = new Map<string, PblParticipation>([
+    ['demo_student:demo-pbl-1', synthesisSeed('demo-pbl-1')],
+    ['demo_student:demo-t44-autonomous', synthesisSeed('demo-t44-autonomous')],
+  ])
+  private responses = new Map<
+    string,
+    { content: string; interactionStyle: InteractionStyle; result: PblMessageSubmission }
+  >()
+  private queue: PblDiagnostic[] = []
+  private learning: PblPlan[] = []
   private owners = new Map<string, number>([
     ['demo_student', 1],
     ['demo_student_b', 2],
@@ -388,7 +207,253 @@ export class DemoPblRepository implements PblRepository {
   // is no longer associated with the student's actual session.
   private counter = 1000
   private notificationCounter = 1
-  private sessionOwners = new Map<string, string>()
+  private sessionOwners = new Map<string, string>([['demo-t44-autonomous', 'demo_student']])
+  private restore() {
+    const stored = storage.readRaw('pbl:t44-demo')
+    if (stored) {
+      const parsed = demoPblStateSchema.safeParse(stored)
+      if (parsed.success) {
+        const value = parsed.data
+        this.classrooms = value.classrooms
+        this.histories = new Map(value.histories)
+        this.responses = new Map(value.responses)
+        this.queue = value.queue
+        this.owners = new Map(value.owners)
+        this.sessionOwners = new Map(value.sessionOwners)
+        this.counter = value.counter
+        return
+      }
+    }
+    this.persist()
+  }
+  /** Add the reference classroom without replacing any existing participation. */
+  ensureReferenceStudents() {
+    const referenceSession = this.classrooms.find((item) => item.id === 'demo-pbl-1')
+    if (referenceSession?.topicCode === 'pathology.inflammation') referenceSession.topicCode = '炎症：病理证据讨论'
+    const names = ['李同学', '王同学', '陈同学', '周同学', '林同学', '赵同学', '孙同学', '吴同学']
+    const students = names.map((name, index) => ({
+      name,
+      index,
+      studentId: 5501 + index,
+      openid: `demo_pbl_reference_${index + 1}`,
+      routeId: `55000000-0000-4000-8000-${String(5501 + index).padStart(12, '0')}`,
+      finalTestId: `f0000000-0000-4000-8000-${String(5501 + index).padStart(12, '0')}`,
+    }))
+    for (const student of students) {
+      this.owners.set(student.openid, student.studentId)
+      const key = `${student.openid}:demo-pbl-1`
+      if (this.histories.has(key)) continue
+      const snapshotId = String(student.studentId)
+      const participation = synthesisSeed('demo-pbl-1')
+      const diagnostic: PblDiagnostic = {
+        ...copy(analysis),
+        id: snapshotId,
+        revision: 4,
+        diagnosticStatus: 'ready',
+        studentId: String(student.studentId),
+        studentName: student.name,
+        classId: '1',
+        className: '病理学演示班',
+        sessionId: 'demo-pbl-1',
+        topicCode: '炎症：病理证据讨论',
+        sessionKind: 'classroom',
+        createdAt: '2026-10-02T00:00:00Z',
+        phase: 'synthesis',
+        phaseDecision: 'complete',
+        assistantReply: 'Demo 合成教学数据：已结合血管扩张、通透性升高与中性粒细胞聚集解释急性炎症。',
+        followUpQuestion: undefined,
+        recommendedQuestions: [],
+        knowledgeGaps: [
+          {
+            id: `gap-${snapshotId}`,
+            point_code: 'pathology.inflammation.vascular',
+            summary: '需进一步巩固血管通透性变化与组织水肿的联系。',
+            evidence_message_ids: [`${snapshotId}-answer`],
+            evidence_summary: '合成教学回答已解释主要机制，证据之间的联系尚需巩固。',
+            confidence: 'medium',
+          },
+        ],
+      }
+      participation.messages.push(
+        {
+          id: `${snapshotId}-answer`,
+          sequence: 7,
+          role: 'student',
+          content: '小血管扩张解释红热，通透性升高解释渗出和水肿，中性粒细胞聚集支持急性炎症。',
+          interactionStyle: 'guided',
+          turnScope: 'evidence',
+        },
+        {
+          id: `${snapshotId}-reply`,
+          sequence: 8,
+          role: 'assistant',
+          content: diagnostic.assistantReply,
+          interactionStyle: 'guided',
+          turnScope: 'evidence',
+          replyToMessageId: `${snapshotId}-answer`,
+        },
+      )
+      Object.assign(participation, {
+        diagnostic,
+        currentPhase: 'completed',
+        phaseStatus: 'completed',
+        phaseCompletedAt: diagnostic.createdAt,
+        evidenceLocked: true,
+        conversationMode: 'private_follow_up',
+        completionSnapshotId: snapshotId,
+        evidenceCompletedRevision: 4,
+        learningRouteId: student.routeId,
+        finalTestId: student.finalTestId,
+        routeGenerationState: student.index < 6 ? 'generating' : 'published',
+        testGenerationState: 'ready',
+      })
+      this.histories.set(key, participation)
+      if (!this.queue.some((item) => item.id === snapshotId)) this.queue.push(diagnostic)
+    }
+    this.counter = Math.max(this.counter, 5600)
+    this.persist()
+    return students
+  }
+  ensureInsightsSamples(
+    samples: Array<{
+      index: number
+      studentId: number
+      openid: string
+      name: string
+      routeId: string
+      sessionId: string
+      pointCode: string
+      topicName: string
+      facts: string[]
+    }>,
+  ) {
+    let added = false
+    const completedAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    const startedAt = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    for (const sample of samples) {
+      if (!this.classrooms.some((item) => item.id === sample.sessionId)) {
+        this.classrooms.push({
+          id: sample.sessionId,
+          classId: '2',
+          topicCode: sample.topicName,
+          status: 'active',
+          goalPointCodes: [sample.pointCode],
+          caseContext: { title: `Demo 合成教学课堂：${sample.topicName}` },
+          phase: 'synthesis',
+          version: 1,
+          createdAt: startedAt,
+          sessionKind: 'classroom',
+        })
+        added = true
+      }
+      if (!this.owners.has(sample.openid)) {
+        this.owners.set(sample.openid, sample.studentId)
+        added = true
+      }
+      const key = `${sample.openid}:${sample.sessionId}`
+      if (this.histories.has(key)) continue
+      const snapshotId = `demo-insights-diagnostic-${sample.studentId}`
+      const answerId = `${snapshotId}-answer`
+      const knowledgeGap = sample.index < 2
+      const reasoningIssue = sample.index === 2
+      const diagnostic: PblDiagnostic = {
+        ...copy(analysis),
+        id: snapshotId,
+        revision: 4,
+        diagnosticStatus: 'ready',
+        studentId: String(sample.studentId),
+        studentName: sample.name,
+        classId: '2',
+        className: '炎症学情演示班',
+        sessionId: sample.sessionId,
+        topicCode: sample.topicName,
+        sessionKind: 'classroom',
+        createdAt: completedAt,
+        phase: 'synthesis',
+        phaseDecision: 'complete',
+        followUpQuestion: undefined,
+        recommendedQuestions: [],
+        assistantReply: `Demo 合成教学数据：已完成${sample.topicName}研讨，后续通过学习路线巩固。`,
+        knowledgeGaps: knowledgeGap
+          ? [
+              {
+                id: `${snapshotId}-gap`,
+                point_code: sample.pointCode,
+                summary: '机制解释需要补足组织学依据。',
+                evidence_message_ids: [answerId],
+                evidence_summary: '已提到血管变化，尚未明确其与组织形态的对应。',
+                confidence: 'medium',
+              },
+            ]
+          : [],
+        reasoningIssues: reasoningIssue
+          ? [
+              {
+                id: `${snapshotId}-reasoning`,
+                dimension_id: 'evidence_reasoning',
+                issue_type: 'insufficient_evidence',
+                summary: '需要说明观察与推断之间的依据。',
+                improvement: '分别列出观察到的事实和支持机制判断的证据。',
+                evidence_message_ids: [answerId],
+                evidence_summary: '作出了机制判断，但尚未明确连接观察与结论。',
+              },
+            ]
+          : [],
+      }
+      const participation = synthesisSeed(sample.sessionId)
+      participation.messages = [
+        {
+          id: answerId,
+          sequence: 1,
+          role: 'student',
+          content: knowledgeGap || reasoningIssue ? sample.facts[0]! : sample.facts.join(''),
+          interactionStyle: 'guided',
+          turnScope: 'evidence',
+        },
+        {
+          id: `${snapshotId}-reply`,
+          sequence: 2,
+          role: 'assistant',
+          content: diagnostic.assistantReply,
+          interactionStyle: 'guided',
+          turnScope: 'evidence',
+          replyToMessageId: answerId,
+        },
+      ]
+      Object.assign(participation, {
+        diagnostic,
+        startedAt,
+        currentPhase: 'completed',
+        phaseStatus: 'completed',
+        phaseCompletedAt: completedAt,
+        evidenceLocked: true,
+        conversationMode: 'private_follow_up',
+        completionSnapshotId: snapshotId,
+        evidenceCompletedRevision: 4,
+        learningRouteId: sample.routeId,
+        finalTestId: `f0000000-0000-4000-8000-${String(sample.studentId).padStart(12, '0')}`,
+        routeGenerationState: 'published',
+        testGenerationState: 'ready',
+      })
+      this.histories.set(key, participation)
+      if (!this.queue.some((item) => item.id === snapshotId)) this.queue.push(diagnostic)
+      added = true
+    }
+    if (added) this.persist()
+  }
+  private persist() {
+    const value = demoPblStateSchema.parse({
+      version: 1,
+      classrooms: this.classrooms,
+      histories: [...this.histories],
+      responses: [...this.responses],
+      queue: this.queue,
+      owners: [...this.owners],
+      sessionOwners: [...this.sessionOwners],
+      counter: this.counter,
+    })
+    storage.write('pbl:t44-demo', value, demoPblStateSchema)
+  }
   private studentId() {
     const key = actor().openid
     if (!this.owners.has(key)) this.owners.set(key, this.owners.size + 1)
@@ -396,6 +461,8 @@ export class DemoPblRepository implements PblRepository {
   }
   private teacher() {
     if (actor().role !== 'teacher') throw new AppError('仅教师可操作', { code: 'FORBIDDEN' })
+    if (actor().openid !== 'demo_teacher')
+      throw new AppError('资源不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
   }
   async classes() {
     actor()
@@ -413,8 +480,14 @@ export class DemoPblRepository implements PblRepository {
           phaseStatus: participation?.phaseStatus,
           interactionStyle: participation?.interactionStyle,
           styleSelectedAt: participation?.styleSelectedAt,
+          evidenceLocked: participation?.evidenceLocked,
+          conversationMode: participation?.conversationMode,
+          completionSnapshotId: participation?.completionSnapshotId,
+          evidenceCompletedRevision: participation?.evidenceCompletedRevision,
         }
       })
+      // Keep the autonomous completion scenario visible first.
+      .sort((left, right) => Number(right.id === 'demo-t44-autonomous') - Number(left.id === 'demo-t44-autonomous'))
     return { items: copy(items.slice(offset, offset + limit)), total: items.length, limit, offset }
   }
   async dialogue(id: string) {
@@ -426,12 +499,123 @@ export class DemoPblRepository implements PblRepository {
     const participation = this.histories.get(`${current}:${id}`)
     return { session: copy(session), participation: participation ? copy(participation) : undefined }
   }
+  async studentInsightsRecords(): Promise<DemoPblStudentInsightsRecord[]> {
+    const user = actor()
+    if (user.role !== 'student') throw new AppError('学生身份不可用', { code: 'ROLE_REQUIRED', statusCode: 403 })
+    const current = user.openid
+    return this.classrooms.flatMap((session) => {
+      if (session.sessionKind !== 'classroom' && this.sessionOwners.get(session.id) !== current) return []
+      const participation = this.histories.get(`${current}:${session.id}`)
+      if (!participation) return []
+
+      const value = participation.diagnostic
+      const completedDiagnostic =
+        participation.phaseStatus === 'completed' &&
+        participation.currentPhase === 'completed' &&
+        participation.evidenceLocked &&
+        Boolean(participation.completionSnapshotId) &&
+        participation.evidenceCompletedRevision != null &&
+        value?.diagnosticStatus === 'ready' &&
+        value.phase === 'synthesis' &&
+        value.phaseDecision === 'complete' &&
+        value.id === participation.completionSnapshotId &&
+        value.revision === participation.evidenceCompletedRevision
+      const diagnostic = completedDiagnostic && value
+      const createdAt = session.createdAt || new Date(0).toISOString()
+      return [
+        {
+          sessionId: session.id,
+          topicCode: session.topicCode,
+          caseTitle: session.caseContext?.title || 'PBL 研讨',
+          createdAt,
+          updatedAt: (diagnostic ? value?.createdAt : undefined) || participation.phaseCompletedAt || createdAt,
+          learningRouteId: participation.learningRouteId,
+          diagnosisCreatedAt: diagnostic ? value?.createdAt || participation.phaseCompletedAt || createdAt : undefined,
+          diagnosis: diagnostic
+            ? {
+                knowledgeGapCodes: [...new Set(value.knowledgeGaps.map((item) => item.point_code))],
+                reasoningIssueCodes: [...new Set(value.reasoningIssues.map((item) => item.dimension_id))],
+              }
+            : undefined,
+        },
+      ]
+    })
+  }
+  async teacherDiscussionRecords() {
+    this.teacher()
+    return this.classrooms.flatMap((session) => {
+      if (session.sessionKind !== 'classroom') return []
+      return [...this.owners.entries()].flatMap(([openid, studentId]) => {
+        const participation = this.histories.get(`${openid}:${session.id}`)
+        if (!participation) return []
+        return [
+          {
+            participationId: `${session.id}:${studentId}`,
+            sessionId: session.id,
+            classId: Number(session.classId),
+            studentId,
+            studentName: studentId === 1 ? '演示学生' : '演示学生（二）',
+            phase: participation.currentPhase,
+            status: participation.phaseStatus,
+            startedAt: participation.startedAt ?? null,
+            completedAt: participation.phaseCompletedAt ?? null,
+          },
+        ]
+      })
+    })
+  }
+
+  async teacherInsightsRecords() {
+    const user = actor()
+    if (user.role !== 'teacher') throw new AppError('仅教师可操作', { code: 'ROLE_REQUIRED', statusCode: 403 })
+    if (user.openid !== 'demo_teacher') return []
+    return this.classrooms.flatMap((session) => {
+      if (session.sessionKind !== 'classroom') return []
+      return [...this.owners.entries()].flatMap(([openid, studentId]) => {
+        const participation = this.histories.get(`${openid}:${session.id}`)
+        const diagnostic = participation?.diagnostic
+        if (
+          !participation ||
+          participation.phaseStatus !== 'completed' ||
+          participation.currentPhase !== 'completed' ||
+          !participation.evidenceLocked ||
+          !participation.completionSnapshotId ||
+          participation.evidenceCompletedRevision == null ||
+          diagnostic?.diagnosticStatus !== 'ready' ||
+          diagnostic.phaseDecision !== 'complete' ||
+          diagnostic.phase !== 'synthesis' ||
+          diagnostic.id !== participation.completionSnapshotId ||
+          diagnostic.revision !== participation.evidenceCompletedRevision
+        )
+          return []
+        const project = (code: string, summary: string) => ({
+          code,
+          summary: summary.replace(/\s+/g, ' ').slice(0, 160),
+        })
+        return [
+          {
+            participationId: `${session.id}:${studentId}`,
+            sessionId: session.id,
+            classId: Number(session.classId || 1),
+            className: '病理学演示班',
+            studentId,
+            studentName: diagnostic.studentName || (studentId === 1 ? '演示学生' : '演示学生（二）'),
+            completedAt:
+              diagnostic.createdAt || participation.phaseCompletedAt || session.createdAt || new Date(0).toISOString(),
+            knowledgeGapCodes: [...new Set(diagnostic.knowledgeGaps.map((item) => item.point_code))],
+            reasoningIssueCodes: [...new Set(diagnostic.reasoningIssues.map((item) => item.dimension_id))],
+            knowledgeGaps: diagnostic.knowledgeGaps.map((item) => project(item.point_code, item.summary)),
+            reasoningIssues: diagnostic.reasoningIssues.map((item) => project(item.dimension_id, item.summary)),
+          },
+        ]
+      })
+    })
+  }
   async teacherFeedbackNotifications() {
     return copy(this.learningNotificationsByStudent.get(actor().openid) || [])
   }
   async createDialogue(input: {
     clientSessionId: string
-    classId?: string
     interactionStyle: InteractionStyle
     goalPointCodes: string[]
   }) {
@@ -441,21 +625,17 @@ export class DemoPblRepository implements PblRepository {
     )
     if (existing) {
       const value = await this.dialogue(existing.id)
-      if (
-        existing.classId !== input.classId ||
-        existing.goalPointCodes.join('|') !== input.goalPointCodes.join('|') ||
-        value.participation?.interactionStyle !== input.interactionStyle
-      )
+      if (existing.goalPointCodes.join('|') !== input.goalPointCodes.join('|'))
         throw new AppError('会话标识已用于其他设置', { code: 'STATE_CONFLICT' })
       return value
     }
     const points = [...new Set(input.goalPointCodes)]
     const topics = new Set(points.map((code) => code.split('.').slice(0, 2).join('.')))
-    if ((input.classId && input.classId !== '1') || points.length < 1 || points.length > 3 || topics.size !== 1)
-      throw new AppError('请选择同一主题下 1～3 个知识点', { code: 'VALIDATION_ERROR' })
+    if (points.length !== 1 || input.goalPointCodes.length !== 1 || topics.size !== 1)
+      throw new AppError('请选择一个知识点', { code: 'VALIDATION_ERROR' })
     const session: PblSession = {
       id: `demo-dialogue-${input.clientSessionId}`,
-      classId: input.classId,
+      classId: undefined,
       topicCode: [...topics][0],
       status: 'active',
       goalPointCodes: points,
@@ -471,127 +651,53 @@ export class DemoPblRepository implements PblRepository {
     this.classrooms.unshift(session)
     this.sessionOwners.set(session.id, current)
     this.histories.set(`${current}:${session.id}`, participation)
+    this.persist()
     return { session: copy(session), participation: copy(participation) }
   }
   async startDialogue(id: string, interactionStyle: InteractionStyle) {
     const value = await this.dialogue(id)
-    if (value.participation && value.participation.interactionStyle !== interactionStyle)
-      throw new AppError('本次研讨的沟通方式已经确定', { code: 'STATE_CONFLICT' })
     if (!value.participation) {
       value.participation = this.emptyParticipation(interactionStyle)
-      this.histories.set(`${actor().openid}:${id}`, copy(value.participation))
+    } else if (value.participation.phaseStatus === 'completed') {
+      return copy(value)
+    } else {
+      value.participation.interactionStyle = interactionStyle
+      value.participation.styleSelectedAt = new Date().toISOString()
     }
+    this.histories.set(`${actor().openid}:${id}`, copy(value.participation))
+    this.persist()
     return copy(value)
   }
-  async dialogueSubmission(id: string) {
-    const value = await this.dialogue(id)
-    if (value.session.sessionKind !== 'student_initiated' || value.participation?.currentPhase !== 'completed')
-      throw new AppError('完成四阶段研讨后可提交', { code: 'STATE_CONFLICT' })
-    const diagnostic = value.participation.diagnostic
-    if (!diagnostic?.id) throw new AppError('尚未形成可提交诊断', { code: 'STATE_CONFLICT' })
-    const submitted = this.dialogueSubmissions.get(id)
-    const feedbacks = this.feedbackBySnapshot.get(diagnostic.id) || []
-    const teacherStatus: LearningDialogueSubmission['teacherStatus'] = diagnostic.recommendedQuestions?.some(
-      (item) => item.status === 'published',
-    )
-      ? 'task_published'
-      : feedbacks.some((item) => item.actionType === 'closed')
-        ? 'closed'
-        : feedbacks.length
-          ? 'responded'
-          : submitted
-            ? 'pending'
-            : undefined
-    return {
-      sessionId: id,
-      snapshotId: diagnostic.id,
-      knowledgeGaps: diagnostic.knowledgeGaps,
-      reasoningIssues: diagnostic.reasoningIssues,
-      evidenceSummary: diagnostic.phaseEvidenceSummary || '',
-      questions: (diagnostic.recommendedQuestions || []).map((item) => ({
-        id: item.id,
-        title: item.title,
-        prompt: item.prompt,
-      })),
-      submission: submitted
-        ? {
-            sessionId: id,
-            snapshotId: submitted.snapshotId,
-            classId: submitted.classId,
-            source: 'student',
-            submittedAt: submitted.submittedAt,
-          }
-        : undefined,
-      teacherStatus,
-      feedbacks: copy(feedbacks),
-      nextAction:
-        teacherStatus === 'task_published'
-          ? '进入正式任务'
-          : teacherStatus === 'responded'
-            ? '按反馈开启新一轮研讨'
-            : teacherStatus === 'closed'
-              ? '查看教师结论'
-              : submitted
-                ? '等待教师审阅'
-                : '完成后可提交给教师',
-    }
+  async dialogueSubmission(_id: string): Promise<LearningDialogueSubmission> {
+    throw new AppError('资源不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
   }
-  async submitDialogue(input: { id: string; snapshotId: string; classId: string; clientSubmissionId: string }) {
-    if (input.classId !== '1') throw new AppError('请选择本人有效班级', { code: 'RESOURCE_NOT_FOUND' })
-    const preview = await this.dialogueSubmission(input.id)
-    if (preview.snapshotId !== input.snapshotId)
-      throw new AppError('诊断版本已经改变，请重新预览', { code: 'STATE_CONFLICT' })
-    const existing = this.dialogueSubmissions.get(input.id)
-    if (
-      existing &&
-      (existing.clientSubmissionId !== input.clientSubmissionId ||
-        existing.snapshotId !== input.snapshotId ||
-        existing.classId !== input.classId)
-    )
-      throw new AppError('本轮已提交，不能改投', { code: 'STATE_CONFLICT' })
-    if (!existing)
-      this.dialogueSubmissions.set(input.id, {
-        clientSubmissionId: input.clientSubmissionId,
-        snapshotId: input.snapshotId,
-        classId: input.classId,
-        submittedAt: new Date().toISOString(),
-      })
-    if (!this.queue.some((item) => item.id === preview.snapshotId)) {
-      const diagnostic = (await this.dialogue(input.id)).participation?.diagnostic
-      if (diagnostic?.id === preview.snapshotId)
-        this.queue.unshift(
-          copy({
-            ...diagnostic,
-            classId: input.classId,
-            className: '病理学演示班',
-          }),
-        )
-    }
-    const diagnostic = (await this.dialogue(input.id)).participation?.diagnostic
-    if (diagnostic && !this.queue.some((item) => item.id === diagnostic.id)) this.queue.unshift(copy(diagnostic))
-    return this.dialogueSubmission(input.id)
-  }
+
   private emptyParticipation(interactionStyle: InteractionStyle): PblParticipation {
     return {
+      startedAt: new Date().toISOString(),
       messages: [],
       currentPhase: 'problem_framing',
       phaseStartedRevision: 0,
       phaseStatus: 'active',
       interactionStyle,
       styleSelectedAt: new Date().toISOString(),
+      evidenceLocked: false,
+      conversationMode: 'evidence',
     }
   }
   async active() {
     actor()
     return copy(
-      this.classrooms.map((item) => {
-        const participation = this.histories.get(`${actor().openid}:${item.id}`)
-        return {
-          ...item,
-          studentPhase: participation?.currentPhase ?? 'problem_framing',
-          phaseStatus: participation?.phaseStatus ?? 'active',
-        }
-      }),
+      this.classrooms
+        .filter((item) => item.sessionKind === 'classroom' || this.sessionOwners.get(item.id) === actor().openid)
+        .map((item) => {
+          const participation = this.histories.get(`${actor().openid}:${item.id}`)
+          return {
+            ...item,
+            studentPhase: participation?.currentPhase ?? 'problem_framing',
+            phaseStatus: participation?.phaseStatus ?? 'active',
+          }
+        }),
     )
   }
   async sessions(classId: string) {
@@ -601,15 +707,10 @@ export class DemoPblRepository implements PblRepository {
   async createSession(classId: string, topicCode: string, caseId: string, goals: string[]) {
     this.teacher()
     const selected = (await this.content.getGuidedCasesAsync()).find(
-      (item) => item.id === caseId && item.status === 'published' && item.medicalReviewStatus === 'approved',
+      (item) => item.id === caseId && item.status === 'published',
     )
-    if (
-      !selected ||
-      goals.length < 1 ||
-      goals.length > 3 ||
-      goals.some((code) => !selected.knowledgePointCodes?.includes(code))
-    )
-      throw new Error('请选择已审核病例及其目标')
+    if (!selected || goals.length !== 1 || goals.some((code) => !selected.knowledgePointCodes?.includes(code)))
+      throw new Error('请选择可用病例及其目标')
     const value: PblSession = {
       caseVersion: selected.version,
       caseContext: { title: selected.title },
@@ -625,35 +726,100 @@ export class DemoPblRepository implements PblRepository {
       sessionKind: 'classroom',
     }
     this.classrooms.push(value)
+    this.persist()
     return copy(value)
   }
   async closeSession(classId: string, id: string) {
+    this.teacher()
     const value = this.classrooms.find((s) => s.id === id && s.classId === classId)
     if (!value) throw new Error('课堂不存在')
     value.status = 'closed'
     value.version++
+    this.persist()
     return copy(value)
   }
   async participation(id: string) {
+    if (actor().role !== 'student') throw new AppError('学生身份不可用', { code: 'ROLE_REQUIRED', statusCode: 403 })
+    await this.dialogue(id)
     const key = `${actor().openid}:${id}`
     const existing = this.histories.get(key)
     if (existing) return copy(existing)
     const empty = this.emptyParticipation('guided')
+    this.studentId()
     this.histories.set(key, copy(empty))
+    this.persist()
     return copy(empty)
   }
-  async message(id: string, content: string, clientMessageId: string) {
+  async message(id: string, content: string, clientMessageId: string, interactionStyle: InteractionStyle) {
+    if (actor().role !== 'student') throw new AppError('学生身份不可用', { code: 'ROLE_REQUIRED', statusCode: 403 })
+    await this.dialogue(id)
     const key = `${actor().openid}:${id}`,
       requestKey = `${key}:${clientMessageId}`
     const existing = this.responses.get(requestKey)
-    if (existing) return copy(existing)
+    if (existing) {
+      if (existing.content !== content || existing.interactionStyle !== interactionStyle)
+        throw new AppError('消息标识已用于其他内容或回应方式', { code: 'STATE_CONFLICT' })
+      return copy(existing.result)
+    }
     const session = this.classrooms.find((s) => s.id === id)
-    if (!session || session.status === 'closed') throw new Error('课堂已关闭')
+    if (!session) throw new AppError('研讨不存在', { code: 'RESOURCE_NOT_FOUND' })
     const value = await this.participation(id),
       mid = String(value.messages.length + 1)
-    if (value.phaseStatus === 'completed' || value.currentPhase === 'completed')
-      throw new Error('四阶段讨论已完成，不能继续发送新消息')
+    if (session.status === 'closed' && value.phaseStatus !== 'completed')
+      throw new AppError('课堂已关闭', { code: 'STATE_CONFLICT' })
+    if (value.phaseStatus === 'completed' || value.currentPhase === 'completed') {
+      if (!value.evidenceLocked || !value.completionSnapshotId || value.evidenceCompletedRevision == null)
+        throw new AppError('完成边界异常，暂时无法继续', { code: 'STATE_CONFLICT' })
+      value.interactionStyle = interactionStyle
+      value.styleSelectedAt = new Date().toISOString()
+      value.messages.push({
+        id: mid,
+        sequence: value.messages.length + 1,
+        role: 'student',
+        content,
+        client_message_id: clientMessageId,
+        processing_status: 'completed',
+        interactionStyle,
+        turnScope: 'private_follow_up',
+      })
+      const assistantId = String(value.messages.length + 1)
+      value.messages.push({
+        id: assistantId,
+        sequence: value.messages.length + 1,
+        role: 'assistant',
+        content: renderResponse(
+          interactionStyle === 'direct'
+            ? '炎症后的个人续问可以继续从机制与形态证据的联系来理解。'
+            : '我们可以在不改变已完成研讨证据的前提下继续梳理这个疑问。',
+          ['此前四阶段证据和诊断已经冻结。', '这段续问仅你自己可见，不提交教师或进入统计。'],
+          interactionStyle === 'direct'
+            ? '请指出你还想展开的具体机制或形态表现。'
+            : '你现在最想澄清的是机制、形态，还是两者之间的联系？',
+        ),
+        interactionStyle,
+        turnScope: 'private_follow_up',
+        replyToMessageId: mid,
+      })
+      this.histories.set(key, copy(value))
+      const result: PblMessageSubmission = {
+        ...copy(value),
+        responseKind: 'private_follow_up',
+        turnScope: 'private_follow_up',
+        privateFollowUp: {
+          studentMessageId: mid,
+          assistantMessageId: assistantId,
+          processingStatus: 'completed',
+          safetyStatus: 'standard',
+          fallbackUsed: false,
+        },
+      }
+      this.responses.set(requestKey, { content, interactionStyle, result: copy(result) })
+      this.persist()
+      return result
+    }
     const phase = value.currentPhase
+    value.interactionStyle = interactionStyle
+    value.styleSelectedAt = new Date().toISOString()
     value.messages.push({
       id: mid,
       sequence: value.messages.length + 1,
@@ -661,9 +827,24 @@ export class DemoPblRepository implements PblRepository {
       content,
       client_message_id: clientMessageId,
       processing_status: 'completed',
+      interactionStyle,
+      turnScope: 'evidence',
     })
-    const directPrefix =
-      value.interactionStyle === 'direct' ? '先说明：炎症表现需结合血流和通透性变化理解。理解检验：' : ''
+    const opening =
+      interactionStyle === 'direct'
+        ? '炎症表现需要结合局部血流增加与血管通透性变化来解释。'
+        : '你已经提出了当前病理问题，可以继续把观察与机制连接起来。'
+    const nextStep =
+      phase === 'synthesis'
+        ? '研讨已完成，可查看后续学习安排。'
+        : interactionStyle === 'direct'
+          ? '请用自己的话说明其中一项机制怎样产生当前表现。'
+          : '请指出当前最关键的形态线索，并说明它支持哪种机制。'
+    const assistantReply = renderResponse(
+      opening,
+      ['Demo 合成教学演示，只用于验证界面合同。', '阶段证据仍只来自你的消息。'],
+      nextStep,
+    )
     const diagnostic: PblDiagnostic =
       phase !== 'synthesis'
         ? copy(analysis)
@@ -672,7 +853,7 @@ export class DemoPblRepository implements PblRepository {
             id: String(this.counter++),
             revision: value.messages.length,
             diagnosticStatus: 'ready',
-            assistantReply: '演示结果：需要补充血管反应的机制解释。',
+            assistantReply,
             followUpQuestion: undefined,
             studentId: String(this.studentId()),
             studentName: '演示学生',
@@ -681,7 +862,7 @@ export class DemoPblRepository implements PblRepository {
             sessionId: id,
             topicCode: session.topicCode,
             sessionKind: session.sessionKind,
-            interactionStyle: value.interactionStyle,
+            interactionStyle,
             phase: 'synthesis',
             phaseDecision: 'complete',
             phaseEvidenceSummary: 'Demo 合成回答整合了机制、证据与剩余疑问。',
@@ -696,18 +877,12 @@ export class DemoPblRepository implements PblRepository {
                 confidence: 'medium',
               },
             ],
-            recommendedQuestions: [
-              {
-                id: String(this.counter++),
-                title: '解释局部红肿的病理基础',
-                prompt: '分别说明血流与血管通透性改变造成的表现。',
-                linkedFindings: ['gap'],
-                status: 'proposed',
-                version: 1,
-              },
-            ],
+            recommendedQuestions: [],
           }
-    if (directPrefix) diagnostic.assistantReply = `${directPrefix}${diagnostic.assistantReply}`
+    diagnostic.schemaVersion = 8
+    diagnostic.assistantReply = assistantReply
+    diagnostic.interactionStyle = interactionStyle
+    diagnostic.followUpQuestion = phase === 'synthesis' ? undefined : nextStep
     if (phase !== 'synthesis') {
       const phases = ['problem_framing', 'hypothesis', 'evidence', 'synthesis'] as const
       diagnostic.phase = phase
@@ -720,6 +895,27 @@ export class DemoPblRepository implements PblRepository {
       value.phaseStatus = 'completed'
       value.phaseCompletedAt = new Date().toISOString()
       value.phaseStartedRevision += 1
+      value.evidenceLocked = true
+      value.conversationMode = 'private_follow_up'
+      value.completionSnapshotId = diagnostic.id
+      value.evidenceCompletedRevision = diagnostic.revision
+      if (learningRouteCompletion) {
+        const locator = await learningRouteCompletion({
+          sessionId: id,
+          studentOpenid: actor().openid,
+          sourceKind: session.sessionKind === 'classroom' ? 'classroom' : 'autonomous',
+          goalPointCodes: session.goalPointCodes,
+          diagnosisSummary: {
+            outcome: diagnostic.assistantReply,
+            knowledge_gaps: diagnostic.knowledgeGaps,
+            reasoning_issues: diagnostic.reasoningIssues,
+          },
+        })
+        value.learningRouteId = locator.learningRouteId
+        value.finalTestId = locator.finalTestId
+        value.routeGenerationState = locator.routeGenerationState
+        value.testGenerationState = locator.testGenerationState
+      }
     }
     value.diagnostic = diagnostic
     value.messages.push({
@@ -727,9 +923,17 @@ export class DemoPblRepository implements PblRepository {
       sequence: value.messages.length + 1,
       role: 'assistant',
       content: diagnostic.assistantReply,
+      interactionStyle,
+      turnScope: 'evidence',
+      replyToMessageId: mid,
     })
     this.histories.set(key, copy(value))
-    this.responses.set(requestKey, copy(value))
+    const result: PblMessageSubmission = {
+      ...copy(value),
+      responseKind: 'evidence_assessment',
+      turnScope: 'evidence',
+    }
+    this.responses.set(requestKey, { content, interactionStyle, result: copy(result) })
     if (diagnostic.diagnosticStatus === 'ready' && session.sessionKind === 'classroom') {
       for (const prior of this.queue.filter(
         (item) => item.studentId === diagnostic.studentId && item.sessionId === id,
@@ -739,7 +943,8 @@ export class DemoPblRepository implements PblRepository {
       }
       this.queue.unshift(copy(diagnostic))
     }
-    return copy(value)
+    this.persist()
+    return copy(result)
   }
   async diagnostics(filters: PblFilters = {}) {
     this.teacher()
@@ -778,6 +983,10 @@ export class DemoPblRepository implements PblRepository {
               : 'pending'
         return {
           snapshotId: item.id || '',
+          learningRouteId: [...this.histories.values()].find((value) => value.completionSnapshotId === item.id)
+            ?.learningRouteId,
+          finalTestId: [...this.histories.values()].find((value) => value.completionSnapshotId === item.id)
+            ?.finalTestId,
           sessionId: item.sessionId || '',
           source: item.sessionKind === 'student_initiated' ? 'student_submission' : 'classroom_diagnostic',
           status,
@@ -788,14 +997,17 @@ export class DemoPblRepository implements PblRepository {
           lastActivityAt: feedbacks.at(-1)?.createdAt || item.createdAt,
           knowledgeGapCount: item.knowledgeGaps.length,
           reasoningIssueCount: item.reasoningIssues.length,
+          readOnly: item.sessionKind === 'student_initiated',
           nextAction:
-            status === 'pending'
-              ? '审阅并反馈'
-              : status === 'task_published'
-                ? '查看学习进展'
-                : status === 'closed'
-                  ? '已关闭'
-                  : '发送补充反馈',
+            item.sessionKind === 'student_initiated'
+              ? '历史共享记录，仅供查看'
+              : status === 'pending'
+                ? '审阅并反馈'
+                : status === 'task_published'
+                  ? '查看学习进展'
+                  : status === 'closed'
+                    ? '已关闭'
+                    : '发送补充反馈',
         }
       })
       .filter((item) => !filters.source || item.source === filters.source)
@@ -816,58 +1028,6 @@ export class DemoPblRepository implements PblRepository {
       feedbacks: copy(this.feedbackBySnapshot.get(snapshotId) || []),
     }
   }
-  async feedback(input: {
-    snapshotId: string
-    clientFeedbackId: string
-    body: string
-    actionType: 'feedback_only' | 'task_published' | 'closed'
-    suggestion?: PblSuggestion
-    targets?: PblTargets
-  }) {
-    this.teacher()
-    const current = this.feedbackBySnapshot.get(input.snapshotId) || []
-    const previous = current.find((item) => item.id === input.clientFeedbackId)
-    if (previous) return copy(previous)
-    if (current.some((item) => item.actionType === 'closed'))
-      throw new AppError('该工作项已关闭', { code: 'STATE_CONFLICT' })
-    if (current.some((item) => item.actionType === 'task_published'))
-      throw new AppError('正式任务已发布，请在学习跟进中继续反馈', { code: 'STATE_CONFLICT' })
-    if (input.actionType === 'task_published') {
-      if (!input.suggestion) throw new AppError('请选择建议题', { code: 'VALIDATION_ERROR' })
-      await this.adopt(input.suggestion, input.targets)
-    }
-    if (input.actionType === 'closed') {
-      const diagnostic = await this.diagnostic(input.snapshotId)
-      for (const question of diagnostic.recommendedQuestions || [])
-        if (['proposed', 'edited'].includes(question.status)) question.status = 'rejected'
-    }
-    const row: PblTeacherFeedback = {
-      id: input.clientFeedbackId,
-      snapshotId: input.snapshotId,
-      actionType: input.actionType,
-      body: input.body.trim(),
-      createdAt: new Date().toISOString(),
-    }
-    this.feedbackBySnapshot.set(input.snapshotId, [...current, row])
-    const submitted = [...this.dialogueSubmissions.entries()].find(([, item]) => item.snapshotId === input.snapshotId)
-    const sessionId = submitted?.[0]
-    const student = sessionId ? this.sessionOwners.get(sessionId) : undefined
-    if (student && sessionId) {
-      const id = this.notificationCounter++
-      const notification: DemoPblLearningNotification = {
-        id,
-        sessionId,
-        actionType: input.actionType,
-        body: row.body,
-        createdAt: row.createdAt || new Date().toISOString(),
-      }
-      this.learningNotificationsByStudent.set(student, [
-        notification,
-        ...(this.learningNotificationsByStudent.get(student) || []),
-      ])
-    }
-    return copy(row)
-  }
   async diagnostic(id: string) {
     this.teacher()
     const found = this.queue.find((d) => d.id === id)
@@ -878,212 +1038,11 @@ export class DemoPblRepository implements PblRepository {
     const found = await this.diagnostic(id)
     return copy(this.queue.filter((d) => d.studentId === found.studentId && d.sessionId === found.sessionId))
   }
-  async editSuggestion(item: PblSuggestion, reject = false) {
-    this.teacher()
-    const value = this.queue.flatMap((d) => d.recommendedQuestions ?? []).find((s) => s.id === item.id)
-    if (!value) throw new Error('建议不存在')
-    if (value.version !== item.version || !['proposed', 'edited'].includes(value.status))
-      throw new Error('建议版本已更新')
-    Object.assign(value, item, { status: reject ? 'rejected' : 'edited', version: item.version + 1 })
-    return copy(value)
+  async plans(): Promise<PblPlan[]> {
+    actor()
+    return []
   }
-  async adopt(item: PblSuggestion, targets: PblTargets = {}) {
-    this.teacher()
-    const diagnostic = this.queue.find((d) => d.recommendedQuestions?.some((s) => s.id === item.id))
-    const value = diagnostic?.recommendedQuestions?.find((s) => s.id === item.id)
-    if (!value || !diagnostic) throw new Error('建议不存在')
-    if (value.status === 'published') return copy(value)
-    if (value.version !== item.version || !['proposed', 'edited'].includes(value.status))
-      throw new Error('建议版本已更新')
-    const recipients = targets.wholeClass
-      ? [1, 2]
-      : targets.studentIds?.length
-        ? targets.studentIds
-        : [Number(diagnostic.studentId)]
-    if (recipients.some((id) => ![...this.owners.values()].includes(id))) throw new Error('目标学生不属于演示班')
-    const problemId = `demo-pbl-question-${item.id}`
-    await this.content.upsertProblem({
-      id: problemId,
-      type: '病例分析',
-      title: item.title,
-      description: item.prompt,
-      target: 'individual',
-      targetIds: [...this.owners.entries()].filter(([, id]) => recipients.includes(id)).map(([key]) => key),
-      status: 'published',
-      time: new Date().toISOString(),
-      contentType: 'question',
-      specialty: '病理学',
-      knowledgePointCodes: diagnostic.knowledgeGaps.map((gap) => gap.point_code),
-    })
-    for (const recipient of new Set(recipients)) {
-      const planId = this.counter++
-      const definitions: Array<{
-        task_type: PblTask['task_type']
-        prompt: string
-        options?: string[]
-        point_code?: string
-        target_label?: string
-        reference?: string
-        cycle_number: number
-        target_type: string
-        target_code: string
-        variant_code: string
-      }> = [
-        {
-          task_type: 'discussion',
-          prompt: item.prompt,
-          target_label: '正式讨论',
-          reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-          cycle_number: 1,
-          target_type: 'discussion',
-          target_code: 'discussion',
-          variant_code: `demo:${item.id}:discussion:v1`,
-        },
-        {
-          task_type: 'discussion',
-          prompt: '第二轮反思：重新说明证据链与不确定性。',
-          target_label: '正式讨论',
-          reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-          cycle_number: 2,
-          target_type: 'discussion',
-          target_code: 'discussion',
-          variant_code: `demo:${item.id}:discussion:v2`,
-        },
-        ...diagnostic.knowledgeGaps.flatMap((gap) => [
-          {
-            task_type: 'knowledge_review' as const,
-            point_code: gap.point_code,
-            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
-            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-            prompt: 'Demo 巩固：如何建立机制解释？',
-            options: ['结合形态与机制核对证据', '只记结论'],
-            cycle_number: 1,
-            target_type: 'knowledge_gap',
-            target_code: gap.point_code,
-            variant_code: `${gap.point_code}.practice`,
-          },
-          {
-            task_type: 'retest' as const,
-            point_code: gap.point_code,
-            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
-            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-            prompt: 'Demo 再测：另一切片与原解释不符，应怎样处理？',
-            options: ['比较新证据并修订假设', '忽略差异'],
-            cycle_number: 1,
-            target_type: 'knowledge_gap',
-            target_code: gap.point_code,
-            variant_code: `${gap.point_code}.retest`,
-          },
-          {
-            task_type: 'knowledge_review' as const,
-            point_code: gap.point_code,
-            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
-            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-            prompt: 'Demo 第二轮巩固：从相反证据重新建立机制解释。',
-            options: ['比较证据后修订解释', '只重复原结论'],
-            cycle_number: 2,
-            target_type: 'knowledge_gap',
-            target_code: gap.point_code,
-            variant_code: `${gap.point_code}.practice.v2`,
-          },
-          {
-            task_type: 'retest' as const,
-            point_code: gap.point_code,
-            target_label: gap.point_code === 'pathology.inflammation.vascular' ? '炎症的血管反应' : gap.point_code,
-            reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-            prompt: 'Demo 第二轮再测：新证据削弱原假设时应怎样处理？',
-            options: ['降低原假设优先级并继续核对', '忽略新证据'],
-            cycle_number: 2,
-            target_type: 'knowledge_gap',
-            target_code: gap.point_code,
-            variant_code: `${gap.point_code}.retest.v2`,
-          },
-        ]),
-        ...(targets.includeCaseRetry
-          ? [
-              {
-                task_type: 'micro_drill' as const,
-                prompt: 'Demo 病例回顾：重新描述课堂病例的观察、假设与证据限制。正式完整重练由 API 训练流程执行。',
-                target_label: '证据推理',
-                reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-                cycle_number: 1,
-                target_type: 'reasoning_issue',
-                target_code: 'evidence_reasoning',
-                variant_code: 'demo.evidence_reasoning.v1',
-              },
-              {
-                task_type: 'micro_drill' as const,
-                prompt: 'Demo 第二轮病例回顾：先写反例，再修订观察、假设与证据限制。',
-                target_label: '证据推理',
-                reference: 'Demo 合成教学资料；仅用于界面合同演示。',
-                cycle_number: 2,
-                target_type: 'reasoning_issue',
-                target_code: 'evidence_reasoning',
-                variant_code: 'demo.evidence_reasoning.v2',
-              },
-            ]
-          : []),
-      ]
-      this.learning.push({
-        id: planId,
-        student_id: recipient,
-        source_type: 'pbl_suggestion',
-        source_id: Number(item.id),
-        source_context: {
-          teacher_id: 1,
-          class_id: 1,
-          class_name: '病理学演示班',
-          session_id: Number(diagnostic.sessionId?.replace(/\D/g, '') || 1),
-          snapshot_id: Number(diagnostic.id),
-          suggestion_id: Number(item.id),
-          point_codes: diagnostic.knowledgeGaps.map((gap) => gap.point_code),
-          dimension_ids: [],
-          topic_code: diagnostic.topicCode!,
-        },
-        status: 'active',
-        verification_status: 'not_ready',
-        verification_note: '',
-        verified_at: null,
-        version: 1,
-        current_cycle: 1,
-        max_cycles: 2,
-        automation_exhausted: false,
-        decision_policy_version: 'pbl-mastery-v1',
-        decision_basis: {},
-        evaluated_at: null,
-        evaluations: [],
-        due_at: new Date(Date.now() + 7 * 86400000).toISOString(),
-        tasks: definitions.map(
-          ({ task_type, cycle_number, target_type, target_code, variant_code, ...public_definition }, position) => ({
-            id: this.counter++,
-            position: position + 1,
-            task_type,
-            cycle_number,
-            target_type,
-            target_code,
-            variant_code,
-            status: cycle_number === 1 ? 'pending' : 'inactive',
-            problem_id: null,
-            public_definition,
-            result: null,
-          }),
-        ),
-      })
-    }
-    Object.assign(value, item, { status: 'published', problemId, version: item.version + 1 })
-    return copy(value)
-  }
-  async plans() {
-    return copy(this.learning.filter((plan) => plan.student_id === this.studentId()))
-  }
-  async results(sessionId?: string) {
-    this.teacher()
-    return copy(
-      this.learning.filter(
-        (plan) => !sessionId || plan.source_context.session_id === Number(sessionId.replace(/\D/g, '')),
-      ),
-    )
-  }
+
   async teacherSessions(filters: { classId?: string; status?: string; offset?: number } = {}) {
     this.teacher()
     const items = this.classrooms
@@ -1109,266 +1068,81 @@ export class DemoPblRepository implements PblRepository {
     const session = this.classrooms.find((item) => item.id === sessionId && item.classId === classId)
     if (!session) throw new AppError('课堂不存在', { code: 'RESOURCE_NOT_FOUND' })
     const workItems = await this.workItems({ classId, sessionId })
-    const students = [...this.owners.entries()].map(([openid, studentId]) => {
+    const routeFacts = (await readClassroomRouteState?.(Number(classId), sessionId)) || []
+    const routesByStudent = new Map(routeFacts.map((item) => [String(item.studentId), item]))
+    const students = [...this.owners.entries()].flatMap(([openid, studentId]) => {
       const participation = this.histories.get(`${openid}:${sessionId}`)
-      const plan = this.learning.find(
+      const diagnostic = this.queue.find(
         (item) =>
-          item.student_id === studentId && item.source_context.session_id === Number(sessionId.replace(/\D/g, '') || 0),
+          item.studentId === String(studentId) &&
+          item.sessionId === sessionId &&
+          item.classId === classId &&
+          item.sessionKind === 'classroom',
       )
-      return {
-        studentId: String(studentId),
-        studentName: openid,
-        currentPhase: participation?.currentPhase || 'problem_framing',
-        phaseStatus: participation?.phaseStatus || 'active',
-        snapshotId: participation?.diagnostic?.id,
-        workItemStatus: participation?.diagnostic
-          ? workItems.items.find((item) => item.snapshotId === participation.diagnostic?.id)?.status
-          : undefined,
-        taskProgress: {
-          completed: plan?.tasks.filter((task) => task.status === 'completed').length || 0,
-          total: plan?.tasks.length || 0,
+      const route = routesByStudent.get(String(studentId))
+      if (!participation && !diagnostic && !route) return []
+      const snapshotId = participation?.diagnostic?.id || diagnostic?.id
+      return [
+        {
+          studentId: String(studentId),
+          studentName: diagnostic?.studentName || `演示学生 ${studentId}`,
+          currentPhase: participation?.currentPhase || (diagnostic ? 'completed' : 'problem_framing'),
+          phaseStatus: participation?.phaseStatus || 'active',
+          lastActivityAt: route?.updatedAt,
+          snapshotId,
+          workItemStatus: snapshotId
+            ? workItems.items.find((item) => item.snapshotId === snapshotId)?.status
+            : undefined,
+          taskProgress: {
+            completed: route?.completedSteps || 0,
+            total: route?.totalSteps || 0,
+          },
+          learningRouteId: route?.routeId,
+          finalTestId: route?.finalTestId,
+          resultId: route?.resultId,
+          routeStatus: route?.status,
+          score: route?.score,
         },
-        currentCycle: plan?.current_cycle,
-        verificationStatus: plan?.verification_status,
-      }
+      ]
     })
+    const completedRoutes = routeFacts.filter((item) => item.resultId)
+    const scores = completedRoutes
+      .map((item) => item.score)
+      .filter((value): value is number => typeof value === 'number')
+    const phaseCounts = students.reduce<Record<string, number>>((counts, student) => {
+      counts[student.currentPhase] = (counts[student.currentPhase] || 0) + 1
+      return counts
+    }, {})
     return {
       session: { id: sessionId, classId, status: session.status },
-      summary: await this.summary(session),
+      summary: {
+        participants: students.length,
+        diagnoses: students.filter((student) => student.snapshotId).length,
+        publishedRoutes: routeFacts.filter((item) => !['generating', 'generation_failed'].includes(item.status)).length,
+        completedRoutes: completedRoutes.length,
+        completionRate: routeFacts.length ? Math.round((completedRoutes.length * 1000) / routeFacts.length) / 10 : null,
+        averageScore: scores.length
+          ? Math.round((scores.reduce((total, score) => total + score, 0) * 10) / scores.length) / 10
+          : null,
+        phaseCounts,
+      },
       students,
     }
   }
-  async followUps(
-    filters: {
-      classId?: string
-      sessionId?: string
-      studentId?: string
-      status?: PblFollowUpStatus
-      offset?: number
-    } = {},
-  ) {
-    this.teacher()
-    const items: PblFollowUp[] = this.learning
-      .map((plan): PblFollowUp => ({
-        planId: plan.id,
-        studentId: plan.student_id,
-        studentName: [...this.owners.entries()].find(([, id]) => id === plan.student_id)?.[0] || '学生',
-        classId: plan.source_context.class_id,
-        className: plan.source_context.class_name || `班级 ${plan.source_context.class_id}`,
-        sessionId: plan.source_context.session_id,
-        sessionTopic: plan.source_context.topic_code || 'PBL 课堂',
-        status:
-          plan.verification_status === 'improved'
-            ? 'improved'
-            : plan.verification_status === 'needs_reinforcement'
-              ? 'support_needed'
-              : plan.current_cycle === 2
-                ? 'cycle_2'
-                : 'in_progress',
-        currentCycle: plan.current_cycle,
-        verificationStatus: plan.verification_status,
-        automationExhausted: plan.automation_exhausted,
-        failedTargets: plan.decision_basis.failed_targets || [],
-      }))
-      .filter(
-        (item) =>
-          (!filters.classId || item.classId === Number(filters.classId)) &&
-          (!filters.sessionId || item.sessionId === Number(filters.sessionId)) &&
-          (!filters.studentId || item.studentId === Number(filters.studentId)) &&
-          (!filters.status || item.status === filters.status),
-      )
-    return { items: copy(items.slice(filters.offset ?? 0, (filters.offset ?? 0) + 20)), total: items.length }
-  }
-  async followUp(planId: number) {
-    this.teacher()
-    const plan = this.learning.find((item) => item.id === planId)
-    if (!plan) throw new AppError('学习跟进不存在', { code: 'RESOURCE_NOT_FOUND' })
-    return { plan: copy(plan), feedbacks: [] }
-  }
-  async followUpFeedback(planId: number, clientFeedbackId: string, body: string) {
-    const followUp = await this.followUp(planId)
-    if (!followUp.plan.automation_exhausted) throw new AppError('当前计划不需要补充反馈', { code: 'STATE_CONFLICT' })
-    return {
-      id: clientFeedbackId,
-      snapshotId: String(followUp.plan.source_context.snapshot_id),
-      planId: String(planId),
-      actionType: 'follow_up',
-      body,
-      createdAt: new Date().toISOString(),
-    }
-  }
   async submitTask(
-    taskId: number,
-    submissionId: string,
-    answer: { text?: string; selected_option?: number },
+    _taskId: number,
+    _submissionId: string,
+    _answer: { text?: string; selected_option?: number },
   ): Promise<PblPlan> {
-    const plan = this.learning.find((p) => p.student_id === this.studentId() && p.tasks.some((t) => t.id === taskId))
-    const task = plan?.tasks.find((t) => t.id === taskId)
-    if (!plan || !task) throw new Error('任务不存在')
-    const previous = this.submissions.get(taskId)
-    if (previous) {
-      if (previous.id !== submissionId || previous.answer !== JSON.stringify(answer)) throw new Error('任务已经提交')
-      return copy(plan)
-    }
-    if (task.status === 'inactive' || task.status === 'skipped' || task.cycle_number !== plan.current_cycle)
-      throw new Error('该轮任务尚未激活')
-    if (
-      plan.tasks.some(
-        (t) =>
-          t.cycle_number === task.cycle_number &&
-          t.position < task.position &&
-          !['completed', 'skipped'].includes(t.status),
-      )
-    )
-      throw new Error('请先完成前面的任务')
-    const objective = !!task.public_definition.options
-    if (
-      objective
-        ? !Number.isInteger(answer.selected_option) || !task.public_definition.options?.[answer.selected_option!]
-        : !answer.text?.trim()
-    )
-      throw new Error('请填写有效答案')
-    task.status = 'completed'
-    task.result = {
-      score: objective ? (answer.selected_option === 0 ? 100 : 0) : task.task_type === 'micro_drill' ? 80 : null,
-      feedback: 'Demo 学习证据已保存，系统将在本轮完成后自动判定。',
-      evidence: [objective ? 'Demo 客观题作答' : 'Demo 学生作答'],
-      answer,
-      submitted_at: new Date().toISOString(),
-    }
-    this.submissions.set(taskId, { id: submissionId, answer: JSON.stringify(answer) })
-    const active = plan.tasks.filter(
-      (item) => item.cycle_number === plan.current_cycle && !['inactive', 'skipped'].includes(item.status),
-    )
-    if (active.every((item) => item.status === 'completed')) {
-      const retests = active.filter((item) => item.task_type === 'retest')
-      const micro = active.filter((item) => item.task_type === 'micro_drill')
-      const failed = [
-        ...retests.filter((item) => item.result?.score !== 100),
-        ...micro.filter((item) => (item.result?.score ?? -1) < 70),
-      ]
-      plan.evaluated_at = new Date().toISOString()
-      plan.version++
-      plan.decision_basis = {
-        result: failed.length
-          ? plan.current_cycle === 1
-            ? 'next_cycle_activated'
-            : 'needs_reinforcement'
-          : 'improved',
-        cycle: plan.current_cycle,
-        failed_targets: failed.map((item) => ({ target_type: item.target_type, target_code: item.target_code })),
-        checks: [...retests, ...micro].map((item) => ({
-          target_type: item.target_type,
-          target_code: item.target_code,
-          threshold: item.task_type === 'retest' ? 100 : 70,
-          score: item.result?.score ?? null,
-          evidence_present: Boolean(item.result?.evidence.length),
-          passed: item.task_type === 'retest' ? item.result?.score === 100 : (item.result?.score ?? -1) >= 70,
-        })),
-      }
-      plan.evaluations ??= []
-      plan.evaluations.push({
-        cycle_number: plan.current_cycle,
-        policy_version: plan.decision_policy_version,
-        result: String(plan.decision_basis.result),
-        checks: plan.decision_basis.checks ?? [],
-        failed_targets: plan.decision_basis.failed_targets ?? [],
-        automation_exhausted: plan.current_cycle === 2 && failed.length > 0,
-        record_source: 'runtime',
-        evaluated_at: plan.evaluated_at,
-      })
-      if (!failed.length) {
-        plan.status = 'completed'
-        plan.verification_status = 'improved'
-      } else if (plan.current_cycle === 1) {
-        const failedKeys = new Set(failed.map((item) => `${item.target_type}:${item.target_code}`))
-        plan.current_cycle = 2
-        for (const item of plan.tasks.filter((candidate) => candidate.cycle_number === 2))
-          item.status =
-            item.target_type === 'discussion' || failedKeys.has(`${item.target_type}:${item.target_code}`)
-              ? 'pending'
-              : 'skipped'
-      } else {
-        plan.status = 'completed'
-        plan.verification_status = 'needs_reinforcement'
-        plan.automation_exhausted = true
-        plan.decision_basis.offline_support_required = true
-      }
-    }
-    return copy(plan)
+    return retiredDemoFlow()
   }
-  async summary(session: PblSession) {
-    const plans = await this.results(session.id),
-      tasks = plans.flatMap((p) => p.tasks)
-    const scores = tasks.filter((t) => t.task_type === 'retest' && t.result).map((t) => t.result!.score!)
-    return {
-      participants: [...this.histories.keys()].filter((key) => key.endsWith(`:${session.id}`)).length,
-      diagnoses: this.queue.filter((d) => d.sessionId === session.id).length,
-      published_suggestions: this.queue
-        .filter((d) => d.sessionId === session.id)
-        .flatMap((d) => d.recommendedQuestions ?? [])
-        .filter((s) => s.status === 'published').length,
-      plans: plans.length,
-      tasks: tasks.length,
-      completed_tasks: tasks.filter((t) => t.status === 'completed').length,
-      pending_verification: 0,
-      improved: plans.filter((p) => p.verification_status === 'improved').length,
-      needs_reinforcement: plans.filter((p) => p.verification_status === 'needs_reinforcement').length,
-      objective_retest_count: scores.length,
-      objective_retest_average: scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
-      phase_counts: Object.fromEntries(
-        ['problem_framing', 'hypothesis', 'evidence', 'synthesis', 'completed'].map((phase) => [
-          phase,
-          [...this.histories.entries()].filter(
-            ([key, participation]) => key.endsWith(`:${session.id}`) && participation.currentPhase === phase,
-          ).length,
-        ]),
-      ),
-      automation_exhausted: plans.filter((p) => p.automation_exhausted).length,
-    }
-  }
+
   async reports(limit = 20, offset = 0) {
-    const studentId = this.studentId()
-    const keyPrefix = `${actor().openid}:`
-    const plans = this.learning.filter((plan) => plan.student_id === studentId)
-    const sessions = this.classrooms.filter((session) => {
-      const numeric = Number(session.id.replace(/\D/g, '') || 0)
-      return (
-        this.histories.has(`${keyPrefix}${session.id}`) ||
-        plans.some((plan) => plan.source_context.session_id === numeric)
-      )
-    })
-    return demoReportPage(
-      sessions.map((session) => {
-        const numeric = Number(session.id.replace(/\D/g, '') || 0)
-        const participation = this.histories.get(`${keyPrefix}${session.id}`)
-        return demoReportDetail(
-          session,
-          participation,
-          plans.filter((plan) => plan.source_context.session_id === numeric),
-          studentId,
-          this.feedbackBySnapshot.get(participation?.diagnostic?.id || '') || [],
-          this.dialogueSubmissions.get(session.id)?.submittedAt,
-        )
-      }),
-      limit,
-      offset,
-    )
+    actor()
+    return demoReportPage([], limit, offset)
   }
-  async report(sessionId: string) {
-    const page = await this.reports(100, 0)
-    if (!page.items.some((item) => item.session.id === sessionId)) throw new Error('学情报告不存在')
-    const studentId = this.studentId()
-    const session = this.classrooms.find((item) => item.id === sessionId)!
-    const numeric = Number(session.id.replace(/\D/g, '') || 0)
-    const participation = this.histories.get(`${actor().openid}:${session.id}`)
-    return demoReportDetail(
-      session,
-      participation,
-      this.learning.filter((plan) => plan.student_id === studentId && plan.source_context.session_id === numeric),
-      studentId,
-      this.feedbackBySnapshot.get(participation?.diagnostic?.id || '') || [],
-      this.dialogueSubmissions.get(session.id)?.submittedAt,
-    )
+
+  async report(_sessionId: string): Promise<never> {
+    throw new AppError('资源不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
   }
 }

@@ -1,9 +1,14 @@
 from sqlalchemy import func, select
 
-from app.modules.content.infrastructure.models import Problem, ProblemOrigin
+from app.modules.content.infrastructure.models import KnowledgeCardContribution, Problem
 from app.modules.identity.infrastructure.models import User
-from app.modules.pbl.application.records import InferenceRequest, InferenceResult
-from app.modules.pbl.infrastructure.models import PblParticipation, PblQuestionSuggestion
+from app.modules.pbl.application.records import (
+    InferenceRequest,
+    InferenceResult,
+    PrivateFollowupRequest,
+    PrivateFollowupResult,
+)
+from app.modules.pbl.infrastructure.models import PblParticipation, PblSession
 from app.modules.pbl.infrastructure.repositories import SqlAlchemyPblRepository
 
 
@@ -22,12 +27,19 @@ def _headers(token: str) -> dict[str, str]:
 
 class _ReadyGateway:
     calls = 0
+    private_calls = 0
 
     def infer(self, request: InferenceRequest) -> InferenceResult:
         from app.modules.pbl.wiring import LocalMockGateway
 
         self.calls += 1
         return LocalMockGateway().infer(request)
+
+    def private_follow_up(self, request: PrivateFollowupRequest) -> PrivateFollowupResult:
+        from app.modules.pbl.wiring import LocalMockGateway
+
+        self.private_calls += 1
+        return LocalMockGateway().private_follow_up(request)
 
 
 def _configure_gateway(monkeypatch) -> _ReadyGateway:
@@ -46,11 +58,16 @@ def _classroom(client, teacher_token: str, student_external_id: str) -> int:
         json={"student_external_id": student_external_id},
     )
     assert added.status_code == 204
-    from app.bootstrap.seed import seed_showcase_case
+    from app.bootstrap.seed import seed_showcase_case, showcase_additional_payloads, showcase_case_payload
     from app.db import SessionLocal
 
     with SessionLocal() as session:
         seed_showcase_case(session)
+        # Shared synthetic fixtures explicitly represent system-owned read-only resources.
+        slugs = [showcase_case_payload()["slug"], *(item["slug"] for item in showcase_additional_payloads())]
+        for case in session.scalars(select(Problem).where(Problem.slug.in_(slugs))):
+            case.author_id = None
+        session.commit()
     return class_id
 
 
@@ -112,10 +129,9 @@ def test_pbl_student_visibility_idempotency_and_close(client, db, monkeypatch) -
     )
 
 
-def test_pbl_teacher_scope_edit_protection_and_adoption_idempotency(client, db, monkeypatch) -> None:
+def test_pbl_schema_v8_has_no_legacy_suggestions_and_mutations_are_retired(client, db, monkeypatch) -> None:
     _configure_gateway(monkeypatch)
     teacher = _login(client, "teacher", "pbl-owner")
-    other_teacher = _login(client, "teacher", "pbl-other")
     student = _login(client, "student", "pbl-owner-student")
     class_id = _classroom(client, teacher, "pbl-owner-student")
     session_id = client.post(
@@ -123,6 +139,7 @@ def test_pbl_teacher_scope_edit_protection_and_adoption_idempotency(client, db, 
         headers=_headers(teacher),
         json=_session_payload(db),
     ).json()["id"]
+    assert db.get(PblSession, session_id).ai_schema_version == 8
     for index, content in enumerate(("为什么红肿？", "提出血管机制假设。", "比较支持与反对证据。", "整合机制与疑问。")):
         response = client.post(
             f"/student/pbl-sessions/{session_id}/messages",
@@ -132,49 +149,21 @@ def test_pbl_teacher_scope_edit_protection_and_adoption_idempotency(client, db, 
         assert response.status_code == 200
     queue = client.get("/teacher/pbl-diagnostics", headers=_headers(teacher))
     assert queue.status_code == 200
-    suggestion = queue.json()["items"][0]["recommended_questions"][0]
-    suggestion_id = suggestion["id"]
-    assert (
-        client.get(
-            f"/teacher/pbl-diagnostics/{queue.json()['items'][0]['id']}", headers=_headers(other_teacher)
-        ).status_code
-        == 404
-    )
-    assert (
-        client.patch(
-            f"/teacher/pbl-question-suggestions/{suggestion_id}",
-            headers=_headers(other_teacher),
-            json={"version": suggestion["version"], "title": "x", "prompt": "x", "reject": False},
-        ).status_code
-        == 404
-    )
+    diagnostic = queue.json()["items"][0]
+    assert diagnostic["recommended_questions"] == []
 
-    edited = client.patch(
-        f"/teacher/pbl-question-suggestions/{suggestion_id}",
+    retired = client.patch(
+        "/teacher/pbl-question-suggestions/1",
         headers=_headers(teacher),
-        json={"version": suggestion["version"], "title": "教师修订题", "prompt": "请区分血管反应。", "reject": False},
+        json={},
     )
-    assert edited.status_code == 200
-    assert edited.json()["status"] == "edited"
-
-    latest = client.get("/teacher/pbl-diagnostics", headers=_headers(teacher)).json()["items"][0][
-        "recommended_questions"
-    ][0]
-    publish = {"version": latest["version"], "title": "教师当前编辑", "prompt": "请区分血管反应。"}
-    suggestion_id = latest["id"]
     adopted = client.post(
-        f"/teacher/pbl-question-suggestions/{suggestion_id}/adopt-and-publish", headers=_headers(teacher), json=publish
+        "/teacher/pbl-question-suggestions/1/adopt-and-publish",
+        headers=_headers(teacher),
+        json={},
     )
-    repeated = client.post(
-        f"/teacher/pbl-question-suggestions/{suggestion_id}/adopt-and-publish", headers=_headers(teacher), json=publish
-    )
-    assert adopted.status_code == repeated.status_code == 200
-    assert adopted.json()["problem_id"] == repeated.json()["problem_id"]
-    db.expire_all()
-    assert db.scalar(select(func.count(Problem.id))) == 6
-    assert db.scalar(select(func.count(ProblemOrigin.id))) == 1
-    stored = db.get(PblQuestionSuggestion, suggestion_id)
-    assert stored is not None and stored.status == "published"
+    assert retired.status_code == adopted.status_code == 409
+    assert retired.json()["detail"]["reason"] == adopted.json()["detail"]["reason"] == "RETIRED_FLOW"
 
 
 def test_pbl_repository_rejects_a_stale_inference_revision(client, db, monkeypatch) -> None:
@@ -216,7 +205,7 @@ def test_pbl_repository_rejects_a_stale_inference_revision(client, db, monkeypat
     assert stale is None
 
 
-def test_t14_participation_advances_four_phases_and_locks_new_messages(client, db, monkeypatch) -> None:
+def test_t14_participation_advances_four_phases_and_t32_locks_evidence(client, db, monkeypatch) -> None:
     gateway = _configure_gateway(monkeypatch)
     teacher = _login(client, "teacher", "t14-phase-teacher")
     student = _login(client, "student", "t14-phase-student")
@@ -239,20 +228,43 @@ def test_t14_participation_advances_four_phases_and_locks_new_messages(client, d
         assert last.json()["current_phase"] == phase
     assert gateway.calls == 4
     assert last is not None and last.json()["diagnostic"]["diagnostic_status"] == "ready"
+    db.expire_all()
+    from app.modules.learning.infrastructure.route_models import LearningRoute, RouteFinalTest
+
+    route = db.scalar(select(LearningRoute))
+    test_shell = db.scalar(select(RouteFinalTest))
+    assert route is not None and test_shell is not None and test_shell.route_id == route.id
+    assert db.scalar(select(func.count(LearningRoute.id))) == 1
+    assert db.scalar(select(func.count(RouteFinalTest.id))) == 1
+    assert db.scalar(
+        select(func.count(KnowledgeCardContribution.id)).where(KnowledgeCardContribution.source_type == "pbl_ai")
+    ) == 0
     duplicate = client.post(
         path,
         headers=_headers(student),
         json={"client_message_id": "stage-3", "content": "第 4 阶段的新证据"},
     )
-    assert duplicate.status_code == 200 and duplicate.json() == last.json()
+    assert duplicate.status_code == 200
+    assert duplicate.json()["diagnostic"] == last.json()["diagnostic"]
+    assert duplicate.json()["learning_route_id"] == last.json()["learning_route_id"]
+    assert duplicate.json()["final_test_id"] == last.json()["final_test_id"]
+    assert duplicate.json()["current_phase"] == last.json()["current_phase"] == "completed"
     assert gateway.calls == 4
-    assert (
-        client.post(
-            path,
-            headers=_headers(student),
-            json={"client_message_id": "after-complete", "content": "完成后的新消息"},
-        ).status_code
-        == 409
+    private = client.post(
+        path,
+        headers=_headers(student),
+        json={"client_message_id": "after-complete", "content": "完成后的新消息"},
     )
+    assert private.status_code == 200
+    assert private.json()["response_kind"] == private.json()["turn_scope"] == "private_follow_up"
+    assert private.json()["diagnostic"] == last.json()["diagnostic"]
+    assert private.json()["phase_started_revision"] == last.json()["phase_started_revision"]
+    assert gateway.calls == 4 and gateway.private_calls == 1
+    db.expire_all()
+    assert db.scalar(select(func.count(LearningRoute.id))) == 1
+    assert db.scalar(select(func.count(RouteFinalTest.id))) == 1
+    assert db.scalar(
+        select(func.count(KnowledgeCardContribution.id)).where(KnowledgeCardContribution.source_type == "pbl_ai")
+    ) == 0
     sessions = client.get(f"/classes/{class_id}/pbl-sessions", headers=_headers(teacher)).json()
     assert sessions[0]["phase_counts"]["completed"] == 1

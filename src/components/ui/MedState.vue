@@ -1,7 +1,11 @@
 <template>
   <view
-    class="med-state card"
-    :class="[`med-state--${variant}`, { 'med-state--centered': centered }]"
+    class="med-state"
+    :class="[
+      { card: size !== 'compact' },
+      `med-state--${variant}`,
+      { 'med-state--centered': centered, 'med-state--compact': size === 'compact' },
+    ]"
     :role="variant === 'error' ? 'alert' : 'status'"
     :aria-live="variant === 'error' ? 'assertive' : 'polite'"
     :aria-busy="variant === 'loading' ? 'true' : undefined"
@@ -15,34 +19,41 @@
         size="lg"
       />
     </view>
-    <text class="med-state__title">{{ title }}</text>
-    <text class="med-state__description">{{ description }}</text>
-    <button
-      v-if="actionLabel"
-      hover-class="is-pressed"
-      :hover-start-time="0"
-      :hover-stay-time="80"
-      tabindex="0"
-      role="button"
-      class="med-state__action"
-      @keydown="activateButtonOnKey"
-      @click="$emit('action')"
-    >
-      {{ actionLabel }}
-    </button>
-    <button
-      v-if="secondaryActionLabel"
-      hover-class="is-pressed"
-      :hover-start-time="0"
-      :hover-stay-time="80"
-      tabindex="0"
-      role="button"
-      class="med-state__secondary"
-      @keydown="activateButtonOnKey"
-      @click="$emit('secondaryAction')"
-    >
-      {{ secondaryActionLabel }}
-    </button>
+    <view class="med-state__body">
+      <text class="med-state__title">{{ title }}</text>
+      <text class="med-state__description">{{ description }}</text>
+      <view
+        v-if="actionLabel || secondaryActionLabel"
+        class="med-state__actions"
+      >
+        <button
+          v-if="actionLabel"
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
+          class="med-state__action"
+          @keydown="activateButtonOnKey"
+          @click="$emit('action')"
+        >
+          {{ actionLabel }}
+        </button>
+        <button
+          v-if="secondaryActionLabel"
+          hover-class="is-pressed"
+          :hover-start-time="0"
+          :hover-stay-time="80"
+          tabindex="0"
+          role="button"
+          class="med-state__secondary"
+          @keydown="activateButtonOnKey"
+          @click="$emit('secondaryAction')"
+        >
+          {{ secondaryActionLabel }}
+        </button>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -59,8 +70,9 @@ withDefaults(
     actionLabel?: string
     secondaryActionLabel?: string
     centered?: boolean
+    size?: 'default' | 'compact'
   }>(),
-  { variant: 'empty', actionLabel: '', secondaryActionLabel: '', centered: false },
+  { variant: 'empty', actionLabel: '', secondaryActionLabel: '', centered: false, size: 'default' },
 )
 
 defineEmits<{ action: []; secondaryAction: [] }>()
@@ -98,8 +110,76 @@ defineEmits<{ action: []; secondaryAction: [] }>()
   background: var(--med-brand-soft);
   border-radius: 28rpx;
 }
+.med-state__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+}
+.med-state__actions {
+  display: flex;
+  width: 100%;
+  max-width: 320rpx;
+  margin-top: 24rpx;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+}
 .med-state--error .med-state__icon {
   background: var(--med-alert-soft);
+}
+.med-state--compact {
+  padding: 20rpx 24rpx;
+  align-items: center;
+  flex-direction: row;
+  gap: 20rpx;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+.med-state--compact .med-state__icon {
+  width: 64rpx;
+  height: 64rpx;
+  flex: none;
+  border-radius: 16rpx;
+}
+.med-state--compact .med-state__body {
+  align-items: stretch;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.med-state--compact .med-state__title {
+  margin-top: 0;
+  font-size: 28rpx;
+}
+.med-state--compact .med-state__description {
+  max-width: 100%;
+  margin-top: 4rpx;
+  font-size: 23rpx;
+}
+.med-state--compact .med-state__actions {
+  margin-top: 12rpx;
+  width: 100%;
+  flex-direction: row;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.med-state--compact .med-state__action,
+.med-state--compact .med-state__secondary {
+  width: auto;
+  flex: 1 1 180rpx;
+  min-width: 0;
+  min-height: 88rpx;
+  margin-top: 0;
+  padding: 0 28rpx;
+  font-size: 26rpx;
+}
+.med-state--compact .med-state__secondary {
+  background: transparent;
 }
 .med-state__icon--loading {
   animation: med-state-pulse 1.2s ease-in-out infinite alternate;
@@ -118,22 +198,38 @@ defineEmits<{ action: []; secondaryAction: [] }>()
   line-height: 1.6;
 }
 .med-state__action {
-  min-width: 180rpx;
+  width: 100%;
   min-height: 88rpx;
-  margin-top: 24rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   background: var(--med-brand);
   border-radius: 18rpx;
   font-size: 24rpx;
+  line-height: 1.4;
 }
 .med-state__secondary {
-  min-width: 180rpx;
+  width: 100%;
   min-height: 88rpx;
-  margin-top: 12rpx;
+  margin: 0;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--med-brand);
   background: var(--med-brand-soft);
   border-radius: 18rpx;
   font-size: 24rpx;
+  line-height: 1.4;
+}
+.med-state__action::after,
+.med-state__secondary::after {
+  border: 0;
 }
 @keyframes med-state-pulse {
   from {

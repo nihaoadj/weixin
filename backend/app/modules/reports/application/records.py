@@ -28,6 +28,8 @@ class ReportRecord:
     teacher_feedback: str | None
     reviewer_id: int | None
     review_topic_codes: tuple[str, ...]
+    class_id: int | None
+    class_name: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -44,6 +46,8 @@ class ReportSummaryRecord:
     teacher_score: float | None
     message_preview: str
     message_count: int
+    class_id: int | None
+    class_name: str | None
     created_at: datetime
     updated_at: datetime
 

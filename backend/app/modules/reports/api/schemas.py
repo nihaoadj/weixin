@@ -1,11 +1,13 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
 from app.modules.qa.api.schemas import MessageRead
 
 ReportAnalysisText = Annotated[str, Field(min_length=1, max_length=2000)]
+
+ReportKind = Literal["qa_learning_report"]
 
 
 class ReportAnalysisIssue(BaseModel):
@@ -26,6 +28,10 @@ class ReportCreate(BaseModel):
     analysis: ReportAnalysis | None = None
 
 
+class ReportSubmit(BaseModel):
+    class_id: int = Field(gt=0)
+
+
 class ReportReview(BaseModel):
     teacher_score: float = Field(ge=0, le=100)
     teacher_feedback: str = Field(default="", max_length=2000)
@@ -39,6 +45,7 @@ class ReportRead(BaseModel):
     student_id: int
     student_name: str | None = None
     status: str
+    report_kind: ReportKind
     ai_score: float
     ai_summary: str
     analysis: ReportAnalysis | None = None
@@ -47,6 +54,8 @@ class ReportRead(BaseModel):
     teacher_feedback: str | None = None
     reviewer_id: int | None = None
     review_topic_codes: list[str] = Field(default_factory=list)
+    class_id: int | None = None
+    class_name: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -60,10 +69,13 @@ class ReportSummaryRead(BaseModel):
     student_id: int
     student_name: str
     status: str
+    report_kind: ReportKind
     ai_score: float
     teacher_score: float | None = None
     message_preview: str = ""
     message_count: int = 0
+    class_id: int | None = None
+    class_name: str | None = None
     created_at: datetime
     updated_at: datetime
 

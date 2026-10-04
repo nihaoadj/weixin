@@ -2,95 +2,105 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.modules.classroom.wiring import classroom_scope_port
-from app.modules.content.wiring import question_publication_port
-from app.modules.pbl.application.records import InferenceRequest, InferenceResult
+from app.modules.content.wiring import knowledge_catalog_port, question_publication_port
+from app.modules.pbl.application.records import (
+    InferenceRequest,
+    InferenceResult,
+    LearningResponseRecord,
+    PrivateFollowupRequest,
+    PrivateFollowupResult,
+)
 from app.modules.pbl.application.use_cases import PblApplication
 from app.modules.pbl.infrastructure.checked_gateway import CheckedGateway
+from app.modules.pbl.infrastructure.classroom_participation import SqlPblClassroomParticipation
 from app.modules.pbl.infrastructure.providers import CozeBotGateway, CozeWorkflowGateway, OpenAICompatibleGateway
 from app.modules.pbl.infrastructure.providers.coze_client import build_coze_client
+from app.modules.pbl.infrastructure.providers.coze_parser import unavailable_private_follow_up, unavailable_result
+from app.modules.pbl.infrastructure.providers.response_renderer import render_learning_response
 from app.modules.pbl.infrastructure.repositories import SqlAlchemyPblRepository
+
+
+def pbl_classroom_participation_port(session: Session) -> SqlPblClassroomParticipation:
+    return SqlPblClassroomParticipation(session)
+
+
+def pbl_student_insight_read_port(session: Session):
+    return SqlAlchemyPblRepository(session)
 
 
 class DisabledGateway:
     def infer(self, request: InferenceRequest) -> InferenceResult:
-        return InferenceResult(
-            "PBL 教学助手当前未启用。",
-            "unavailable",
-            failure_reason="disabled",
-            interaction_style=request.interaction_style,
-        )
+        return unavailable_result("disabled", request.interaction_style)
+
+    def private_follow_up(self, request: PrivateFollowupRequest) -> PrivateFollowupResult:
+        return unavailable_private_follow_up("disabled", request.interaction_style)
 
 
 class LocalMockGateway:
     """Deterministic test-only provider used by the API-mode local E2E suite."""
 
     def infer(self, request: InferenceRequest) -> InferenceResult:
-        phase_prompts = {
-            "problem_framing": "请用一句话概括当前病理问题，并指出关键形态线索。",
-            "hypothesis": "请提出至少一个机制假设，并说明你最不确定的地方。",
-            "evidence": "哪些病例证据支持或反驳该假设？这些证据有什么限制？",
-        }
-        if request.current_phase != "synthesis":
-            reply = phase_prompts[request.current_phase]
-            if request.interaction_style == "direct":
-                reply = f"先说明：{request.question}需要结合当前病理主题与阶段证据判断。理解检验：{reply}"
-            return InferenceResult(
-                reply,
-                "probing",
-                follow_up_question=phase_prompts[request.current_phase],
-                provider_metadata={"provider": "local_mock", "mode": "test"},
-                phase_assessment={
-                    "phase": request.current_phase,
-                    "decision": "advance",
-                    "evidence_message_ids": [request.message_id],
-                    "evidence_summary": "合成测试回答满足当前阶段目标。",
-                    "missing_elements": [],
-                },
-                interaction_style=request.interaction_style,
-            )
-        return InferenceResult(
-            "你已经开始联系血管反应与炎症表现，但还需要区分不同机制。",
-            "ready",
-            knowledge_gaps=(
+        if request.schema_version != 8:
+            return unavailable_result("retired_schema", request.interaction_style)
+        return self._infer_v8(request)
+
+    def _infer_v8(self, request: InferenceRequest) -> InferenceResult:
+        complete = request.current_phase == "synthesis"
+        sections = LearningResponseRecord(
+            "合成教学演示：整理观察、机制与证据之间的联系。",
+            ("请区分可见病理变化与推断，并说明证据限制。",),
+            "研讨已完成，学习计划正在生成。" if complete else "请继续解释本阶段的病理依据。",
+        )
+        no_gaps = "无明确薄弱点" in request.question or not request.goal_point_codes
+        gaps = (
+            (
                 {
                     "id": "gap-1",
-                    "point_code": request.goal_point_codes[0]
-                    if request.goal_point_codes
-                    else "pathology.inflammation.vascular",
+                    "point_code": request.goal_point_codes[0],
                     "summary": "机制解释需要补充",
                     "confidence": "medium",
                     "evidence_message_ids": [request.message_id],
-                    "evidence_summary": "学生的第二次解释尚未区分相关机制。",
+                    "evidence_summary": "合成教学回答的机制证据连接需要完善。",
                 },
-            ),
-            reasoning_issues=(
-                {
-                    "id": "reason-1",
-                    "dimension_id": "evidence_reasoning",
-                    "issue_type": "missing_evidence",
-                    "summary": "结论与组织学依据连接不足",
-                    "evidence_message_ids": [request.message_id],
-                    "evidence_summary": "解释未明确指出支持结论的形态证据。",
-                    "improvement": "先列出观察，再说明推断。",
-                },
-            ),
-            recommended_questions=(
-                {
-                    "title": "炎症早期的血管反应",
-                    "prompt": "请用血流变化和通透性变化解释红、肿、热。",
-                    "objective": "区分观察与推断",
-                    "linked_findings": ["gap-1", "reason-1"],
-                },
-            ),
+            )
+            if complete and not no_gaps
+            else ()
+        )
+        return InferenceResult(
+            render_learning_response(sections),
+            "ready" if complete else "probing",
+            response_sections=sections,
+            schema_version=8,
+            interaction_style=request.interaction_style,
+            diagnosis_outcome=("no_clear_gaps" if no_gaps else "identified_gaps") if complete else None,
+            knowledge_gaps=gaps,
             provider_metadata={"provider": "local_mock", "mode": "test"},
             phase_assessment={
-                "phase": "synthesis",
-                "decision": "complete",
+                "phase": request.current_phase,
+                "decision": "complete" if complete else "advance",
                 "evidence_message_ids": [request.message_id],
-                "evidence_summary": "合成测试回答完成机制、证据与疑问整合。",
+                "evidence_summary": "合成回答满足当前教学阶段目标。",
                 "missing_elements": [],
             },
+        )
+
+    def private_follow_up(self, request: PrivateFollowupRequest) -> PrivateFollowupResult:
+        opening = (
+            "先直接说明：炎症表现需要把局部血流变化、血管通透性和渗出联系起来。"
+            if request.interaction_style == "direct"
+            else "你可以先比较血流增加与血管通透性增加分别解释了哪些表现。"
+        )
+        sections = LearningResponseRecord(
+            opening,
+            ("这是完成后的合成私人问答，不会改变已冻结证据。", "AI 回复不作为正式学习证据。"),
+            "尝试用一条形态观察和一条机制依据重新表述你的理解。",
+        )
+        return PrivateFollowupResult(
+            assistant_reply=render_learning_response(sections),
             interaction_style=request.interaction_style,
+            provider_metadata={"provider": "local_mock", "mode": "test"},
+            safety_notice="Demo 合成教学演示，不能替代临床诊疗。",
+            response_sections=sections,
         )
 
 
@@ -144,7 +154,7 @@ def _gateway():
 
 
 def pbl_application(session: Session) -> PblApplication:
-    from app.modules.learning.wiring import pbl_learning_port
+    from app.modules.learning.wiring import learning_evidence_port, learning_route_application
 
     gateway, provider, mode = _gateway()
     return PblApplication(
@@ -155,7 +165,9 @@ def pbl_application(session: Session) -> PblApplication:
         question_publication_port(session),
         provider,
         mode,
-        pbl_learning_port(session),
+        knowledge_catalog_port(session),
+        learning_evidence_port(session),
+        completion_routes=learning_route_application(session),
     )
 
 
@@ -169,3 +181,12 @@ def practice_json_port():
     from app.modules.pbl.infrastructure.practice_transport import PracticeTransport
 
     return PracticeTransport(get_settings())
+
+
+def learning_route_inference_port():
+    gateway, _, _ = _gateway()
+    return CheckedGateway(gateway)
+
+
+def pbl_teacher_diagnosis_read_port(session: Session):
+    return SqlAlchemyPblRepository(session, classroom_scope_port(session))

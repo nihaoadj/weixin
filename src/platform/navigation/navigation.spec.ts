@@ -33,12 +33,23 @@ describe('navigation semantics', () => {
 
   it('maps each session role to one canonical home', () => {
     expect(roleHome('student')).toBe(ROUTES.studentPbl)
-    expect(roleHome('teacher')).toBe(ROUTES.teacherWorkspace)
+    expect(roleHome('teacher')).toBe(ROUTES.teacherPbl)
     expect(roleHome(null)).toBe(ROUTES.login)
   })
 
-  it('keeps every declared route exactly aligned with pages.json paths', () => {
-    const declared = Object.values(ROUTES).sort()
+  it('keeps active routes and explicit compatibility pages exactly aligned with pages.json paths', () => {
+    const compatibilityPages = [
+      '/pages/teacher/pbl-progress/pbl-progress',
+      '/pages/teacher/learning/result',
+      '/pages/teacher/list/list',
+      '/pages/teacher/analytics/index',
+      '/pages/teacher/analytics/student-detail',
+      '/pages/teacher/medical-review/review-list',
+      '/pages/teacher/medical-review/review-detail',
+      '/pages/teacher/classes/classes',
+      '/pages/teacher/knowledge-cards/knowledge-cards',
+    ]
+    const declared = [...Object.values(ROUTES), ...compatibilityPages].sort()
     const configured = pagesConfig.pages.map((page) => `/${page.path}`).sort()
     expect(declared).toEqual(configured)
   })

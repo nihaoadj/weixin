@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="180" viewBox="0 0 750 180" fill="none">
+  <defs>
+    <linearGradient id="heart" x1="557" y1="44" x2="630" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C8F3FB"/>
+      <stop offset="1" stop-color="#68CFF0"/>
+    </linearGradient>
+  </defs>
+  <rect width="750" height="180" fill="#F5FBFE"/>
+  <path d="M0 5C84 45 150-22 258 14C365 50 435 46 526 14C609-15 675 19 750 2V69C665 49 602 78 515 78C416 78 354 39 251 47C148 55 78 106 0 74V5Z" fill="#EAF6FD"/>
+  <path d="M0 47C85 5 158 51 253 57C351 63 410 27 500 31C598 35 656 77 750 47V112C662 94 596 128 499 121C399 114 340 78 241 88C145 98 75 142 0 111V47Z" fill="#E2F3FC" fill-opacity=".9"/>
+  <path d="M0 105C92 150 177 119 272 116C374 112 425 151 525 154C620 156 681 120 750 127V180H0V105Z" fill="#EEF8FD"/>
+  <path d="M0 131C101 160 180 139 282 137C386 135 445 171 546 169C630 168 691 143 750 147V180H0V131Z" fill="#F8FCFE"/>
+  <g opacity=".82">
+    <path d="M495 91H515L522 102L530 56L540 117L550 81L560 91H565" stroke="#61D7F1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M615 61C601 42 575 48 575 75C575 101 615 127 615 127C615 127 655 101 655 75C655 48 629 42 615 61Z" fill="url(#heart)"/>
+    <path d="M590 86H601L607 75L613 100L620 82L626 90H640" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="#479FEA" font-family="KaiTi, STKaiti, serif" font-size="24" font-style="italic" text-anchor="middle" transform="rotate(-8 704 91)">
+      <text x="704" y="81">Better</text>
+      <text x="704" y="107">Doctor</text>
+    </g>
+  </g>
+</svg>

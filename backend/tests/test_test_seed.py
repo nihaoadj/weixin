@@ -18,8 +18,9 @@ def test_test_seed_is_idempotent_and_builds_each_demo_path() -> None:
         assert first["question_threads"] == 1
         assert first["case_attempts"] == 1
         assert db.query(CaseAssessment).count() == 1
-        assert db.query(LearningPlan).count() == 1
-        assert db.query(LearningTask).count() == 3
+        # An independent case keeps its student assessment without a formal classroom plan.
+        assert db.query(LearningPlan).count() == 0
+        assert db.query(LearningTask).count() == 0
         assert db.query(Report).filter(Report.status == "pending_review").count() == 1
         assert db.query(Problem).filter(Problem.medical_review_status == "pending").count() == 1
         assert db.query(CaseAttempt).filter(CaseAttempt.status == "assessed").count() == 1

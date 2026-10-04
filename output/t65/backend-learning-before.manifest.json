@@ -1,0 +1,49 @@
+{
+  "created_at": "2026-10-03T14:52:40.1059462Z",
+  "files": [
+    {
+      "path": "backend/app/modules/learning/application/knowledge_review.py",
+      "sha256": "B396A413267A53F68D8E6FBED35C8E69DA4DD7460DFE3871F7DA73BC4561D667",
+      "bytes": 13079
+    },
+    {
+      "path": "backend/app/modules/learning/application/review_ports.py",
+      "sha256": "9B22F057001356CFE94A2D49B12DCCD7CC3B8B9C4E9E46E9D138D8362044B52C",
+      "bytes": 1129
+    },
+    {
+      "path": "backend/app/modules/learning/application/review_records.py",
+      "sha256": "5115664B7D0232EDF6003EE03A35E024AE79AD4D24ABE9D8F561E04D4EBB0750",
+      "bytes": 1418
+    },
+    {
+      "path": "backend/app/modules/learning/infrastructure/knowledge_review_repository.py",
+      "sha256": "32592AB60FA6389D94719DECB643DC8438ECD9A11C838D2FC3A2AD8C86674639",
+      "bytes": 5815
+    },
+    {
+      "path": "backend/app/modules/learning/wiring.py",
+      "sha256": "0024F046ACD4687BB4B2896C59DD7B1265F122EF6DD05F9D6275D7DA09F9224E",
+      "bytes": 4448
+    },
+    {
+      "path": "backend/app/modules/learning/public.py",
+      "sha256": "1FB6E5A7505874771EC864DF12FB200FF015C4DAABF26A5ABAB3931AEFA41405",
+      "bytes": 10411
+    },
+    {
+      "path": "backend/tests/test_t08_knowledge_review.py",
+      "sha256": "05705C610DF1F021651F09FE0692268621D4182B156499845ED690B8CD52C7E9",
+      "bytes": 14026
+    }
+  ],
+  "git_status": [
+    "M  backend/app/modules/learning/application/knowledge_review.py",
+    "M  backend/app/modules/learning/application/review_ports.py",
+    "M  backend/app/modules/learning/infrastructure/knowledge_review_repository.py",
+    "M  backend/app/modules/learning/public.py",
+    "M  backend/app/modules/learning/wiring.py",
+    "MM backend/tests/test_t08_knowledge_review.py"
+  ],
+  "archive_sha256": "5A9E198A41B08A73167C49D121D9B6BD0A1279CAD43B8D3AF691F3C931578A60"
+}

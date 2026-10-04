@@ -1,0 +1,1 @@
+npx vitest run [nine requested files plus two new behavior files] | exit 0

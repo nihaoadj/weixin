@@ -3,9 +3,32 @@ import type { Conversation, Report, StudentQuestion } from '@/types/domain'
 const demoStudentId = 'demo_student'
 const demoConversationId = 'pathology-demo-conversation-v2'
 const demoCreatedAt = '2026-08-28T10:00:00.000Z'
+// T29 submit-flow fixture: a deterministic draft QA learning report the demo
+// student can submit to the demo class through the real picker/confirm flow.
+const demoDraftConversationId = 'pathology-demo-draft-conversation'
+const demoDraftCreatedAt = '2026-09-13T09:00:00.000Z'
 
 export function createDemoConversations(): Conversation[] {
   return [
+    {
+      conversationId: demoDraftConversationId,
+      createdAt: demoDraftCreatedAt,
+      updatedAt: demoDraftCreatedAt,
+      messages: [
+        {
+          id: 'demo-draft-msg-1',
+          role: 'user',
+          content: '血栓形成的条件有哪些？怎样和死后凝血块区分？',
+          timestamp: '09:00',
+        },
+        {
+          id: 'demo-draft-msg-2',
+          role: 'assistant',
+          content: '可以从内皮损伤、血流状态与血液凝固性三方面整理，再比较附着度与镜下结构。',
+          timestamp: '09:01',
+        },
+      ],
+    },
     {
       conversationId: demoConversationId,
       createdAt: demoCreatedAt,
@@ -35,8 +58,30 @@ export function createDemoConversations(): Conversation[] {
 }
 
 export function createDemoReports(): Report[] {
-  const [conversation] = createDemoConversations()
+  const [draftConversation, conversation] = createDemoConversations()
   return [
+    {
+      id: 'pathology-demo-report-draft',
+      conversationId: draftConversation.conversationId,
+      messages: draftConversation.messages,
+      analysis: {
+        score: 64,
+        summary: '已列出 thrombosis 形成条件，但区分可逆变化的依据还不完整。',
+        errors: [
+          {
+            content: '死后凝血块的鉴别要点未展开。',
+            suggestion: '补充附着度、光泽、镜下纤丝结构等对照观察。',
+          },
+        ],
+        strengths: ['能够按条件逐项列举。'],
+        generalSuggestions: ['按假设、证据、机制解释的顺序重组答案。'],
+      },
+      createdAt: demoDraftCreatedAt,
+      studentId: demoStudentId,
+      studentName: '示例学生',
+      status: '草稿',
+      kind: 'qa_learning_report',
+    },
     {
       id: 'pathology-demo-report-v2',
       conversationId: conversation.conversationId,
@@ -57,6 +102,9 @@ export function createDemoReports(): Report[] {
       studentId: demoStudentId,
       studentName: '示例学生',
       status: '待批阅',
+      kind: 'qa_learning_report',
+      classId: '1',
+      className: '病理学演示班',
     },
   ]
 }

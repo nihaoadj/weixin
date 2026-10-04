@@ -12,10 +12,17 @@ from app.modules.analytics.application.records import (
     ScopeClass,
     ScopeStudent,
 )
+from app.modules.learning.public import LearningEvidenceReadPort
 
 
 class AnalyticsReader(Protocol):
     def load_classes(self, teacher_id: int, class_id: int | None) -> tuple[ScopeClass, ...]: ...
+
+    def load_owned_classes(self, teacher_id: int, class_id: int | None) -> tuple[ScopeClass, ...]: ...
+
+    def load_student_names(self, student_ids: tuple[int, ...]) -> dict[int, str]: ...
+
+    def owns_case(self, teacher_id: int, problem_id: int) -> bool: ...
 
     def load_students(self, classes: tuple[ScopeClass, ...]) -> tuple[ScopeStudent, ...]: ...
 
@@ -30,3 +37,6 @@ class AnalyticsReader(Protocol):
     def load_learning(self, student_id: int) -> tuple[LearningPlanRecord | None, tuple[PracticeMasteryRecord, ...]]: ...
 
     def load_knowledge(self, student_ids: tuple[int, ...], now: datetime) -> KnowledgeAnalyticsRecord: ...
+
+
+__all__ = ["AnalyticsReader", "LearningEvidenceReadPort"]

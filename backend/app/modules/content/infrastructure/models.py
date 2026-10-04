@@ -1,7 +1,19 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.platform.database import Base
@@ -47,6 +59,10 @@ class Problem(Base):
         back_populates="problem", cascade="all, delete-orphan"
     )
 
+    @property
+    def knowledge_point_codes(self) -> tuple[str, ...]:
+        return tuple(link.point_code for link in self.knowledge_links)
+
 
 class ProblemKnowledgeLink(Base):
     __tablename__ = "problem_knowledge_links"
@@ -75,12 +91,29 @@ class KnowledgeCardContribution(Base):
     """Teacher-authored card attached to a fixed system knowledge point."""
 
     __tablename__ = "knowledge_card_contributions"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_type",
+            "source_snapshot_id",
+            "source_position",
+            name="uq_knowledge_card_pbl_source",
+        ),
+        Index("ix_knowledge_card_source_status", "source_type", "status"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     catalog_card_code: Mapped[str | None] = mapped_column(String(160), nullable=True, unique=True)
     point_code: Mapped[str] = mapped_column(String(120), index=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     class_code: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    ai_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    source_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    source_snapshot_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_finding_ids: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]", nullable=False)
+    origin_student_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    origin_student_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    target_student_ids: Mapped[list[int]] = mapped_column(JSON, default=list, server_default="[]", nullable=False)
     version: Mapped[int] = mapped_column(Integer, default=1)
     card_type: Mapped[str] = mapped_column(String(20), default="single_choice")
     prompt: Mapped[str] = mapped_column(Text)
@@ -98,4 +131,201 @@ class KnowledgeCardContribution(Base):
     )
 
 
-__all__ = ["KnowledgeCardContribution", "Problem", "ProblemKnowledgeLink", "ProblemOrigin"]
+class KnowledgeCatalog(Base):
+    """Versioned, persisted knowledge catalog; runtime code must not synthesize it."""
+
+    __tablename__ = "knowledge_catalogs"
+    __table_args__ = (
+        CheckConstraint("status IN ('active', 'archived')", name="ck_knowledge_catalog_status"),
+        CheckConstraint(
+            "evidence_status IN ('source_supported', 'insufficient')",
+            name="ck_knowledge_catalog_evidence_status",
+        ),
+        CheckConstraint(
+            "medical_review_status IN ('pending_expert_review', 'expert_reviewed', 'rejected')",
+            name="ck_knowledge_catalog_medical_review_status",
+        ),
+        Index(
+            "uq_knowledge_catalog_single_active",
+            "status",
+            unique=True,
+            sqlite_where=text("status = 'active'"),
+            postgresql_where=text("status = 'active'"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    version: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    label: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    reference_note: Mapped[str] = mapped_column(String(500))
+    evidence_status: Mapped[str] = mapped_column(String(30))
+    medical_review_status: Mapped[str] = mapped_column(String(30))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class KnowledgeModule(Base):
+    __tablename__ = "knowledge_modules"
+    __table_args__ = (
+        UniqueConstraint("catalog_id", "code", name="uq_knowledge_module_catalog_code"),
+        UniqueConstraint("catalog_id", "position", name="uq_knowledge_module_catalog_position"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    catalog_id: Mapped[int] = mapped_column(ForeignKey("knowledge_catalogs.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(120), index=True)
+    label: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer)
+
+
+class KnowledgePoint(Base):
+    __tablename__ = "knowledge_points"
+    __table_args__ = (
+        UniqueConstraint("catalog_id", "code", name="uq_knowledge_point_catalog_code"),
+        UniqueConstraint("module_id", "position", name="uq_knowledge_point_module_position"),
+        CheckConstraint(
+            "evidence_status IN ('source_supported', 'insufficient')",
+            name="ck_knowledge_point_evidence_status",
+        ),
+        CheckConstraint(
+            "medical_review_status IN ('pending_expert_review', 'expert_reviewed', 'rejected')",
+            name="ck_knowledge_point_medical_review_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    catalog_id: Mapped[int] = mapped_column(ForeignKey("knowledge_catalogs.id", ondelete="CASCADE"), index=True)
+    module_id: Mapped[int] = mapped_column(ForeignKey("knowledge_modules.id", ondelete="CASCADE"), index=True)
+    code: Mapped[str] = mapped_column(String(120), index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    objective: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text)
+    case_slug: Mapped[str] = mapped_column(String(160))
+    position: Mapped[int] = mapped_column(Integer)
+    evidence_status: Mapped[str] = mapped_column(String(30))
+    medical_review_status: Mapped[str] = mapped_column(String(30))
+    reviewer_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class KnowledgeStudyMaterial(Base):
+    __tablename__ = "knowledge_study_materials"
+    __table_args__ = (
+        UniqueConstraint("catalog_id", "point_id", name="uq_knowledge_material_catalog_point"),
+        CheckConstraint(
+            "evidence_status IN ('source_supported', 'insufficient')",
+            name="ck_knowledge_material_evidence_status",
+        ),
+        CheckConstraint(
+            "medical_review_status IN ('pending_expert_review', 'expert_reviewed', 'rejected')",
+            name="ck_knowledge_material_medical_review_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    catalog_id: Mapped[int] = mapped_column(ForeignKey("knowledge_catalogs.id", ondelete="CASCADE"), index=True)
+    point_id: Mapped[int] = mapped_column(ForeignKey("knowledge_points.id", ondelete="CASCADE"), unique=True)
+    version: Mapped[str] = mapped_column(String(80))
+    learning_objectives: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    scenario: Mapped[str] = mapped_column(Text)
+    background: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list, nullable=False)
+    example: Mapped[dict[str, str]] = mapped_column(JSON, default=dict, nullable=False)
+    remediation: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list, nullable=False)
+    reference_note: Mapped[str] = mapped_column(String(500))
+    evidence_status: Mapped[str] = mapped_column(String(30))
+    medical_review_status: Mapped[str] = mapped_column(String(30))
+
+
+class KnowledgeDependency(Base):
+    __tablename__ = "knowledge_dependencies"
+    __table_args__ = (
+        UniqueConstraint(
+            "catalog_id", "prerequisite_point_id", "dependent_point_id", name="uq_knowledge_dependency_edge"
+        ),
+        CheckConstraint("prerequisite_point_id <> dependent_point_id", name="ck_knowledge_dependency_no_self"),
+        CheckConstraint(
+            "relation_kind IN ('response_continuum', 'mechanistic_basis', 'structural_component', "
+            "'specialized_pattern', 'repair_phase_basis', 'assessment_framework', 'common_source', "
+            "'occlusive_mechanism', 'outcome_definition', 'classification_basis', 'grading_basis', "
+            "'staging_basis')",
+            name="ck_knowledge_dependency_relation_kind",
+        ),
+        CheckConstraint("confidence IN ('high', 'moderate')", name="ck_knowledge_dependency_confidence"),
+        CheckConstraint(
+            "evidence_status IN ('source_supported', 'insufficient')",
+            name="ck_knowledge_dependency_evidence_status",
+        ),
+        CheckConstraint(
+            "medical_review_status IN ('pending_expert_review', 'expert_reviewed', 'rejected')",
+            name="ck_knowledge_dependency_medical_review_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    catalog_id: Mapped[int] = mapped_column(ForeignKey("knowledge_catalogs.id", ondelete="CASCADE"), index=True)
+    prerequisite_point_id: Mapped[int] = mapped_column(
+        ForeignKey("knowledge_points.id", ondelete="CASCADE"), index=True
+    )
+    dependent_point_id: Mapped[int] = mapped_column(ForeignKey("knowledge_points.id", ondelete="CASCADE"), index=True)
+    relation_kind: Mapped[str] = mapped_column(String(40))
+    rationale: Mapped[str] = mapped_column(Text)
+    limitation: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[str] = mapped_column(String(20))
+    evidence_status: Mapped[str] = mapped_column(String(30))
+    medical_review_status: Mapped[str] = mapped_column(String(30))
+    reviewer_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    position: Mapped[int] = mapped_column(Integer)
+
+
+class KnowledgeSource(Base):
+    __tablename__ = "knowledge_sources"
+    __table_args__ = (
+        CheckConstraint(
+            "source_type IN ('government', 'peer_reviewed', 'academic_reference')",
+            name="ck_knowledge_source_type",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_key: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    publisher: Mapped[str] = mapped_column(String(160))
+    url: Mapped[str] = mapped_column(String(1000))
+    source_type: Mapped[str] = mapped_column(String(40))
+    accessed_on: Mapped[str] = mapped_column(String(10))
+
+
+class KnowledgePointSource(Base):
+    __tablename__ = "knowledge_point_sources"
+    __table_args__ = (UniqueConstraint("point_id", "source_id", name="uq_knowledge_point_source"),)
+
+    point_id: Mapped[int] = mapped_column(ForeignKey("knowledge_points.id", ondelete="CASCADE"), primary_key=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey("knowledge_sources.id", ondelete="CASCADE"), primary_key=True)
+
+
+class KnowledgeDependencySource(Base):
+    __tablename__ = "knowledge_dependency_sources"
+    __table_args__ = (UniqueConstraint("dependency_id", "source_id", name="uq_knowledge_dependency_source"),)
+
+    dependency_id: Mapped[int] = mapped_column(
+        ForeignKey("knowledge_dependencies.id", ondelete="CASCADE"), primary_key=True
+    )
+    source_id: Mapped[int] = mapped_column(ForeignKey("knowledge_sources.id", ondelete="CASCADE"), primary_key=True)
+
+
+__all__ = [
+    "KnowledgeCardContribution",
+    "KnowledgeCatalog",
+    "KnowledgeDependency",
+    "KnowledgeDependencySource",
+    "KnowledgeModule",
+    "KnowledgePoint",
+    "KnowledgePointSource",
+    "KnowledgeSource",
+    "KnowledgeStudyMaterial",
+    "Problem",
+    "ProblemKnowledgeLink",
+    "ProblemOrigin",
+]

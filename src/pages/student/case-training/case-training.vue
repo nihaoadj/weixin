@@ -1,260 +1,268 @@
 <template>
   <view class="safe-page page"
-    ><view
-      v-if="attempt"
-      class="case-heading"
-      ><view class="case-meta"
-        ><text class="eyebrow">模拟接诊 · {{ attempt.opening.setting || '病理病例研讨' }}</text
-        ><text class="stage-count">阶段 {{ currentStageNumber }} / {{ caseStages.length }}</text></view
-      ><text class="title">{{ attempt.opening.chiefComplaint }}</text
-      ><view class="case-caption"
-        ><text class="patient-intro">{{ attempt.opening.patientIntro || '虚拟患者' }}</text
-        ><text class="caption-divider">·</text><text>合成教学病例，不构成诊疗建议</text></view
-      ><view
-        class="progress"
-        aria-label="病例训练进度"
-        ><view
-          v-for="(item, index) in caseStages"
-          :key="item.id"
-          class="progress-step"
-          :class="{ active: item.id === attempt.currentStage, done: done(item.id) }"
-          ><text class="progress-index">{{ done(item.id) ? '✓' : index + 1 }}</text
-          ><text class="progress-label">{{ item.label }}</text></view
-        ></view
-      ></view
     ><MedState
-      v-if="error"
-      icon="retry"
-      title="训练加载失败"
-      :description="error"
-      :action-label="id ? '重新加载' : '返回病例列表'"
-      :secondary-action-label="id ? '返回病例列表' : ''"
-      @action="id ? load() : back()"
-      @secondary-action="back"
-    /><view
-      v-if="attempt"
-      class="stage-content"
-      ><template v-if="attempt.currentStage === 'history'"
-        ><text
-          class="sr-only"
-          role="heading"
-          aria-level="2"
-          >与虚拟患者交流</text
-        ><view class="history-workspace"
-          ><view class="dialogue-panel"
-            ><view class="dialogue-header"
-              ><view class="patient-profile"
-                ><view class="patient-avatar"><text>患</text><text class="presence-dot" /></view
-                ><view class="patient-copy"
-                  ><text class="patient-name">虚拟患者</text
-                  ><text class="patient-state">只回应你已经询问的内容</text></view
-                ></view
-              ><text class="reply-count">{{ patientReplyCount }} 次回应</text></view
-            ><scroll-view
-              class="dialogue-stream"
-              scroll-y
-              scroll-with-animation
-              :scroll-into-view="lastMessageAnchor"
-              role="log"
-              aria-live="polite"
-              aria-label="虚拟患者对话记录"
-              ><view
-                v-if="!attempt.messages.length"
-                id="case-message-welcome"
-                class="message assistant"
-                ><text class="message-avatar">患</text
-                ><view class="message-body"
-                  ><text class="message-role">虚拟患者</text
-                  ><text class="message-bubble">你好，请问你想先了解哪些不适和经过？</text></view
-                ></view
-              ><view
-                v-for="message in attempt.messages"
-                :id="messageAnchor(message.id)"
-                :key="message.id"
-                class="message"
-                :class="message.role"
-                ><text class="message-avatar">{{ message.role === 'user' ? '你' : '患' }}</text
-                ><view class="message-body"
-                  ><text class="message-role">{{ message.role === 'user' ? '你的提问' : '虚拟患者' }}</text
-                  ><text class="message-bubble">{{ message.content }}</text></view
-                ></view
-              ><view
-                v-if="sending"
-                id="case-message-typing"
-                class="message assistant is-typing"
-                role="status"
-                ><text class="message-avatar">患</text
-                ><view class="message-body"
-                  ><text class="message-role">虚拟患者正在回应</text
-                  ><view class="typing-bubble"><text /><text /><text /></view></view></view></scroll-view
-            ><view class="question-guide"
-              ><text class="guide-label">可以这样继续问</text
-              ><view class="prompt-list"
-                ><button
-                  v-for="prompt in promptSuggestions"
-                  :key="prompt"
-                  class="prompt-action"
-                  :disabled="sending"
-                  :aria-label="`填写问题：${prompt}`"
-                  @click="usePrompt(prompt)"
-                >
-                  {{ prompt }}
-                </button></view
-              ></view
-            ><view class="question-composer"
-              ><view class="composer-row"
-                ><input
-                  v-model="question"
-                  aria-label="输入向患者提出的问题"
-                  placeholder="输入一个具体问题…"
-                  :disabled="sending"
-                  confirm-type="send"
-                  @confirm="ask"
-                /><button
-                  class="ask-action"
-                  :disabled="sending || !question.trim()"
-                  @click="ask"
-                >
-                  {{ sending ? '询问中' : '发送' }}
-                </button></view
-              ><text class="composer-tip">一次询问一个线索，更容易判断回答的意义。</text></view
-            ></view
+      v-if="accessDenied"
+      variant="error"
+      icon="history"
+      title="学生身份已变化"
+      description="当前病例与作答内容已清除。请使用当前学生账号重新进入训练。"
+    /><template v-else
+      ><view
+        v-if="attempt"
+        class="case-heading"
+        ><view class="case-meta"
+          ><text class="eyebrow">模拟接诊 · {{ attempt.opening.setting || '病理病例研讨' }}</text
+          ><text class="stage-count">阶段 {{ currentStageNumber }} / {{ caseStages.length }}</text></view
+        ><text class="title">{{ attempt.opening.chiefComplaint }}</text
+        ><view class="case-caption"
+          ><text class="patient-intro">{{ attempt.opening.patientIntro || '虚拟患者' }}</text
+          ><text class="caption-divider">·</text><text>合成教学病例，不构成诊疗建议</text></view
+        ><view
+          class="progress"
+          aria-label="病例训练进度"
           ><view
-            class="history-notes"
-            :class="{ expanded: notesExpanded }"
-            ><button
-              class="notes-toggle"
-              :aria-expanded="notesExpanded"
-              aria-controls="history-note-fields"
-              @click="toggleNotes"
-            >
-              <view class="notes-copy"
-                ><text class="notes-kicker">临床笔记</text><text class="notes-title">整理问诊依据</text></view
-              ><view class="notes-state"
-                ><text>{{ historyNoteStatus }}</text
-                ><text
-                  class="notes-arrow"
-                  :class="{ expanded: notesExpanded }"
-                  >⌄</text
+            v-for="(item, index) in caseStages"
+            :key="item.id"
+            class="progress-step"
+            :class="{ active: item.id === attempt.currentStage, done: done(item.id) }"
+            ><text class="progress-index">{{ done(item.id) ? '✓' : index + 1 }}</text
+            ><text class="progress-label">{{ item.label }}</text></view
+          ></view
+        ></view
+      ><MedState
+        v-if="error"
+        icon="retry"
+        title="训练加载失败"
+        :description="error"
+        :action-label="id ? '重新加载' : returnLabel"
+        :secondary-action-label="id ? returnLabel : ''"
+        @action="id ? load() : back()"
+        @secondary-action="back"
+      /><view
+        v-if="attempt"
+        class="stage-content"
+        ><template v-if="attempt.currentStage === 'history'"
+          ><text
+            class="sr-only"
+            role="heading"
+            aria-level="2"
+            >与虚拟患者交流</text
+          ><view class="history-workspace"
+            ><view class="dialogue-panel"
+              ><view class="dialogue-header"
+                ><view class="patient-profile"
+                  ><view class="patient-avatar"><text>患</text><text class="presence-dot" /></view
+                  ><view class="patient-copy"
+                    ><text class="patient-name">虚拟患者</text
+                    ><text class="patient-state">只回应你已经询问的内容</text></view
+                  ></view
+                ><text class="reply-count">{{ patientReplyCount }} 次回应</text></view
+              ><scroll-view
+                class="dialogue-stream"
+                scroll-y
+                scroll-with-animation
+                :scroll-into-view="lastMessageAnchor"
+                role="log"
+                aria-live="polite"
+                aria-label="虚拟患者对话记录"
+                ><view
+                  v-if="!attempt.messages.length"
+                  id="case-message-welcome"
+                  class="message assistant"
+                  ><text class="message-avatar">患</text
+                  ><view class="message-body"
+                    ><text class="message-role">虚拟患者</text
+                    ><text class="message-bubble">你好，请问你想先了解哪些不适和经过？</text></view
+                  ></view
+                ><view
+                  v-for="message in attempt.messages"
+                  :id="messageAnchor(message.id)"
+                  :key="message.id"
+                  class="message"
+                  :class="message.role"
+                  ><text class="message-avatar">{{ message.role === 'user' ? '你' : '患' }}</text
+                  ><view class="message-body"
+                    ><text class="message-role">{{ message.role === 'user' ? '你的提问' : '虚拟患者' }}</text
+                    ><text class="message-bubble">{{ message.content }}</text></view
+                  ></view
+                ><view
+                  v-if="sending"
+                  id="case-message-typing"
+                  class="message assistant is-typing"
+                  role="status"
+                  ><text class="message-avatar">患</text
+                  ><view class="message-body"
+                    ><text class="message-role">虚拟患者正在回应</text
+                    ><view class="typing-bubble"><text /><text /><text /></view></view></view></scroll-view
+              ><view class="question-guide"
+                ><text class="guide-label">可以这样继续问</text
+                ><view class="prompt-list"
+                  ><button
+                    v-for="prompt in promptSuggestions"
+                    :key="prompt"
+                    class="prompt-action"
+                    :disabled="sending"
+                    :aria-label="`填写问题：${prompt}`"
+                    @click="usePrompt(prompt)"
+                  >
+                    {{ prompt }}
+                  </button></view
                 ></view
-              ></button
+              ><view class="question-composer"
+                ><view class="composer-row"
+                  ><input
+                    v-model="question"
+                    aria-label="输入向患者提出的问题"
+                    placeholder="输入一个具体问题…"
+                    :disabled="sending"
+                    confirm-type="send"
+                    @confirm="ask"
+                  /><button
+                    class="ask-action"
+                    :disabled="sending || !question.trim()"
+                    @click="ask"
+                  >
+                    {{ sending ? '询问中' : '发送' }}
+                  </button></view
+                ><text class="composer-tip">一次询问一个线索，更容易判断回答的意义。</text></view
+              ></view
             ><view
-              v-if="notesExpanded"
-              id="history-note-fields"
-              class="notes-fields"
-              ><text class="notes-hint">将对话提炼为症状、时间进程、关键阳性与阴性信息。</text
-              ><label class="field-label"
-                ><text>病史小结</text
-                ><textarea
-                  v-model="summary"
-                  aria-label="病史小结"
-                  placeholder="用自己的话概括本次问诊"
-                /></label
-              ><label class="field-label"
-                ><text>关键发现</text
-                ><input
-                  v-model="keyFindingsText"
-                  aria-label="关键发现"
-                  placeholder="例如：发热 3 天、咳嗽、无胸痛" /></label></view></view></view></template
-      ><template v-else-if="attempt.currentStage === 'problem_representation'"
-        ><text class="section">问题表征</text
-        ><textarea
-          v-model="summary"
-          placeholder="患者特征—时间进程—核心阳性/阴性—主要问题"
-        /></template
-      ><template v-else-if="attempt.currentStage === 'differential'"
-        ><text class="section">鉴别诊断卡片（至少两张）</text
-        ><view
-          v-for="(item, index) in differentialItems"
-          :key="index"
-          class="answer-card"
-          ><input
-            v-model="item.diagnosis"
-            placeholder="诊断"
-          /><textarea
-            v-model="item.supportingEvidence"
-            placeholder="支持证据"
-          /><textarea
-            v-model="item.opposingEvidence"
-            placeholder="反对证据"
-          /></view
-        ><button
-          class="secondary"
-          @click="addDifferential"
-        >
-          新增诊断卡
-        </button></template
-      ><template v-else-if="attempt.currentStage === 'tests'"
-        ><text class="section">检查决策卡片</text
-        ><view
-          v-for="(item, index) in testItems"
-          :key="index"
-          class="answer-card"
-          ><input
-            v-model="item.testName"
-            placeholder="检查名称" /><textarea
-            v-model="item.rationale"
-            placeholder="检查理由" /><input
-            v-model="item.priority"
-            placeholder="necessary / optional / avoid" /></view
-        ><button
-          class="secondary"
-          @click="addTest"
-        >
-          新增检查卡
-        </button></template
-      ><template v-else-if="attempt.currentStage === 'management'"
-        ><text class="section">初步处置卡片</text
-        ><view
-          v-for="(item, index) in managementItems"
-          :key="index"
-          class="answer-card"
-          ><input
-            v-model="item.action"
-            placeholder="行动"
-          /><textarea
-            v-model="item.rationale"
-            placeholder="处置理由"
-          /></view
-        ><button
-          class="secondary"
-          @click="addManagement"
-        >
-          新增处置卡</button
-        ><textarea
-          v-model="safetyText"
-          placeholder="安全考虑，以逗号分隔"
-        /></template
-      ><template v-else
-        ><text class="section">五阶段已完成</text
+              class="history-notes"
+              :class="{ expanded: notesExpanded }"
+              ><button
+                class="notes-toggle"
+                :aria-expanded="notesExpanded"
+                aria-controls="history-note-fields"
+                @click="toggleNotes"
+              >
+                <view class="notes-copy"
+                  ><text class="notes-kicker">临床笔记</text><text class="notes-title">整理问诊依据</text></view
+                ><view class="notes-state"
+                  ><text>{{ historyNoteStatus }}</text
+                  ><text
+                    class="notes-arrow"
+                    :class="{ expanded: notesExpanded }"
+                    >⌄</text
+                  ></view
+                ></button
+              ><view
+                v-if="notesExpanded"
+                id="history-note-fields"
+                class="notes-fields"
+                ><text class="notes-hint">将对话提炼为症状、时间进程、关键阳性与阴性信息。</text
+                ><label class="field-label"
+                  ><text>病史小结</text
+                  ><textarea
+                    v-model="summary"
+                    aria-label="病史小结"
+                    placeholder="用自己的话概括本次问诊"
+                  /></label
+                ><label class="field-label"
+                  ><text>关键发现</text
+                  ><input
+                    v-model="keyFindingsText"
+                    aria-label="关键发现"
+                    placeholder="例如：发热 3 天、咳嗽、无胸痛" /></label></view></view></view></template
+        ><template v-else-if="attempt.currentStage === 'problem_representation'"
+          ><text class="section">问题表征</text
+          ><textarea
+            v-model="summary"
+            placeholder="患者特征—时间进程—核心阳性/阴性—主要问题"
+          /></template
+        ><template v-else-if="attempt.currentStage === 'differential'"
+          ><text class="section">鉴别诊断卡片（至少两张）</text
+          ><view
+            v-for="(item, index) in differentialItems"
+            :key="index"
+            class="answer-card"
+            ><input
+              v-model="item.diagnosis"
+              placeholder="诊断"
+            /><textarea
+              v-model="item.supportingEvidence"
+              placeholder="支持证据"
+            /><textarea
+              v-model="item.opposingEvidence"
+              placeholder="反对证据"
+            /></view
+          ><button
+            class="secondary"
+            @click="addDifferential"
+          >
+            新增诊断卡
+          </button></template
+        ><template v-else-if="attempt.currentStage === 'tests'"
+          ><text class="section">检查决策卡片</text
+          ><view
+            v-for="(item, index) in testItems"
+            :key="index"
+            class="answer-card"
+            ><input
+              v-model="item.testName"
+              placeholder="检查名称" /><textarea
+              v-model="item.rationale"
+              placeholder="检查理由" /><input
+              v-model="item.priority"
+              placeholder="necessary / optional / avoid" /></view
+          ><button
+            class="secondary"
+            @click="addTest"
+          >
+            新增检查卡
+          </button></template
+        ><template v-else-if="attempt.currentStage === 'management'"
+          ><text class="section">初步处置卡片</text
+          ><view
+            v-for="(item, index) in managementItems"
+            :key="index"
+            class="answer-card"
+            ><input
+              v-model="item.action"
+              placeholder="行动"
+            /><textarea
+              v-model="item.rationale"
+              placeholder="处置理由"
+            /></view
+          ><button
+            class="secondary"
+            @click="addManagement"
+          >
+            新增处置卡</button
+          ><textarea
+            v-model="safetyText"
+            placeholder="安全考虑，以逗号分隔"
+          /></template
+        ><template v-else
+          ><text class="section">五阶段已完成</text
+          ><button
+            class="primary"
+            :loading="completing"
+            :disabled="completing"
+            @click="complete"
+          >
+            生成训练报告
+          </button></template
+        ></view
+      ><view
+        v-if="attempt && attempt.currentStage !== 'completed'"
+        class="bottom"
         ><button
           class="primary"
-          :loading="completing"
-          :disabled="completing"
-          @click="complete"
+          :loading="submitting"
+          :disabled="submitting"
+          @click="handlePrimaryAction"
         >
-          生成训练报告
-        </button></template
-      ></view
-    ><view
-      v-if="attempt && attempt.currentStage !== 'completed'"
-      class="bottom"
-      ><button
-        class="primary"
-        :loading="submitting"
-        :disabled="submitting"
-        @click="handlePrimaryAction"
-      >
-        {{ primaryActionLabel }}
-      </button></view
+          {{ primaryActionLabel }}
+        </button></view
+      ></template
     ></view
   >
 </template>
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import { onBackPress, onLoad } from '@dcloudio/uni-app'
+import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
-import { requireRole } from '@/features/identity/public'
+import { getSession, requireRole } from '@/features/identity/public'
 import { backOrRoute, goReplace, handleBackPress, ROUTES } from '@/platform/navigation'
 import {
   completeCaseAttemptAsync,
@@ -281,8 +289,53 @@ const managementItems = ref<Array<{ action: string; rationale: string }>>([{ act
 const sending = ref(false)
 const submitting = ref(false)
 const completing = ref(false)
+const accessDenied = ref(false)
 const promptSuggestions = ['症状从什么时候开始？', '症状是怎样变化的？', '还伴随哪些不适？']
 let id = ''
+let studentIdentity: string | undefined
+let identityInitialized = false
+let pageContextVersion = 0
+let initialShowPending = false
+
+function isCurrentStudentPage(contextVersion: number, identity: string): boolean {
+  const session = getSession()
+  return (
+    contextVersion === pageContextVersion &&
+    identityInitialized &&
+    !accessDenied.value &&
+    studentIdentity === identity &&
+    session?.role === 'student' &&
+    session.openid === identity
+  )
+}
+
+function clearStudentCaseData() {
+  pageContextVersion += 1
+  attempt.value = undefined
+  error.value = ''
+  question.value = ''
+  summary.value = ''
+  keyFindingsText.value = ''
+  notesExpanded.value = false
+  safetyText.value = ''
+  differentialItems.value = [
+    { diagnosis: '', supportingEvidence: '', opposingEvidence: '' },
+    { diagnosis: '', supportingEvidence: '', opposingEvidence: '' },
+  ]
+  testItems.value = [{ testName: '', rationale: '', priority: 'necessary' }]
+  managementItems.value = [{ action: '', rationale: '' }]
+  sending.value = false
+  submitting.value = false
+  completing.value = false
+  id = ''
+}
+
+function denyStudentCasePage() {
+  clearStudentCaseData()
+  identityInitialized = false
+  accessDenied.value = true
+}
+const returnLabel = '返回病例列表'
 const stageLabel = (stage: string) => caseStages.find((i) => i.id === stage)?.label || '报告'
 const currentStageNumber = computed(() => {
   if (!attempt.value || attempt.value.currentStage === 'completed') return caseStages.length
@@ -344,11 +397,16 @@ function addManagement() {
   if (managementItems.value.length < 12) managementItems.value.push({ action: '', rationale: '' })
 }
 async function load() {
+  const identity = studentIdentity
+  const contextVersion = pageContextVersion
+  if (!id || !identity || accessDenied.value) return
   try {
-    attempt.value = await getCaseAttemptAsync(id)
+    const value = await getCaseAttemptAsync(id)
+    if (!isCurrentStudentPage(contextVersion, identity)) return
+    attempt.value = value
     if (!attempt.value) error.value = '训练不存在或已不可用'
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '请重试'
+    if (isCurrentStudentPage(contextVersion, identity)) error.value = e instanceof Error ? e.message : '请重试'
   }
 }
 function back() {
@@ -383,13 +441,17 @@ function hasUnsavedInput() {
 }
 async function ask() {
   if (!question.value.trim()) return
+  const identity = studentIdentity
+  const contextVersion = pageContextVersion
+  if (!identity || accessDenied.value) return
   sending.value = true
   try {
     await sendPatientMessageAsync(id, question.value)
+    if (!isCurrentStudentPage(contextVersion, identity)) return
     question.value = ''
     await load()
   } finally {
-    sending.value = false
+    if (isCurrentStudentPage(contextVersion, identity)) sending.value = false
   }
 }
 function answer(): StageAnswer {
@@ -444,9 +506,13 @@ function answer(): StageAnswer {
   }
 }
 async function submit() {
+  const identity = studentIdentity
+  const contextVersion = pageContextVersion
+  if (!identity || accessDenied.value) return
   submitting.value = true
   try {
     await submitCaseStageAsync(id, answer())
+    if (!isCurrentStudentPage(contextVersion, identity)) return
     summary.value = ''
     keyFindingsText.value = ''
     safetyText.value = ''
@@ -459,26 +525,60 @@ async function submit() {
     notesExpanded.value = false
     await load()
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : '提交失败', icon: 'none' })
+    if (isCurrentStudentPage(contextVersion, identity))
+      uni.showToast({ title: e instanceof Error ? e.message : '提交失败', icon: 'none' })
   } finally {
-    submitting.value = false
+    if (isCurrentStudentPage(contextVersion, identity)) submitting.value = false
   }
 }
 async function complete() {
   if (completing.value) return
+  const identity = studentIdentity
+  const contextVersion = pageContextVersion
+  if (!identity || accessDenied.value) return
   completing.value = true
   try {
     await completeCaseAttemptAsync(id)
+    if (!isCurrentStudentPage(contextVersion, identity)) return
     goReplace(ROUTES.studentCaseReport, { attemptId: id })
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : '生成报告失败', icon: 'none' })
+    if (isCurrentStudentPage(contextVersion, identity))
+      uni.showToast({ title: e instanceof Error ? e.message : '生成训练结果失败', icon: 'none' })
   } finally {
-    completing.value = false
+    if (isCurrentStudentPage(contextVersion, identity)) completing.value = false
   }
 }
 onLoad((query) => {
-  if (!requireRole('student')) return
+  const session = getSession()
+  if (!requireRole('student') || session?.role !== 'student' || !session.openid) {
+    denyStudentCasePage()
+    return
+  }
+  studentIdentity = session.openid
+  identityInitialized = true
+  accessDenied.value = false
   id = String(query?.id || '')
+  initialShowPending = true
+  void load()
+})
+
+onShow(() => {
+  if (accessDenied.value) return
+  const session = getSession()
+  if (
+    !requireRole('student') ||
+    session?.role !== 'student' ||
+    !session.openid ||
+    !identityInitialized ||
+    studentIdentity !== session.openid
+  ) {
+    denyStudentCasePage()
+    return
+  }
+  if (initialShowPending) {
+    initialShowPending = false
+    return
+  }
   void load()
 })
 
@@ -554,6 +654,25 @@ onBackPress(({ from }) => {
   flex-wrap: wrap;
   gap: 8rpx;
   color: var(--med-muted);
+  font-size: 22rpx;
+}
+.classroom-return-note,
+.context-warning {
+  color: #315a75;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+.context-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  color: #8c5519;
+}
+.context-warning button {
+  flex: none;
+  color: var(--med-brand);
+  background: transparent;
   font-size: 22rpx;
 }
 .patient-intro {

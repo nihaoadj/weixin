@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from app.modules.content.public import knowledge_point_view
+from app.modules.content.public import KnowledgeCatalogPort
 from app.modules.qa.application.ports import (
     ConversationCommand,
     ConversationRepository,
-    QuestionRepository,
     QuestionThreadCommand,
 )
 from app.modules.qa.application.records import (
@@ -19,9 +18,12 @@ from app.shared.uow import UnitOfWork
 
 
 class ConversationsApplication:
-    def __init__(self, repository: ConversationRepository, uow: UnitOfWork) -> None:
+    def __init__(
+        self, repository: ConversationRepository, uow: UnitOfWork, knowledge_catalog: KnowledgeCatalogPort
+    ) -> None:
         self._repository = repository
         self._uow = uow
+        self._knowledge_catalog = knowledge_catalog
 
     def list_summaries(
         self, actor: Actor, limit: int, offset: int, knowledge_point_code: str | None = None
@@ -68,47 +70,28 @@ class ConversationsApplication:
         self._uow.commit()
         return result
 
-    @staticmethod
-    def _validate_topic(knowledge_point_code: str | None) -> None:
-        if knowledge_point_code is not None and knowledge_point_view(knowledge_point_code) is None:
+    def _validate_topic(self, knowledge_point_code: str | None) -> None:
+        if knowledge_point_code is not None and self._knowledge_catalog.point_view(knowledge_point_code) is None:
             raise AppError("VALIDATION_ERROR", "学习主题不存在", 422)
 
-    @staticmethod
-    def _validate_topics(topic_codes: tuple[str, ...]) -> None:
-        if len(topic_codes) > 3 or any(knowledge_point_view(code) is None for code in topic_codes):
+    def _validate_topics(self, topic_codes: tuple[str, ...]) -> None:
+        if len(topic_codes) > 3 or not self._knowledge_catalog.contains_points(topic_codes):
             raise AppError("VALIDATION_ERROR", "学习主题不存在或数量超限", 422)
 
 
 class QuestionsApplication:
-    def __init__(self, repository: QuestionRepository, uow: UnitOfWork) -> None:
-        self._repository = repository
-        self._uow = uow
-
     def list(self, actor: Actor) -> tuple[StudentQuestionRecord, ...]:
         actor.require_role("student")
-        class_codes = set(actor.class_ids) | self._repository.class_codes(actor.id)
-        return self._repository.list_student_questions(actor, class_codes)
+        return ()
 
     def get(self, actor: Actor, problem_id: int) -> StudentQuestionRecord:
         actor.require_role("student")
-        class_codes = set(actor.class_ids) | self._repository.class_codes(actor.id)
-        result = self._repository.find_student_question(actor, problem_id, class_codes)
-        if result is None:
-            raise AppError("RESOURCE_NOT_FOUND", "题目不存在", 404)
-        return result
+        raise AppError("RESOURCE_NOT_FOUND", "题目不存在", 404)
 
     def thread(self, actor: Actor, problem_id: int) -> QuestionThreadRecord:
         actor.require_role("student")
-        result = self._repository.find_thread(problem_id, actor.id)
-        if result is None:
-            raise AppError("RESOURCE_NOT_FOUND", "题目作答线程不存在", 404)
-        return result
+        raise AppError("RESOURCE_NOT_FOUND", "题目作答线程不存在", 404)
 
     def upsert_thread(self, actor: Actor, problem_id: int, command: QuestionThreadCommand) -> QuestionThreadRecord:
         actor.require_role("student")
-        class_codes = set(actor.class_ids) | self._repository.class_codes(actor.id)
-        if self._repository.find_student_question(actor, problem_id, class_codes) is None:
-            raise AppError("RESOURCE_NOT_FOUND", "题目不存在", 404)
-        result = self._repository.upsert_thread(problem_id, actor.id, command)
-        self._uow.commit()
-        return result
+        raise AppError("RETIRED_FLOW", "开放讨论题已退役，请打开学习计划", 409)

@@ -11,12 +11,14 @@ export const storageKeys = {
   conversations: 'conversationHistory',
   reports: 'reports',
   problems: 'problems',
+  problemOwners: 'med-demo-problem-owners-v1',
   answeredQuestions: 'answeredQuestionIds',
   questionThreads: 'questionThreads',
   schemaVersion: 'storageSchemaVersion',
   caseAttempts: 'caseAttempts',
   caseAssessments: 'caseAssessments',
   guidedDrafts: 'guidedCaseDrafts',
+  learningRoutes: 'learningRoutes',
   logs: 'logs',
 } as const
 
@@ -64,9 +66,14 @@ export const reportSchema: ZodType<Report> = z.object({
   studentId: z.string(),
   studentName: z.string(),
   status: z.enum(['草稿', '待批阅', '已批阅']),
+  // T29: additive fields. Stored drafts and legacy rows predate `kind`, so the
+  // literal default keeps old local data valid without a schema version bump.
+  kind: z.literal('qa_learning_report').default('qa_learning_report'),
   teacherScore: z.number().optional(),
   teacherFeedback: z.string().optional(),
   reviewTopicCodes: z.array(z.string().min(1)).max(3).optional(),
+  classId: z.string().optional(),
+  className: z.string().optional(),
 })
 
 export const problemSchema: ZodType<Problem> = z.object({
@@ -91,7 +98,7 @@ export const problemSchema: ZodType<Problem> = z.object({
   version: z.number().optional(),
   authorId: z.number().optional(),
   parentProblemId: z.number().optional(),
-  medicalReviewStatus: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).optional(),
+  medicalReviewStatus: z.enum(['not_required', 'not_submitted', 'pending', 'approved', 'rejected']).optional(),
   opening: z.object({ setting: z.string(), patientIntro: z.string(), chiefComplaint: z.string() }).optional(),
   capabilityTags: z.array(z.string()).optional(),
   knowledgePointCodes: z.array(z.string()).optional(),

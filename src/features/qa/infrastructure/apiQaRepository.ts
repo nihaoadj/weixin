@@ -21,7 +21,7 @@ export class ApiQaRepository implements QaRepository {
       path: '/conversations',
       method: 'POST',
       schema: apiConversationSchema,
-      invalidateCache: ['/conversations', '/reports'],
+      invalidateCache: ['/conversations'],
       body: {
         client_id: conversation.conversationId,
         messages: conversation.messages.map(({ role, content }) => ({ role, content })),

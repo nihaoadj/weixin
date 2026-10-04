@@ -12,7 +12,7 @@ backend/.pytest_cache/
 **/.pytest_cache/
 **/.ruff_cache/
 **/.mypy_cache/
-backend/**/__pycache__/
+**/__pycache__/
 .contract-tmp/
 **/.contract-tmp/
 .eslintcache
@@ -21,6 +21,12 @@ backend/**/__pycache__/
 *.local
 *.tsbuildinfo
 test-results/
+
+# Reproducible local outputs; existing output/ evidence remains visible.
+/artifacts/
+/output/local/
+/tmp/
+/data/
 
 .env
 .env.*

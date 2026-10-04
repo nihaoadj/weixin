@@ -1,13 +1,39 @@
 import { getApplicationServices } from '@/bootstrap/wiring'
+import type { TeacherInsightsFilters, TeacherInsightsStudentFilters } from './domain/teacherInsights'
 
 const analytics = () => getApplicationServices().analytics
 
-export const getAnalyticsOverview = (classId?: number, dateFrom?: string, dateTo?: string) =>
-  analytics().getAnalyticsOverview(classId, dateFrom, dateTo)
-export const getAnalyticsCase = (problemId: number, classId?: number, dateFrom?: string, dateTo?: string) =>
-  analytics().getAnalyticsCase(problemId, classId, dateFrom, dateTo)
-export const getAnalyticsStudent = (studentId: number, classId?: number, dateFrom?: string, dateTo?: string) =>
-  analytics().getAnalyticsStudent(studentId, classId, dateFrom, dateTo)
-export const getAnalyticsKnowledge = (classId: number) => analytics().getAnalyticsKnowledge(classId)
+export const getTeacherInsightsOverview = (filters?: TeacherInsightsFilters) =>
+  analytics().getTeacherInsightsOverview(filters)
+export const getTeacherInsightsStudents = (filters?: TeacherInsightsFilters, limit?: number, offset?: number) =>
+  analytics().getTeacherInsightsStudents(filters, limit, offset)
+export const getTeacherInsightsStudent = (studentId: number, filters: TeacherInsightsStudentFilters) =>
+  analytics().getTeacherInsightsStudent(studentId, filters)
+export const getTeacherInsightsKnowledge = (filters?: TeacherInsightsFilters) =>
+  analytics().getTeacherInsightsKnowledge(filters)
+export const getTeacherInsightsDiagnostics = (filters?: TeacherInsightsFilters, limit?: number, offset?: number) =>
+  analytics().getTeacherInsightsDiagnostics(filters, limit, offset)
 
-export type { AnalyticsCase, AnalyticsDimension, AnalyticsKnowledge, AnalyticsOverview, AnalyticsStudent } from '@/types/teacher'
+export type {
+  TeacherInsightsCohortProgress,
+  TeacherInsightsDiagnosis,
+  TeacherInsightsDiagnosisPage,
+  TeacherInsightsDiscussion,
+  TeacherInsightsDiscussionProgress,
+  TeacherInsightsFinding,
+  TeacherInsightsFindingGroup,
+  TeacherInsightsFilters,
+  TeacherInsightsKnowledgePage,
+  TeacherInsightsKnowledgeRow,
+  TeacherInsightsMetricBasis,
+  TeacherInsightsOverview,
+  TeacherInsightsPeriodResults,
+  TeacherInsightsResultSummary,
+  TeacherInsightsRouteProgress,
+  TeacherInsightsScope,
+  TeacherInsightsSessionId,
+  TeacherInsightsStudent,
+  TeacherInsightsStudentDetail,
+  TeacherInsightsStudentFilters,
+  TeacherInsightsStudentPage,
+} from './domain/teacherInsights'

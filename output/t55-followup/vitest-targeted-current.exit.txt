@@ -1,0 +1,1 @@
+npx vitest run [reference behavior, pbl repository, learning routes, root scope, reference seed] | exit 0

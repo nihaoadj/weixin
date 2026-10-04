@@ -28,6 +28,7 @@ export function toProblem(dto: ApiProblem): Problem {
     version: problem.version,
     parentProblemId: problem.parent_problem_id ?? undefined,
     authorId: problem.author_id ?? undefined,
+    allowedActions: problem.allowed_actions,
     medicalReviewStatus: problem.medical_review_status,
     capabilityTags: problem.capability_tags || [],
     knowledgePointCodes: problem.knowledge_point_codes,

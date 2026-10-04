@@ -1,8 +1,22 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
 from app.modules.training.api.schemas import DIMENSION_SPECS, CaseDefinition, CaseOpening, CaseRubric
+
+
+class TeacherContentActionSummary(BaseModel):
+    cases_draft: int = Field(ge=0)
+    cases_rejected: int = Field(ge=0)
+    cases_approved: int = Field(ge=0)
+    questions_draft: int = Field(ge=0)
+    questions_rejected: int = Field(ge=0)
+    cards_draft: int = Field(ge=0)
+    cards_rejected: int = Field(ge=0)
+    medical_cases_pending: int | None = Field(ge=0)
+    medical_cards_pending: int | None = Field(ge=0)
+    as_of: datetime
 
 
 class ProblemCreate(BaseModel):
@@ -67,6 +81,9 @@ class ProblemRead(BaseModel):
     version: int = 1
     parent_problem_id: int | None = None
     author_id: int | None = None
+    allowed_actions: list[Literal["edit", "delete", "submit_medical_review", "publish", "reject"]] = Field(
+        default_factory=list
+    )
     medical_review_status: str = "not_submitted"
     opening: CaseOpening | None = None
     capability_tags: list[str] = Field(default_factory=list)
@@ -87,6 +104,7 @@ class KnowledgeCardContributionWrite(BaseModel):
     correct_option: int | None = Field(default=None, ge=0)
     explanation: str = Field(default="", max_length=2000)
     reference: str = Field(default="", max_length=500)
+    target_student_ids: list[int] = Field(default_factory=list, max_length=200)
 
 
 class KnowledgeCardContributionRead(BaseModel):
@@ -106,6 +124,14 @@ class KnowledgeCardContributionRead(BaseModel):
     reviewed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    ai_title: str | None = None
+    source_type: str | None = None
+    source_snapshot_id: int | None = None
+    source_position: int | None = None
+    source_finding_ids: list[str] = Field(default_factory=list)
+    origin_student_id: int | None = None
+    origin_student_name: str | None = None
+    target_student_ids: list[int] = Field(default_factory=list)
 
 
 class KnowledgeCardReviewDecision(BaseModel):

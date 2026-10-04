@@ -64,6 +64,7 @@ class ProblemCommand:
     capability_tags: tuple[str, ...]
     status: str | None = None
     knowledge_point_codes: tuple[str, ...] = ()
+    preserve_knowledge_point_codes: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +98,14 @@ class KnowledgeCardContributionRecord:
     reviewed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    ai_title: str | None = None
+    source_type: str | None = None
+    source_snapshot_id: int | None = None
+    source_position: int | None = None
+    source_finding_ids: tuple[str, ...] = ()
+    origin_student_id: int | None = None
+    origin_student_name: str | None = None
+    target_student_ids: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,3 +118,4 @@ class KnowledgeCardContributionCommand:
     correct_option: int | None
     explanation: str
     reference: str
+    target_student_ids: tuple[int, ...] = ()

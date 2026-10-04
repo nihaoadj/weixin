@@ -1,4 +1,6 @@
 import type { ContentRepository } from '@/features/content/domain/ports'
+import type { TeacherContentActionSummary } from '@/features/content/domain/teacherActionSummary'
+import { teacherContentActionSummarySchema } from '@/platform/contracts/contentActions'
 import { apiRequest, encodePathSegment as segment, undefinedOnNotFound } from '@/platform/http/apiClient'
 import { apiProblemListSchema, apiProblemSchema } from '@/platform/contracts/core'
 import type { ApiProblem } from '@/platform/contracts/core'
@@ -9,135 +11,144 @@ import type { CaseDraftGenerateInput, CaseDraftGenerateResult } from '@/types/ca
 import type { MedicalReviewRecord } from '@/types/review'
 import type { Problem } from '@/types/records'
 import { AppError } from '@/types/errors'
+import type {
+  TeacherQuestionBankContent,
+  TeacherQuestionBankFilters,
+  TeacherQuestionBankImportInput,
+  TeacherQuestionBankItem,
+  TeacherQuestionBankPage,
+  TeacherQuestionBankSource,
+} from '@/features/content/domain/questionBank'
 import {
-  apiKnowledgeCardContributionListSchema,
-  apiKnowledgeCardContributionSchema,
-} from '@/platform/contracts/knowledge'
-import type { KnowledgeCardContribution, KnowledgeCardContributionInput } from '@/types/knowledge'
+  teacherQuestionBankItemSchema,
+  teacherQuestionBankPageSchema,
+  teacherQuestionBankContentSchema,
+  teacherQuestionBankSourceSchema,
+} from '@/platform/contracts/questionBank'
 
 const invalidates = ['/analytics', '/problems', '/student/questions', '/learning']
 
-function toKnowledgeCardContribution(
-  value: ReturnType<typeof apiKnowledgeCardContributionSchema.parse>,
-): KnowledgeCardContribution {
-  return {
-    id: value.id,
-    pointCode: value.point_code,
-    classCode: value.class_code || undefined,
-    version: value.version,
-    cardType: value.card_type,
-    prompt: value.prompt,
-    options: value.options,
-    correctOption: value.correct_option ?? undefined,
-    explanation: value.explanation,
-    reference: value.reference,
-    status: value.status,
-    reviewerId: value.reviewer_id ?? undefined,
-    reviewComment: value.review_comment,
-    reviewedAt: value.reviewed_at || undefined,
-    createdAt: value.created_at,
-    updatedAt: value.updated_at,
-  }
-}
-
-function contributionPayload(input: KnowledgeCardContributionInput) {
-  return {
-    point_code: input.pointCode,
-    class_code: input.classCode || null,
-    card_type: input.cardType,
-    prompt: input.prompt,
-    options: input.options,
-    correct_option: input.correctOption ?? null,
-    explanation: input.explanation,
-    reference: input.reference,
-  }
-}
-
 export class ApiContentRepository implements ContentRepository {
-  async getKnowledgeCardContributions(pointCode?: string): Promise<KnowledgeCardContribution[]> {
-    return (
-      await apiRequest({
-        path: '/knowledge/cards',
-        query: pointCode ? { point_code: pointCode } : undefined,
-        schema: apiKnowledgeCardContributionListSchema,
-        cacheTtlMs: 15_000,
-      })
-    ).map(toKnowledgeCardContribution)
+  async getTeacherContentActionSummary(): Promise<TeacherContentActionSummary> {
+    const value = await apiRequest({
+      path: '/problems/teacher-action-summary',
+      schema: teacherContentActionSummarySchema,
+      cacheTtlMs: 0,
+    })
+    return {
+      casesDraft: value.cases_draft,
+      casesRejected: value.cases_rejected,
+      casesApproved: value.cases_approved,
+      questionsDraft: value.questions_draft,
+      questionsRejected: value.questions_rejected,
+      cardsDraft: value.cards_draft,
+      cardsRejected: value.cards_rejected,
+      medicalCasesPending: value.medical_cases_pending,
+      medicalCardsPending: value.medical_cards_pending,
+      asOf: value.as_of,
+    }
   }
 
-  async getKnowledgeCardReviewQueue(): Promise<KnowledgeCardContribution[]> {
-    return (
-      await apiRequest({
-        path: '/knowledge/review-queue',
-        schema: apiKnowledgeCardContributionListSchema,
-        cacheTtlMs: 15_000,
-      })
-    ).map(toKnowledgeCardContribution)
+  async getTeacherQuestionBankSource(sourceId: string): Promise<TeacherQuestionBankSource> {
+    const value = await apiRequest({
+      path: `/teacher/question-bank/sources/route-test-questions/${segment(sourceId)}`,
+      schema: teacherQuestionBankSourceSchema,
+      cacheTtlMs: 0,
+    })
+    return toQuestionBankSource(value)
   }
 
-  async createKnowledgeCardContribution(input: KnowledgeCardContributionInput): Promise<KnowledgeCardContribution> {
-    return toKnowledgeCardContribution(
+  async listTeacherQuestionBank(filters: TeacherQuestionBankFilters = {}): Promise<TeacherQuestionBankPage> {
+    const value = await apiRequest({
+      path: '/teacher/question-bank',
+      query: {
+        status: filters.status === 'archived' ? 'archived' : undefined,
+        point_code: filters.pointCode,
+        task_type: filters.taskType,
+        q: filters.query,
+        limit: filters.limit ?? 20,
+        offset: filters.offset ?? 0,
+      },
+      schema: teacherQuestionBankPageSchema,
+      cacheTtlMs: 0,
+    })
+    return {
+      items: value.items.map(toQuestionBankItem),
+      total: value.total,
+      limit: value.limit,
+      offset: value.offset,
+    }
+  }
+
+  async getTeacherQuestionBankItem(id: number): Promise<TeacherQuestionBankItem> {
+    return toQuestionBankItem(
       await apiRequest({
-        path: '/knowledge/teacher/cards',
-        method: 'POST',
-        body: contributionPayload(input),
-        schema: apiKnowledgeCardContributionSchema,
-        invalidateCache: ['/knowledge/cards', '/knowledge/review-queue'],
+        path: `/teacher/question-bank/${segment(id)}`,
+        schema: teacherQuestionBankItemSchema,
+        cacheTtlMs: 0,
       }),
     )
   }
 
-  async updateKnowledgeCardContribution(
-    id: number,
-    input: KnowledgeCardContributionInput,
-  ): Promise<KnowledgeCardContribution> {
-    return toKnowledgeCardContribution(
+  async importTeacherQuestionBankItem(input: TeacherQuestionBankImportInput): Promise<TeacherQuestionBankItem> {
+    const content = questionBankContentPayload(input)
+    return toQuestionBankItem(
       await apiRequest({
-        path: `/knowledge/teacher/cards/${segment(id)}`,
+        path: '/teacher/question-bank/import',
+        method: 'POST',
+        body: {
+          ...content,
+          source_type: input.sourceType,
+          source_id: input.sourceId,
+          source_digest: input.sourceDigest,
+          client_request_id: input.clientRequestId,
+          deidentified: input.deidentified,
+        },
+        schema: teacherQuestionBankItemSchema,
+        invalidateCache: ['/teacher/question-bank'],
+      }),
+    )
+  }
+
+  async updateTeacherQuestionBankItem(
+    id: number,
+    version: number,
+    content: TeacherQuestionBankContent,
+  ): Promise<TeacherQuestionBankItem> {
+    return toQuestionBankItem(
+      await apiRequest({
+        path: `/teacher/question-bank/${segment(id)}`,
         method: 'PUT',
-        body: contributionPayload(input),
-        schema: apiKnowledgeCardContributionSchema,
-        invalidateCache: ['/knowledge/cards', '/knowledge/review-queue'],
+        body: { ...questionBankContentPayload(content), version },
+        schema: teacherQuestionBankItemSchema,
+        invalidateCache: ['/teacher/question-bank'],
       }),
     )
   }
 
-  async submitKnowledgeCardContribution(id: number): Promise<KnowledgeCardContribution> {
-    return toKnowledgeCardContribution(
-      await apiRequest({
-        path: `/knowledge/teacher/cards/${segment(id)}/submit`,
-        method: 'POST',
-        schema: apiKnowledgeCardContributionSchema,
-        invalidateCache: ['/knowledge/cards', '/knowledge/review-queue'],
-      }),
-    )
-  }
-
-  async reviewKnowledgeCardContribution(
+  async archiveTeacherQuestionBankItem(
     id: number,
-    decision: 'approved' | 'rejected',
-    comment: string,
-  ): Promise<KnowledgeCardContribution> {
-    return toKnowledgeCardContribution(
+    version: number,
+    clientRequestId: string,
+  ): Promise<TeacherQuestionBankItem> {
+    return toQuestionBankItem(
       await apiRequest({
-        path: `/knowledge/teacher/cards/${segment(id)}/review`,
+        path: `/teacher/question-bank/${segment(id)}/archive`,
         method: 'POST',
-        body: { decision, comment },
-        schema: apiKnowledgeCardContributionSchema,
-        invalidateCache: ['/knowledge/cards', '/knowledge/review-queue'],
+        body: { version, client_request_id: clientRequestId },
+        schema: teacherQuestionBankItemSchema,
+        invalidateCache: ['/teacher/question-bank'],
       }),
     )
   }
 
-  async disableKnowledgeCardContribution(id: number): Promise<KnowledgeCardContribution> {
-    return toKnowledgeCardContribution(
-      await apiRequest({
-        path: `/knowledge/teacher/cards/${segment(id)}/disable`,
-        method: 'POST',
-        schema: apiKnowledgeCardContributionSchema,
-        invalidateCache: ['/knowledge/cards', '/knowledge/review-queue'],
-      }),
-    )
+  async deleteTeacherQuestionBankItem(id: number, version: number, clientRequestId: string): Promise<void> {
+    await apiRequest<void>({
+      path: `/teacher/question-bank/${segment(id)}`,
+      method: 'DELETE',
+      body: { version, client_request_id: clientRequestId },
+      invalidateCache: ['/teacher/question-bank'],
+    })
   }
 
   async getProblems(): Promise<Problem[]> {
@@ -208,6 +219,14 @@ export class ApiContentRepository implements ContentRepository {
 
   async getGuidedCasesAsync(): Promise<Problem[]> {
     return (await this.getProblems()).filter((item) => item.contentType === 'guided_case')
+  }
+
+  async deleteGuidedCaseAsync(id: string): Promise<void> {
+    await apiRequest<void>({
+      path: `/problems/${segment(id)}`,
+      method: 'DELETE',
+      invalidateCache: invalidates,
+    })
   }
 
   async getCaseAuthoringAsync(id: string): Promise<CaseDraftGenerateResult | undefined> {
@@ -316,7 +335,11 @@ export class ApiContentRepository implements ContentRepository {
     )
   }
 
-  async saveGuidedCaseAsync(draft: CaseDraftGenerateResult, id?: string, metadata?: { slug?: string }) {
+  async saveGuidedCaseAsync(
+    draft: CaseDraftGenerateResult,
+    id?: string,
+    metadata?: { slug?: string; knowledgePointCodes?: string[] },
+  ) {
     const body = {
       type: '病例分析' as const,
       title: draft.title,
@@ -333,6 +356,7 @@ export class ApiContentRepository implements ContentRepository {
       case_definition: toApiDefinition(draft.caseDefinition),
       rubric: toApiRubric(draft.rubric),
       capability_tags: [...new Set((draft.caseDefinition.practiceBlueprints || []).map((item) => item.dimensionId))],
+      ...(metadata?.knowledgePointCodes ? { knowledge_point_codes: [...metadata.knowledgePointCodes] } : {}),
     }
     const saved = toProblem(
       await apiRequest({
@@ -345,4 +369,53 @@ export class ApiContentRepository implements ContentRepository {
     )
     return { id: saved.id, slug: saved.slug, status: saved.status, medicalReviewStatus: saved.medicalReviewStatus }
   }
+}
+
+function toQuestionBankItem(value: ReturnType<typeof teacherQuestionBankItemSchema.parse>): TeacherQuestionBankItem {
+  return {
+    id: value.id,
+    version: value.version,
+    status: value.status,
+    taskType: value.task_type,
+    title: value.title,
+    prompt: value.prompt,
+    options: value.options,
+    answer: value.answer,
+    explanation: value.explanation,
+    pointCodes: value.point_codes,
+    dimensionIds: value.dimension_ids,
+    medicalReviewStatus: value.medical_review_status,
+    updatedAt: value.updated_at,
+  }
+}
+
+function toQuestionBankSource(
+  value: ReturnType<typeof teacherQuestionBankSourceSchema.parse>,
+): TeacherQuestionBankSource {
+  return {
+    sourceType: value.source_type,
+    sourceId: value.source_id,
+    sourceDigest: value.source_digest,
+    taskType: value.task_type,
+    title: value.title,
+    prompt: value.prompt,
+    options: value.options,
+    answer: value.answer,
+    explanation: value.explanation,
+    pointCodes: value.point_codes,
+    dimensionIds: value.dimension_ids,
+  }
+}
+
+function questionBankContentPayload(value: TeacherQuestionBankContent) {
+  return teacherQuestionBankContentSchema.parse({
+    task_type: value.taskType,
+    title: value.title,
+    prompt: value.prompt,
+    options: value.options,
+    answer: value.answer,
+    explanation: value.explanation,
+    point_codes: value.pointCodes,
+    dimension_ids: value.dimensionIds,
+  })
 }

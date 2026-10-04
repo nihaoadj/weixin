@@ -6,7 +6,7 @@
         @click="openChat"
       >
         返回研讨</button
-      ><text class="eyebrow-label">旧答疑归档</text><text class="heading-title">学习记录</text></view
+      ><text class="eyebrow-label">旧答疑归档</text><text class="heading-title">历史学习总结</text></view
     >
     <view class="topic-filter">
       <text class="filter-label">按学习主题筛选</text>
@@ -32,8 +32,8 @@
       v-if="isLoading"
       variant="loading"
       icon="retry"
-      title="正在加载学习记录"
-      description="正在整理旧答疑和报告。"
+      title="正在加载历史学习总结"
+      description="正在整理旧答疑和历史学习总结。"
     />
     <MedState
       v-else-if="loadError"
@@ -84,7 +84,7 @@
           class="tag"
           @click.stop="openReport(item.conversationId)"
         >
-          {{ item.reportStatus === '已批阅' ? '查看教师反馈' : '查看报告' }}
+          {{ item.reportStatus === '已批阅' ? '查看历史反馈' : '查看历史总结' }}
         </text>
       </view>
     </view>

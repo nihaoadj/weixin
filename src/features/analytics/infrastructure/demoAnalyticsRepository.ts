@@ -1,64 +1,21 @@
 import type { AnalyticsRepository } from '@/features/analytics/domain/ports'
-import type { AnalyticsCase, AnalyticsKnowledge, AnalyticsOverview, AnalyticsStudent } from '@/types/teacher'
+import type { TeacherInsightsStudentFilters } from '../domain/teacherInsights'
+import { demoTeacherInsights } from './demoTeacherInsights'
 
 export const demoAnalyticsRepository: AnalyticsRepository = {
-  async getAnalyticsOverview(classId?: number, dateFrom?: string, dateTo?: string): Promise<AnalyticsOverview> {
-    return {
-      scope: { classId: classId || null, className: null, dateFrom: dateFrom || '', dateTo: dateTo || '' },
-      studentCount: 0,
-      publishedCaseCount: 0,
-      eligiblePairs: 0,
-      startedPairs: 0,
-      completedPairs: 0,
-      completionRate: null,
-      currentAverageScore: null,
-      averageImprovement: null,
-      dimensions: [],
-      weakDimensions: [],
-      cases: [],
-      students: [],
-    }
+  async getTeacherInsightsOverview(filters = {}) {
+    return demoTeacherInsights.overview(filters)
   },
-  async getAnalyticsCase(problemId: number): Promise<AnalyticsCase> {
-    return {
-      problem: { id: problemId, title: '', version: 1 },
-      eligiblePairs: 0,
-      startedPairs: 0,
-      completedPairs: 0,
-      completionRate: null,
-      currentAverageScore: null,
-      averageImprovement: null,
-      averageDurationMinutes: null,
-      dimensions: [],
-      distribution: {},
-      students: [],
-    }
+  async getTeacherInsightsStudents(filters = {}, limit, offset) {
+    return demoTeacherInsights.students(filters, limit, offset)
   },
-  async getAnalyticsStudent(studentId: number): Promise<AnalyticsStudent> {
-    return {
-      student: { id: studentId, nickname: '' },
-      assigned: 0,
-      started: 0,
-      completed: 0,
-      completionRate: null,
-      currentAverageScore: null,
-      averageImprovement: null,
-      dimensions: [],
-      cases: [],
-      timeline: [],
-      learningPlan: null,
-      practiceMastery: {},
-    }
+  async getTeacherInsightsStudent(studentId, filters: TeacherInsightsStudentFilters) {
+    return demoTeacherInsights.student(studentId, filters)
   },
-  async getAnalyticsKnowledge(classId: number): Promise<AnalyticsKnowledge> {
-    return {
-      classId,
-      className: '',
-      participantCount: 0,
-      dueBacklog: 0,
-      objectiveCorrectRate: null,
-      weakPoints: [],
-      rankingsSuppressed: true,
-    }
+  async getTeacherInsightsKnowledge(filters = {}) {
+    return demoTeacherInsights.knowledge(filters)
+  },
+  async getTeacherInsightsDiagnostics(filters = {}, limit, offset) {
+    return demoTeacherInsights.diagnostics(filters, limit, offset)
   },
 }

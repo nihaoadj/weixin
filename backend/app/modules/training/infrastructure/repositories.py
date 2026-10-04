@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import asdict
 from datetime import UTC, datetime
 
 from sqlalchemy import false, or_, select
@@ -52,6 +53,9 @@ class SqlAlchemyTrainingRepository(TrainingRepository):
             target_ids=tuple(item for item in (problem.target_ids or "").split(",") if item),
             case_definition=deepcopy(problem.case_definition or {}),
             rubric=deepcopy(problem.rubric or {}),
+            knowledge_point_codes=tuple(link.point_code for link in problem.knowledge_links),
+            capability_tags=tuple(problem.capability_tags or ()),
+            medical_review_status=problem.medical_review_status,
         )
 
     @staticmethod
@@ -109,11 +113,29 @@ class SqlAlchemyTrainingRepository(TrainingRepository):
             started_at=attempt.started_at,
             completed_at=attempt.completed_at,
             assessed_at=attempt.assessed_at,
-            problem=cls._problem_record(attempt.problem),
+            problem=cls._snapshot_record(attempt),
             messages=tuple(cls._message_record(item) for item in attempt.messages),
             submissions=tuple(cls._submission_record(item) for item in attempt.submissions),
             assessment=cls._assessment_record(attempt.assessment) if attempt.assessment is not None else None,
         )
+
+    @classmethod
+    def _snapshot_record(cls, attempt: CaseAttempt) -> TrainingProblemRecord:
+        if not attempt.problem_snapshot:
+            return cls._problem_record(attempt.problem)
+        value = deepcopy(attempt.problem_snapshot)
+        for field in ("target_ids", "knowledge_point_codes", "capability_tags"):
+            value[field] = tuple(value.get(field, ()))
+        return TrainingProblemRecord(**value)
+
+    def freeze(self, problem_id: int) -> None:
+        attempts = self._session.scalars(
+            select(CaseAttempt).where(CaseAttempt.problem_id == problem_id)
+        ).all()
+        for attempt in attempts:
+            if not attempt.problem_snapshot:
+                attempt.problem_snapshot = asdict(self._problem_record(attempt.problem))
+        self._session.flush()
 
     def class_codes(self, student_id: int) -> set[str]:
         student = self._session.get(User, student_id)
@@ -205,6 +227,7 @@ class SqlAlchemyTrainingRepository(TrainingRepository):
             problem_id=problem.id,
             student_id=student_id,
             problem_version=problem.version,
+            problem_snapshot=asdict(problem),
             status="in_progress",
             current_stage=focus_stage or "history",
             retry_of_id=retry_of_id,

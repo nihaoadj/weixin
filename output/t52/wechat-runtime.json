@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-30",
+  "mode": "demo",
+  "project": "D:/CODE/weixin/wxprogrom7.15/dist/dev/mp-weixin",
+  "watcher": "Existing uni mp-weixin watcher reused (PID 20728)",
+  "client": "Codex",
+  "sdkVersion": "3.17.2",
+  "viewport": { "width": 428, "height": 835 },
+  "urlCheck": true,
+  "actions": [
+    { "tool": "simulator_refresh", "ok": true },
+    { "tool": "automation_element_action", "action": "tap", "selector": ".role-button.teacher", "ok": true },
+    {
+      "tool": "automation_element_action",
+      "action": "text",
+      "selector": ".teacher-page",
+      "ok": true,
+      "observed": "Teacher workspace with four destinations and updated overview copy"
+    },
+    {
+      "tool": "automation_element_action",
+      "action": "outerWxml",
+      "selector": ".teacher-nav",
+      "ok": false,
+      "reason": "no such element"
+    },
+    {
+      "tool": "automation_element_action",
+      "action": "tap",
+      "selector": ".teacher-nav__item:nth-child(4)",
+      "ok": false,
+      "reason": "no such element"
+    }
+  ],
+  "doctor": { "command": "npm run test:mp:doctor", "exitCode": 0 },
+  "acceptance": "Teacher landing reached; diagnostic detail, return and final-test entry require manual verification MA-T52-001. No new detail screenshot or render acceptance."
+}

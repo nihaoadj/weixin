@@ -1,0 +1,10 @@
+{
+  "phase": "T43",
+  "status": "completed_archived",
+  "decision_date": "2026-09-26",
+  "authority": "用户明确要求默认完成并直接归档，免除剩余验收",
+  "acceptance": "waived_by_user",
+  "future_acceptance": "不恢复 T43 验收；旧交接待办仅历史记录",
+  "evidence": "原文件逐字节保留；历史未执行/失败不改写为通过",
+  "older_logs": "docs/archive/history-20260926.zip"
+}

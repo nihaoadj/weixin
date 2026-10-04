@@ -1,6 +1,0 @@
-interface:
-  display_name: 'Browser-External Screenshot'
-  short_description: 'Capture desktop and developer-tool evidence'
-  icon_small: './assets/screenshot-small.svg'
-  icon_large: './assets/screenshot.png'
-  default_prompt: 'Use $screenshot to capture browser-external evidence from the correct window, screen, or region.'

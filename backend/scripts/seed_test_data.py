@@ -8,9 +8,9 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 from alembic import command
 from alembic.config import Config
+from app.bootstrap.test_seed import seed_test_data
 from app.core.config import get_settings
 from app.db import SessionLocal
-from app.services.test_seed import seed_test_data
 
 
 def main() -> None:

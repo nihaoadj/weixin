@@ -1,0 +1,1 @@
+npx vitest run src/pages/teacher/insights/student-detail.behavior.spec.ts | exit 0

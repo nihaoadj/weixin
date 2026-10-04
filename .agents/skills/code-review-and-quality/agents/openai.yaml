@@ -2,3 +2,6 @@ interface:
   display_name: 'Code Review and Quality'
   short_description: 'Evidence-led multi-axis review for this repository'
   default_prompt: 'Use $code-review-and-quality to review this concrete change and report evidence-backed findings first.'
+
+policy:
+  allow_implicit_invocation: true

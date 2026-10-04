@@ -2,9 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.bootstrap.composition import training_application as compose_training_application
-from app.db import SessionLocal
 from app.main import app
-from app.models import Problem
 from app.modules.training.application.records import AssessmentGenerationResult
 from app.modules.training.domain.state import AssessmentCandidate
 
@@ -22,7 +20,7 @@ def login(role: str, external_id: str) -> str:
 
 
 def case_id() -> int:
-    response = client.get("/problems", headers={"Authorization": f"Bearer {login('teacher', 'case_owner')}"})
+    response = client.get("/problems", headers={"Authorization": f"Bearer {login('teacher', 'demo_teacher')}"})
     return response.json()[0]["id"]
 
 
@@ -75,55 +73,14 @@ def test_draft_inputs_clone_and_published_immutability() -> None:
         ).status_code
         == 404
     )
-    assert client.post(f"/problems/{problem_id}/medical-review/submit", headers=headers).status_code == 200
-    reviewer = login("teacher", "demo_reviewer")
-    review_view = client.get(
-        f"/problems/{problem_id}/medical-review-view",
-        headers={"Authorization": f"Bearer {reviewer}"},
-    )
-    assert review_view.status_code == 200
-    assert review_view.json()["case_definition"]["facts"]
-    assert review_view.json()["rubric"]["dimensions"]
-    assert len(review_view.json()["current_digest"]) == 64
-    assert (
-        client.post(
-            f"/problems/{problem_id}/medical-review",
-            headers={"Authorization": f"Bearer {reviewer}"},
-            json={"decision": "rejected", "comment": "不通过"},
-        ).status_code
-        == 422
-    )
-    review = client.post(
-        f"/problems/{problem_id}/medical-review",
-        headers={"Authorization": f"Bearer {reviewer}"},
-        json={"decision": "approved", "comment": "通过"},
-    )
-    assert review.status_code == 200
-    published = client.post(f"/problems/{problem_id}/publish", headers=headers)
-    assert published.status_code == 200
-    immutable = client.put(f"/problems/{problem_id}", headers=headers, json=payload)
-    assert immutable.status_code == 409
-    rejected = client.post(f"/problems/{problem_id}/reject", headers=headers)
-    assert rejected.status_code == 409
-    clone = client.post(f"/problems/{problem_id}/clone-version", headers=headers)
-    assert clone.status_code == 200
-    assert clone.json()["version"] == 2
-    assert clone.json()["status"] == "draft"
-
-    db = SessionLocal()
-    try:
-        persisted = db.get(Problem, problem_id)
-        persisted.title = "审核后被修改的病例"
-        db.commit()
-    finally:
-        db.close()
-    digest_mismatch = client.post(f"/problems/{problem_id}/publish", headers=headers)
-    assert digest_mismatch.status_code == 409
-
-    draft_payload = {**payload, "slug": "draft-case"}
-    draft = client.post("/problems", headers=headers, json=draft_payload)
-    assert draft.status_code == 200
-    assert client.post(f"/problems/{draft.json()['id']}/clone-version", headers=headers).status_code == 404
+    assert client.post(f"/problems/{problem_id}/medical-review/submit", headers=headers).status_code == 409
+    assert client.post(f"/problems/{problem_id}/publish", headers=headers).status_code == 409
+    assert client.post(f"/problems/{problem_id}/clone-version", headers=headers).status_code == 409
+    editable = client.put(f"/problems/{problem_id}", headers=headers, json=payload)
+    assert editable.status_code == 200
+    assert editable.json()["status"] == "published"
+    assert editable.json()["medical_review_status"] == "not_required"
+    assert editable.json()["version"] == 2
 
 
 def test_attempt_order_safety_and_cross_student_privacy() -> None:
@@ -143,7 +100,7 @@ def test_attempt_order_safety_and_cross_student_privacy() -> None:
     assert safety.status_code == 200
     assert safety.json()["response_mode"] == "safety"
     assert "社区获得性肺炎" not in safety.json()["content"]
-    owner = login("teacher", "answer_count_owner")
+    owner = login("teacher", "demo_teacher")
     listed = client.get("/problems", headers={"Authorization": f"Bearer {owner}"})
     guided = next(item for item in listed.json() if item["id"] == problem)
     assert guided["answer_count"] == 1
@@ -169,7 +126,7 @@ def test_attempt_order_safety_and_cross_student_privacy() -> None:
     assert incomplete.status_code == 409
 
 
-def test_problem_crud_and_missing_resources() -> None:
+def test_retired_problem_create_and_missing_resources() -> None:
     teacher = login("teacher", "crud_teacher")
     student = login("student", "crud_student")
     headers = {"Authorization": f"Bearer {teacher}"}
@@ -177,24 +134,10 @@ def test_problem_crud_and_missing_resources() -> None:
     assert client.get("/problems/99999/authoring", headers=headers).status_code == 404
     assert client.get("/problems/99999/thread", headers={"Authorization": f"Bearer {student}"}).status_code == 404
     created = client.post(
-        "/problems",
-        headers=headers,
-        json={
-            "type": "医学常识",
-            "title": "普通题",
-            "description": "描述",
-            "target": "all",
-            "target_label": "全体学生",
-            "target_ids": [],
-        },
+        "/problems", headers=headers, json={"type": "医学常识", "title": "普通题", "description": "描述"}
     )
-    assert created.status_code == 200
-    problem_id = created.json()["id"]
-    update = {**created.json(), "title": "普通题更新", "status": "rejected"}
-    assert client.put(f"/problems/{problem_id}", headers=headers, json=update).status_code == 200
-    assert client.post(f"/problems/{problem_id}/reject", headers=headers).status_code == 200
-    assert client.post(f"/problems/{problem_id}/publish", headers=headers).status_code == 200
-    assert client.post(f"/problems/{problem_id}/publish", headers=headers).status_code == 200
+    assert created.status_code == 409
+    assert created.json()["detail"]["code"] == "RETIRED_FLOW"
 
 
 def test_assessment_model_result_is_recalculated(monkeypatch) -> None:
@@ -246,6 +189,7 @@ def test_assessment_model_result_is_recalculated(monkeypatch) -> None:
             "management_safety",
         )
     )
+
     class StubAssessmentGateway:
         def assess(self, _attempt):
             return AssessmentGenerationResult(

@@ -98,206 +98,102 @@ def test_report_state_flow() -> None:
             },
         },
     )
-    assert report_response.status_code == 200
-    report_id = report_response.json()["id"]
-    assert report_response.json()["analysis"]["errors"][0]["content"] == "缺少鉴别诊断"
-
-    submit_response = client.post(f"/reports/{report_id}/submit", headers={"Authorization": f"Bearer {student_token}"})
-    assert submit_response.status_code == 200
-    assert submit_response.json()["status"] == "pending_review"
-
-    review_response = client.post(
-        f"/reports/{report_id}/review",
-        headers={"Authorization": f"Bearer {teacher_token}"},
-        json={"teacher_score": 0, "teacher_feedback": "需要补充依据"},
-    )
-    assert review_response.status_code == 200
-    assert review_response.json()["status"] == "reviewed"
-    assert review_response.json()["teacher_score"] == 0
-    # 批阅教师身份必须留痕，保证审计可追溯。
-    assert isinstance(review_response.json()["reviewer_id"], int)
-
-    duplicate_response = client.post(
-        "/reports",
-        headers={"Authorization": f"Bearer {student_token}"},
-        json={
-            "conversation_id": conversation_id,
-            "ai_score": 88,
-            "ai_summary": "结构完整",
-            "analysis": {
-                "errors": [{"content": "缺少鉴别诊断", "suggestion": "补充鉴别依据"}],
-                "strengths": ["结构清晰"],
-                "general_suggestions": ["继续练习"],
-            },
-        },
-    )
-    assert duplicate_response.status_code == 200
-    assert duplicate_response.json()["status"] == "reviewed"
-    assert duplicate_response.json()["analysis"]["strengths"] == ["结构清晰"]
+    assert report_response.status_code == 409
+    assert report_response.json()["detail"]["code"] == "STATE_CONFLICT"
+    assert client.get("/reports/summaries", headers={"Authorization": f"Bearer {teacher_token}"}).status_code == 404
 
 
-def test_problem_publish_and_question_thread_flow() -> None:
-    student_token = login()
-    teacher_token = login("teacher", "demo_teacher")
-
-    create_response = client.post(
-        "/problems",
-        headers={"Authorization": f"Bearer {teacher_token}"},
-        json={
-            "type": "医学常识",
-            "title": "肺炎有哪些典型表现",
-            "description": "请从临床表现和鉴别诊断回答",
-            "target": "all",
-            "target_label": "全体学生",
-            "target_ids": [],
-        },
-    )
-    assert create_response.status_code == 200
-    problem_id = create_response.json()["id"]
-    assert create_response.json()["status"] == "draft"
-
-    student_before_publish = client.get("/problems", headers={"Authorization": f"Bearer {student_token}"})
-    assert student_before_publish.status_code == 200
-    assert student_before_publish.json() == []
-
-    publish_response = client.post(
-        f"/problems/{problem_id}/publish", headers={"Authorization": f"Bearer {teacher_token}"}
-    )
-    assert publish_response.status_code == 200
-    assert publish_response.json()["status"] == "published"
-
-    student_problems = client.get("/problems", headers={"Authorization": f"Bearer {student_token}"})
-    assert student_problems.status_code == 200
-    assert len(student_problems.json()) == 1
-
-    thread_response = client.post(
-        f"/problems/{problem_id}/thread",
-        headers={"Authorization": f"Bearer {student_token}"},
-        json={"messages": [{"role": "user", "content": "需要结合发热、咳嗽、影像学改变进行判断"}]},
-    )
-    assert thread_response.status_code == 200
-    assert thread_response.json()["question_id"] == problem_id
-
-    teacher_problems = client.get("/problems", headers={"Authorization": f"Bearer {teacher_token}"})
-    assert teacher_problems.status_code == 200
-    assert teacher_problems.json()[0]["answer_count"] == 1
+def test_open_discussion_create_and_thread_writes_are_retired() -> None:
+    student = {"Authorization": f"Bearer {login()}"}
+    teacher = {"Authorization": f"Bearer {login('teacher', 'demo_teacher')}"}
+    payload = {"type": "医学常识", "title": "旧讨论题", "description": "旧内容"}
+    for path, headers, body in [("/problems", teacher, payload), ("/problems/1/thread", student, {"messages": []})]:
+        response = client.post(path, headers=headers, json=body)
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "RETIRED_FLOW"
+    assert client.get("/student/questions", headers=student).json() == []
+    assert client.get("/problems/1/thread", headers=student).status_code == 404
 
 
-def test_question_writes_require_author_ownership() -> None:
-    owner_token = login("teacher", "question_owner")
-    other_token = login("teacher", "question_intruder")
-    owner_headers = {"Authorization": f"Bearer {owner_token}"}
-    other_headers = {"Authorization": f"Bearer {other_token}"}
+def test_case_writes_require_author_ownership() -> None:
+    owner_headers = {"Authorization": f"Bearer {login('teacher', 'question_owner')}"}
+    other_headers = {"Authorization": f"Bearer {login('teacher', 'question_intruder')}"}
+    from tests.test_t63_content_learning_pruning import _case_payload
 
-    created = client.post(
-        "/problems",
-        headers=owner_headers,
-        json={
-            "type": "医学常识",
-            "title": "仅作者可操作",
-            "description": "归属校验",
-            "target": "all",
-            "target_label": "全体学生",
-            "target_ids": [],
-        },
-    )
+    payload = _case_payload(client, owner_headers, "ownership-case")
+    created = client.post("/problems", headers=owner_headers, json=payload)
     assert created.status_code == 200
     problem_id = created.json()["id"]
-    # 题目创建即记录作者，供写操作归属校验使用。
     assert created.json()["author_id"] is not None
-
-    payload = {
-        "type": "医学常识",
-        "title": "篡改标题",
-        "description": "越权修改",
-        "target": "all",
-        "target_label": "全体学生",
-        "target_ids": [],
-        "content_type": "question",
-    }
     assert client.put(f"/problems/{problem_id}", headers=other_headers, json=payload).status_code == 404
     assert client.post(f"/problems/{problem_id}/publish", headers=other_headers).status_code == 404
     assert client.post(f"/problems/{problem_id}/reject", headers=other_headers).status_code == 404
+    assert client.put(f"/problems/{problem_id}", headers=owner_headers, json=payload).status_code == 200
+    assert client.post(f"/problems/{problem_id}/publish", headers=owner_headers).status_code == 409
 
-    # 作者本人操作不受影响。
-    assert client.post(f"/problems/{problem_id}/publish", headers=owner_headers).status_code == 200
 
+def test_class_and_individual_case_visibility(db) -> None:
+    from app.modules.content.infrastructure.models import Problem
 
-def test_class_and_individual_problem_visibility() -> None:
     class_student = login("student", "class_student", ["class_a"])
     other_student = login("student", "other_student", ["class_b"])
-    teacher_token = login("teacher", "visibility_teacher")
-
-    def create_and_publish(target: str, target_ids: list[str], title: str) -> int:
-        created = client.post(
-            "/problems",
-            headers={"Authorization": f"Bearer {teacher_token}"},
-            json={
-                "type": "病例分析",
-                "title": title,
-                "description": "visibility test",
-                "target": target,
-                "target_label": title,
-                "target_ids": target_ids,
-            },
-        )
-        problem_id = created.json()["id"]
-        published = client.post(
-            f"/problems/{problem_id}/publish",
-            headers={"Authorization": f"Bearer {teacher_token}"},
-        )
-        assert published.status_code == 200
-        return problem_id
-
-    class_problem_id = create_and_publish("class", ["class_a"], "class only")
-    individual_problem_id = create_and_publish("individual", ["other_student"], "student only")
-
+    cases = [
+        Problem(
+            type="病例分析",
+            title="class only",
+            content_type="guided_case",
+            status="published",
+            medical_review_status="approved",
+            target="class",
+            target_ids="class_a",
+        ),
+        Problem(
+            type="病例分析",
+            title="student only",
+            content_type="guided_case",
+            status="published",
+            medical_review_status="approved",
+            target="individual",
+            target_ids="other_student",
+        ),
+    ]
+    db.add_all(cases)
+    db.commit()
     class_items = client.get("/problems", headers={"Authorization": f"Bearer {class_student}"}).json()
     other_items = client.get("/problems", headers={"Authorization": f"Bearer {other_student}"}).json()
-    assert {item["id"] for item in class_items} == {class_problem_id}
-    assert {item["id"] for item in other_items} == {individual_problem_id}
-
-    hidden = client.get(
-        f"/problems/{individual_problem_id}",
-        headers={"Authorization": f"Bearer {class_student}"},
-    )
-    assert hidden.status_code == 404
-
-
-def test_student_problem_response_does_not_expose_targeting_metadata() -> None:
-    student_token = login("student", "target_metadata_student", ["class_a"])
-    teacher_token = login("teacher", "target_metadata_teacher")
-    created = client.post(
-        "/problems",
-        headers={"Authorization": f"Bearer {teacher_token}"},
-        json={
-            "type": "医学常识",
-            "title": "定向题目",
-            "description": "仅用于指定班级",
-            "target": "class",
-            "target_label": "临床一班",
-            "target_ids": ["class_a", "other-class"],
-        },
-    )
-    problem_id = created.json()["id"]
+    assert {item["id"] for item in class_items} == {cases[0].id}
+    assert {item["id"] for item in other_items} == {cases[1].id}
     assert (
-        client.post(
-            f"/problems/{problem_id}/publish",
-            headers={"Authorization": f"Bearer {teacher_token}"},
-        ).status_code
-        == 200
+        client.get(f"/problems/{cases[1].id}", headers={"Authorization": f"Bearer {class_student}"}).status_code == 404
     )
 
-    response = client.get("/problems", headers={"Authorization": f"Bearer {student_token}"})
 
-    item = next(item for item in response.json() if item["id"] == problem_id)
+def test_student_case_response_does_not_expose_targeting_metadata(db) -> None:
+    from app.modules.content.infrastructure.models import Problem
+
+    student_token = login("student", "target_metadata_student", ["class_a"])
+    login("teacher", "target_metadata_teacher")
+    case = Problem(
+        type="病例分析",
+        title="定向病例",
+        content_type="guided_case",
+        status="published",
+        medical_review_status="approved",
+        target="class",
+        target_label="临床一班",
+        target_ids="class_a,other-class",
+    )
+    db.add(case)
+    db.commit()
+    response = client.get("/problems", headers={"Authorization": f"Bearer {student_token}"})
+    item = next(item for item in response.json() if item["id"] == case.id)
     assert item["target_ids"] == []
     assert item["target_label"] == "已分配学习内容"
     assert item["author_id"] is None
     assert item["capability_tags"] == []
 
 
-def test_teacher_cannot_review_a_draft_report() -> None:
+def test_teacher_cannot_see_or_review_a_draft_report() -> None:
     student_token = login("student", "draft_student")
     teacher_token = login("teacher", "draft_teacher")
     conversation = client.post(
@@ -310,9 +206,15 @@ def test_teacher_cannot_review_a_draft_report() -> None:
         headers={"Authorization": f"Bearer {student_token}"},
         json={"conversation_id": conversation.json()["id"], "ai_score": 70, "ai_summary": "draft"},
     )
+    assert report.status_code == 409
+    assert report.json()["detail"]["code"] == "STATE_CONFLICT"
+    # The old teacher route remains a deprecated compatibility endpoint and
+    # cannot be used to review a retained report.
+    assert client.get("/reports/1", headers={"Authorization": f"Bearer {teacher_token}"}).status_code == 404
     response = client.post(
-        f"/reports/{report.json()['id']}/review",
+        "/reports/1/review",
         headers={"Authorization": f"Bearer {teacher_token}"},
         json={"teacher_score": 70, "teacher_feedback": "not ready"},
     )
     assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "STATE_CONFLICT"

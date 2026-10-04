@@ -19,6 +19,14 @@ export const apiKnowledgeCardContributionSchema = z.object({
   reviewed_at: timestamp.nullable().optional(),
   created_at: timestamp,
   updated_at: timestamp,
+  ai_title: z.string().nullable().optional(),
+  source_type: z.enum(['pbl_ai']).nullable().optional(),
+  source_snapshot_id: z.number().int().nullable().optional(),
+  source_position: z.number().int().nullable().optional(),
+  source_finding_ids: z.array(z.string()).default([]),
+  origin_student_id: z.number().int().nullable().optional(),
+  origin_student_name: z.string().nullable().optional(),
+  target_student_ids: z.array(z.number().int()).default([]),
 })
 
 export const apiKnowledgeCardContributionListSchema = z.array(apiKnowledgeCardContributionSchema)

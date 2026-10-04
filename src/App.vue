@@ -11,10 +11,10 @@ onLaunch(() => {
 
 <style>
 page {
-  --med-paper: #f6f8f6;
-  --med-ink: #102a43;
-  --med-clinical: #0a6b66;
-  --med-wash: #e4f1ee;
+  --med-paper: #f4f7f6;
+  --med-ink: #15324a;
+  --med-clinical: #0b716b;
+  --med-wash: #e7f2f0;
   --med-safety: #9a5618;
   --med-safety-soft: #fef3e8;
   --med-safety-border: #efd1aa;
@@ -25,22 +25,23 @@ page {
   --med-font-display: var(--med-font-body);
   --med-font-utility: 'DIN Alternate', 'SFMono-Regular', Consolas, monospace;
   --med-navy: var(--med-ink);
-  --med-text: #243b53;
+  --med-text: #29465a;
   --med-text-secondary: #526174;
-  --med-muted: #5e7382;
+  --med-muted: #5c7080;
   --med-brand: var(--med-clinical);
-  --med-brand-deep: #075753;
+  --med-brand-deep: #075954;
   --med-brand-soft: var(--med-wash);
   --med-accent: #2f8f87;
   --med-page: var(--med-paper);
-  --med-surface: #fbfdfd;
-  --med-border: #d4e0dc;
-  --med-divider: #e7eeeb;
+  --med-surface: #ffffff;
+  --med-border: #d7e2de;
+  --med-divider: #e6edeb;
   --med-warning: var(--med-safety);
   --med-danger: var(--med-alert);
   --med-radius-sm: 12rpx;
   --med-radius-md: 20rpx;
   --med-radius-lg: 20rpx;
+  --med-space-0: 8rpx;
   --med-space-1: 16rpx;
   --med-space-2: 24rpx;
   --med-space-3: 32rpx;
@@ -62,7 +63,7 @@ button {
   box-sizing: border-box;
   font-family: inherit;
   touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(10, 107, 102, 0.14);
+  -webkit-tap-highlight-color: rgba(11, 113, 107, 0.14);
 }
 
 button::after,

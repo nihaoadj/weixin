@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import socket
 import sys
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import pytest
@@ -131,6 +132,15 @@ def managed_database(request: pytest.FixtureRequest, app, db_engine):
     Base.metadata.drop_all(bind=db_engine)
     assert_owned_resource(TEST_RESOURCE)
     Base.metadata.create_all(bind=db_engine)
+    migration_path = BACKEND_ROOT / "alembic" / "versions" / "20260916_0028_persisted_knowledge_graph.py"
+    spec = spec_from_file_location("test_t38_catalog_seed", migration_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Unable to load the T38 knowledge catalog seed")
+    catalog_seed = module_from_spec(spec)
+    spec.loader.exec_module(catalog_seed)
+    with db_engine.begin() as connection:
+        catalog_seed.seed_baseline(connection, include_learning_objectives=True)
+        catalog_seed.validate_baseline(connection)
     if request.node.get_closest_marker("seed_showcase"):
         from app.services.case_seed import seed_showcase_case
 

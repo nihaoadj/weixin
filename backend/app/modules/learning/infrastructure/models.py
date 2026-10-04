@@ -132,6 +132,7 @@ class StudentNotification(Base):
     type: Mapped[str] = mapped_column(String(40))
     entity_type: Mapped[str] = mapped_column(String(40), default="learning_plan")
     entity_id: Mapped[int] = mapped_column(Integer)
+    entity_public_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     title: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text)
     dedupe_key: Mapped[str] = mapped_column(String(160), unique=True)

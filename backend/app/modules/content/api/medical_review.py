@@ -1,4 +1,8 @@
+from datetime import datetime
+from typing import Literal
+
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -12,6 +16,57 @@ from app.modules.identity.infrastructure.models import User
 from app.shared.actor import Actor
 
 router = APIRouter(prefix="/problems", tags=["medical-review"])
+question_router = APIRouter(prefix="/medical-review/classroom-questions", tags=["medical-review"])
+
+
+class ClassroomQuestionReviewResponse(BaseModel):
+    id: int
+    package_item_id: int
+    content_digest: str
+    content_snapshot: dict
+    status: Literal["pending", "approved", "rejected"]
+    submitted_by: int
+    submitted_at: datetime
+    reviewer_id: int | None
+    review_comment: str
+    reviewed_at: datetime | None
+
+
+class ClassroomQuestionDecision(BaseModel):
+    decision: Literal["approved", "rejected"]
+    comment: str = Field(default="", max_length=1000)
+
+
+@question_router.get("", response_model=list[ClassroomQuestionReviewResponse])
+def classroom_question_queue(
+    status: Literal["pending", "approved", "rejected"] = "pending",
+    _reviewer: User = Depends(require_permission("medical_review")),
+    db: Session = Depends(get_db),
+):
+    return []
+
+
+@question_router.get("/{review_id}", response_model=ClassroomQuestionReviewResponse)
+def classroom_question_review(
+    review_id: int,
+    _reviewer: User = Depends(require_permission("medical_review")),
+    db: Session = Depends(get_db),
+):
+    from app.shared.errors import AppError
+
+    raise AppError("RESOURCE_NOT_FOUND", "资源不存在", 404)
+
+
+@question_router.post("/{review_id}/decision", response_model=ClassroomQuestionReviewResponse)
+def decide_classroom_question(
+    review_id: int,
+    payload: ClassroomQuestionDecision,
+    reviewer: User = Depends(require_permission("medical_review")),
+    db: Session = Depends(get_db),
+):
+    from app.modules.learning.public import retired_learning_flow
+
+    retired_learning_flow()
 
 
 @router.get("/review-queue", response_model=list[ProblemRead])
@@ -41,9 +96,7 @@ def decide_review(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     return problem_view(
-        content_application(db).decide_review(
-            Actor.from_user(reviewer), problem_id, payload.decision, payload.comment
-        )
+        content_application(db).decide_review(Actor.from_user(reviewer), problem_id, payload.decision, payload.comment)
     )
 
 
@@ -64,6 +117,5 @@ def review_history(
     db: Session = Depends(get_db),
 ) -> list[dict[str, object]]:
     return [
-        review_record_view(item)
-        for item in content_application(db).review_history(Actor.from_user(user), problem_id)
+        review_record_view(item) for item in content_application(db).review_history(Actor.from_user(user), problem_id)
     ]

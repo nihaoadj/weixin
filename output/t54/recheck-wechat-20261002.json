@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-02",
+  "mode": "demo",
+  "project": "D:/CODE/weixin/wxprogrom7.15/dist/dev/mp-weixin",
+  "sdk": "3.17.2",
+  "urlCheck": true,
+  "actions": [
+    { "tool": "close_project_window", "exitCode": 0, "ok": true },
+    { "tool": "open_project_window", "exitCode": 0, "ok": true, "windowMode": "liteMode", "type": "newopen" },
+    { "tool": "automation_runtime_info", "action": "currentPage", "exitCode": 0, "ok": true, "path": "pages/login/login" },
+    { "tool": "automation_element_action", "action": "tap", "selector": ".role-button.teacher", "exitCode": 0, "ok": true, "eventualPath": "pages/teacher/index/index" },
+    { "tool": "automation_element_action", "action": "tap", "selector": "teacher-page-frame >>> .teacher-frame__nav-item:nth-child(4)", "exitCode": 0, "ok": false, "error": "no such element" },
+    { "tool": "automation_element_action", "action": "tap", "selector": ".teacher-frame__nav-item:nth-child(4)", "exitCode": 0, "ok": false, "error": "no such element" },
+    { "tool": "simulator_open_page", "exitCode": 0, "ok": true, "page": "pages/teacher/pbl/index", "actualNavigationClickVerified": false },
+    { "tool": "simulator_screenshot", "exitCode": 0, "ok": true, "file": "pbl-list-reopened.jpg", "width": 548, "height": 1184, "reviewed": true },
+    { "tool": "simulator_open_page", "exitCode": 0, "ok": true, "page": "pages/teacher/pbl/test-queue" },
+    { "tool": "simulator_screenshot", "exitCode": 0, "ok": true, "file": "test-queue-reopened.jpg", "reviewed": true },
+    { "tool": "automation_element_action", "action": "tap", "selector": ".queue-action", "exitCode": 0, "ok": false, "error": "no such element" },
+    { "tool": "automation_element_action", "action": "tap", "selector": ".queue-back", "exitCode": 0, "ok": true, "eventualPath": "pages/teacher/index/index" },
+    { "tool": "automation_element_action", "action": "tap", "selector": ".todo-row", "exitCode": 0, "ok": true, "eventualPath": "pages/teacher/pbl/test-queue", "query": { "reviewKind": "pending_review" } }
+  ],
+  "remainingAcceptance": "MA-T54-001: component navigation, diagnostic and final-test detail interactions and return",
+  "dataReset": false,
+  "generatedFilesModified": false
+}

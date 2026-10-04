@@ -1,20 +1,53 @@
 import { z } from 'zod'
 import { AppError } from '@/types/errors'
 import { storage, storageKeys } from '@/platform/storage/storage'
-import { localAttemptSchema, localAssessmentSchema } from '@/platform/storage/caseSchemas'
+import { localAttemptSchema, localAssessmentSchema, localDraftSchema } from '@/platform/storage/caseSchemas'
 import { getSessionContext } from '@/platform/session/context'
 import type { CaseCatalogPort } from '@/features/training/domain/ports'
 import { scoreDemoCase } from '@/features/training/domain/scoring'
-import type { CaseAssessment, CaseAttempt, CaseStageId, StageAnswer } from '@/types/case'
+import type { CaseAssessment, CaseAttempt, CaseDraftGenerateResult, CaseStageId, StageAnswer } from '@/types/case'
 
 const key = (name: string) => storage.scopedKey(name, getSessionContext()?.openid || 'anonymous')
 const write = <T>(name: string, value: T[], schema: z.ZodType<T>) => storage.write(key(name), value, z.array(schema))
 const stages: CaseStageId[] = ['history', 'problem_representation', 'differential', 'tests', 'management']
 
 let caseCatalog: CaseCatalogPort | undefined
+let demoAttemptSequence = 0
 
 export function configureDemoCaseCatalog(catalog: CaseCatalogPort): void {
   caseCatalog = catalog
+}
+
+const draftSnapshotsSchema = z.record(z.string(), localDraftSchema)
+const snapshotsKey = (attemptsKey: string) => `${attemptsKey}:drafts`
+
+// Demo lifecycle port: freeze existing attempts before their source changes, including other local actors.
+export function freezeExistingDemoCaseAttempts(problemId: string, draft: CaseDraftGenerateResult): void {
+  for (const attemptsKey of storage
+    .keys()
+    .filter((name) => name.startsWith(`${storageKeys.caseAttempts}:`) && !name.endsWith(':drafts'))) {
+    const attempts = storage.read(attemptsKey, z.array(localAttemptSchema), [])
+    const snapshots = storage.read(snapshotsKey(attemptsKey), draftSnapshotsSchema, {})
+    let changed = false
+    for (const attempt of attempts) {
+      if (attempt.problemId === problemId && !snapshots[attempt.id]) {
+        snapshots[attempt.id] = localDraftSchema.parse(draft)
+        changed = true
+      }
+    }
+    if (changed) storage.write(snapshotsKey(attemptsKey), snapshots, draftSnapshotsSchema)
+  }
+}
+
+function attemptDraft(attempt: CaseAttempt): CaseDraftGenerateResult | undefined {
+  const draftsKey = snapshotsKey(key(storageKeys.caseAttempts))
+  const snapshots = storage.read(draftsKey, draftSnapshotsSchema, {})
+  if (snapshots[attempt.id]) return snapshots[attempt.id]
+  const target = demoDraftForProblem(attempt.problemId)
+  if (!target) return undefined
+  snapshots[attempt.id] = localDraftSchema.parse(target.draft)
+  storage.write(draftsKey, snapshots, draftSnapshotsSchema)
+  return snapshots[attempt.id]
 }
 
 function demoDraftForProblem(id: string) {
@@ -31,12 +64,16 @@ export function demoAttempts(): CaseAttempt[] {
 export function demoStart(problemId: string, retryOfId?: string): CaseAttempt {
   const target = demoDraftForProblem(problemId)
   if (!target) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
-  const prior = retryOfId ? demoAttempts().find((item) => item.id === retryOfId) : undefined
+  const attempts = demoAttempts()
+  const prior = retryOfId ? attempts.find((item) => item.id === retryOfId) : undefined
+  const attemptIds = new Set(attempts.map((item) => item.id))
+  let uniqueAttemptId = `case-${Date.now()}-${demoAttemptSequence++}`
+  while (attemptIds.has(uniqueAttemptId)) uniqueAttemptId = `case-${Date.now()}-${demoAttemptSequence++}`
   const focus = prior
     ? demoAssessments().find((item) => item.attemptId === prior.id)?.focusStage || 'history'
     : 'history'
   const attempt: CaseAttempt = {
-    id: `case-${Date.now()}`,
+    id: uniqueAttemptId,
     problemId,
     problemVersion: target.problem.version || 1,
     status: 'in_progress',
@@ -49,7 +86,11 @@ export function demoStart(problemId: string, retryOfId?: string): CaseAttempt {
     assessmentReady: false,
     startedAt: new Date().toISOString(),
   }
-  write(storageKeys.caseAttempts, [attempt, ...demoAttempts()].slice(0, 30), localAttemptSchema)
+  write(storageKeys.caseAttempts, [attempt, ...attempts].slice(0, 30), localAttemptSchema)
+  const draftsKey = snapshotsKey(key(storageKeys.caseAttempts))
+  const snapshots = storage.read(draftsKey, draftSnapshotsSchema, {})
+  snapshots[attempt.id] = localDraftSchema.parse(target.draft)
+  storage.write(draftsKey, snapshots, draftSnapshotsSchema)
   return attempt
 }
 
@@ -61,14 +102,14 @@ export function demoMessage(id: string, content: string): CaseAttempt {
   const attempt = demoFind(id)
   if (!attempt || attempt.currentStage !== 'history')
     throw new AppError('病史阶段已锁定', { code: 'STATE_CONFLICT', statusCode: 409 })
-  const target = demoDraftForProblem(attempt.problemId)
-  if (!target) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
+  const draft = attemptDraft(attempt)
+  if (!draft) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
   const asked = attempt.messages.filter((item) => item.role === 'user').length
   if (asked >= 30) throw new AppError('请先提交病史小结', { code: 'STATE_CONFLICT', statusCode: 409 })
   const seen = new Set(
     attempt.messages.filter((item) => item.role === 'assistant').flatMap((item) => item.revealedFactIds || []),
   )
-  const matching = target.draft.caseDefinition.facts
+  const matching = draft.caseDefinition.facts
     .filter(
       (fact) =>
         fact.triggers.some((trigger) => content.toLowerCase().includes(trigger.toLowerCase())) && !seen.has(fact.id),
@@ -117,11 +158,11 @@ export function demoComplete(id: string): CaseAssessment {
   const attempt = demoFind(id)
   if (!attempt || attempt.status !== 'completed')
     throw new AppError('请先完成五个阶段', { code: 'STATE_CONFLICT', statusCode: 409 })
-  const target = demoDraftForProblem(attempt.problemId)
-  if (!target) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
-  const dimensions = scoreDemoCase(attempt, target.draft)
+  const draft = attemptDraft(attempt)
+  if (!draft) throw new AppError('病例不存在', { code: 'RESOURCE_NOT_FOUND', statusCode: 404 })
+  const dimensions = scoreDemoCase(attempt, draft)
   const focus = dimensions.reduce((lowest, item) => (item.score < lowest.score ? item : lowest)).dimensionId
-  const focusStage = target.draft.rubric.dimensions.find((item) => item.id === focus)?.stageIds[0] || 'history'
+  const focusStage = draft.rubric.dimensions.find((item) => item.id === focus)?.stageIds[0] || 'history'
   const previous = attempt.retryOfId
     ? demoAssessments().find((item) => item.attemptId === attempt.retryOfId)
     : undefined

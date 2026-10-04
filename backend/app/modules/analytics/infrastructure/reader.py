@@ -46,6 +46,32 @@ class SqlAlchemyAnalyticsReader(AnalyticsReader):
             statement = statement.where(ClassRoom.id == class_id)
         return tuple(self._class_record(item) for item in self._session.scalars(statement).all())
 
+    def load_owned_classes(self, teacher_id: int, class_id: int | None) -> tuple[ScopeClass, ...]:
+        statement = select(ClassRoom).where(ClassRoom.teacher_id == teacher_id)
+        if class_id is not None:
+            statement = statement.where(ClassRoom.id == class_id)
+        return tuple(self._class_record(item) for item in self._session.scalars(statement.order_by(ClassRoom.id)).all())
+
+    def load_student_names(self, student_ids: tuple[int, ...]) -> dict[int, str]:
+        if not student_ids:
+            return {}
+        return {
+            row.id: row.nickname
+            for row in self._session.scalars(select(User).where(User.id.in_(student_ids), User.role == "student")).all()
+        }
+
+    def owns_case(self, teacher_id: int, problem_id: int) -> bool:
+        return (
+            self._session.scalar(
+                select(Problem.id).where(
+                    Problem.id == problem_id,
+                    Problem.author_id == teacher_id,
+                    Problem.content_type == "guided_case",
+                )
+            )
+            is not None
+        )
+
     def load_students(self, classes: tuple[ScopeClass, ...]) -> tuple[ScopeStudent, ...]:
         if not classes:
             return ()

@@ -199,6 +199,7 @@ export const localDraftSchema: z.ZodType<CaseDraftGenerateResult> = z.object({
 })
 
 export const localCaseRecordSchema = z.object({
+  deletedAt: z.string().optional(),
   problem: problemSchema,
   draft: localDraftSchema,
   authorOpenid: z.string().default('demo_teacher'),

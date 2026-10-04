@@ -1,0 +1,38 @@
+{
+  "archive_sha256": "7c9d14a11c31f97dc48d72f40f02373f0d1c04caa4d37b6b8ed9f4f2af7fdff1",
+  "files": [
+    {
+      "path": "docs/update_plan/62-insights-default-complete-rows/deliveries/completion.md",
+      "size": 1890,
+      "sha256": "449254aff0b767512a26c15cc2dc5625fb45c9fb5b50c25f7496e905e5d72cae"
+    },
+    {
+      "path": "docs/update_plan/62-insights-default-complete-rows/README.md",
+      "size": 1351,
+      "sha256": "45873d9fecb1b86e8946d4860aebf1d22608104389b839eab3d4424e502dbc5d"
+    }
+  ],
+  "links": [
+    {
+      "source": "docs/manual-acceptance.md",
+      "old": "update_plan/62-insights-default-complete-rows/README.md",
+      "new": "archive/update-plan-t62-20261003.md#file-24061e76a1a39bb6"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old": "62-insights-default-complete-rows/README.md",
+      "new": "../archive/update-plan-t62-20261003.md#file-24061e76a1a39bb6"
+    },
+    {
+      "source": "docs/update_plan/README.md",
+      "old": "62-insights-default-complete-rows/deliveries/completion.md",
+      "new": "../archive/update-plan-t62-20261003.md#file-78c826942dbacf69"
+    },
+    {
+      "source": "docs/update_plan/summary.md",
+      "old": "62-insights-default-complete-rows/README.md",
+      "new": "../archive/update-plan-t62-20261003.md#file-24061e76a1a39bb6"
+    }
+  ],
+  "verification": "CRC/size/SHA256 passed"
+}

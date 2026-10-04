@@ -1,176 +1,67 @@
-# 架构设计
+# 架构与数据合同
 
-微信小程序是唯一产品目标。T25 已按用户授权退役 H5 构建、浏览器 E2E 和 H5 专属实现；小程序验证缺口仍按 [微信开发者工具验收](operations/wechat-validation.md) 单独记录，不能由历史浏览器证据补足。
+本页定义模块与数据边界；业务见[产品](product.md)，权限见[安全](security.md)。函数、路由及字段以源码/生成契约为准。
 
-## 技术栈
+## 前端模块与公开接口
 
-```text
-前端：uni-app + Vue 3 + TypeScript + Vite
-后端：Python + FastAPI + SQLAlchemy + Alembic
-数据库：SQLite（开发与受管测试）
-AI：可选的服务端 gateway；测试禁用真实外部调用
-```
+`src/pages`拥有路由与页面生命周期；业务专属视图及邻近测试归入`src/features/*/presentation`，`src/components`保留通用UI与跨功能教师工作区。页面和应用壳可以组合功能视图；所有展示代码的业务读写只经`src/features/*/public.ts`进入用例、领域port与adapter，不直接导入domain/application/infrastructure。domain/application保持纯业务，不直接使用`uni.request`、storage key或后端URL。`src/platform`拥有HTTP、storage、runtime、导航、缓存和契约；`src/bootstrap/wiring.ts`是唯一API/Demo装配点。
 
-## 总体架构
+Demo知识目录的生成快照与字段映射归内容模块；装配根向学习repository注入读取函数，学习模块不直接读取内容模块内部文件。`src/types`与`src/shared/mappers`承载现有共享展示合同和映射，跨模块装配测试归`src/test/integration`；共享实现不反向依赖功能内部实现。
 
-```text
-微信小程序
-        ↓
-feature public API → bootstrap wiring → platform HTTP
-        ↓
-FastAPI HTTP API
-        ↓
-模块 application / domain / infrastructure
-        ↓
-SQLite（开发或 launcher-owned 临时测试库）
-```
+公开接口返回领域/展示模型，不暴露DTO、Zod实现或StorageGateway。边界映射显式处理snake_case、可空字段、状态与版本；不以默认值掩盖缺少字段或非法枚举。`src/services`和业务`src/data`运行目录已移除，不恢复旧facade；`src/data/contracts`只保留生成契约。
 
-微信小程序只是客户端入口，不再绑定微信云函数作为核心后端。PostgreSQL、对象存储、生产 AI 网关和其他客户端接入是后续方向，不是当前运行调用链或发布承诺。
+页面导航使用platform入口：主入口`goPrimary`对应reLaunch，详情`goDetail`对应navigateTo，替换详情`replaceDetail`对应redirectTo。详情保留原生返回、来源section/筛选与适用的无栈回退；旧路径只规范化到现行路由，不渲染重复页面。导航键和兼容映射以源码为准，不从历史计划恢复旧标签。
 
-## 前端目录职责
+## 后端模块与事务
 
-```text
-src/
-├── pages/        路由入口，只组合公开 feature API、页面状态和交互
-├── components/   可复用 UI，不直接写业务持久化逻辑
-├── features/     identity/qa/reports/content/training/learning/classroom/analytics
-│   ├── public.ts 对外稳定应用能力和展示类型
-│   ├── presentation/（按需）页面/组件状态
-│   ├── application/ 用例编排与窄 port
-│   ├── domain/      领域 port、对象和纯规则
-│   └── infrastructure API/Demo adapter、Zod、mapper、本地集合
-├── platform/      runtime、HTTP/cache、底层 storage、导航、日志和契约
-├── bootstrap/     唯一 API/Demo 组合根与 Demo 初始数据装配
-├── shared/        有明确复用者的纯 mapper/status 工具
-├── types/         兼容的纯领域/展示类型（不承载 I/O）
-├── utils/         无状态纯函数
-├── services/      不再承载运行时代码（历史测试已迁移到真实模块）
-├── data/          仅保留 `contracts/openapi.generated.ts` 生成物
-└── static/        图片等静态资源
-```
+后端模块组织为`api/application/domain/infrastructure`、`public.py`和`wiring.py`。api适配HTTP schema/Actor、调用用例、映射view；application编排业务与事务；domain保持纯策略；infrastructure实现ORM、repository、query及外部adapter。
 
-前端数据访问规则：
+跨模块通过稳定`public.py`合同或注入port；只允许api/wiring在显式组合处依赖其他api，application/domain/infrastructure不得这样导入。核心业务不依赖FastAPI、SQLAlchemy、HTTP客户端或旧services。bootstrap显式装配，不引入service locator。`backend/app/bootstrap/model_registry.py`注册canonical ORM；旧api/models/schemas/services仅兼容入口，不新增业务。
 
-- 页面只从 `src/features/*/public.ts` 引入业务能力；页面和组件不导入 feature 的 `application/domain/infrastructure`。
-- `src/bootstrap/wiring.ts` 是唯一运行时组合根，按 `VITE_APP_MODE=demo|api` 装配每个 feature 的 port 实现；请求失败不会切换数据源。
-- `src/platform/http/apiClient.ts` 负责 FastAPI 传输、token、错误、请求去重和显式内存缓存；身份失效通过平台 API 清理，不反向导入页面。
-- `VITE_APP_MODE=demo|api` 显式决定运行模式，禁止请求失败时自动切换数据源。
-- `src/platform/storage/storage.ts` 只提供底层存取、key 和运行时校验；身份迁移/会话格式由 `features/identity/infrastructure/sessionStorage.ts` 适配，QA、报告、内容和训练的实际本地 store 归各自 feature infrastructure。
-- API/Demo adapter 只实现所属 feature 的窄 domain port。报告应用用例通过显式 persistence port 保证“先会话、后草稿”。
-- `src/platform/contracts` 持有 Zod/契约 conformance；当前生成文件仍由既有工具写入 `src/data/contracts/openapi.generated.ts`，该文件是唯一生成物且禁止手改。
-- 旧 `src/services/*` facade、旧 `src/data/*` aggregate/mapper 已无仓库内消费者并已删除；生成 OpenAPI 类型仍按既有命令保留在 `src/data/contracts/openapi.generated.ts`。
-- 外部 JSON 先经过 Zod 边界校验，再由显式 mapper 转换为领域类型。
-- 页面不直接散落 `uni.request`、storage key 或后端 URL。
+repository只flush，用例拥有commit/rollback与请求级UoW；不可变Actor经HTTP认证后仍在用例校验角色、owner、成员和数据范围。AppError映射稳定code及401/403/404/409/422/5xx状态，不把无权限或服务失败映成空列表。
 
-完整的数据流、缓存和错误约定见 [data-layer.md](./data-layer.md)。
-公开应用接口见 [frontend/public-interfaces.md](frontend/public-interfaces.md)；依赖门禁由 `scripts/frontend-boundaries.mjs` 和 `config/frontend-boundaries.json` 实施，直接运行脚本（尚无 npm alias）。
+AI审核记录与对应训练、非紧急问答、计划和通知写入同一事务；审核或commit失败应回滚并明确失败，不提交半份业务结果。紧急医学安全分流不调用AI。训练完成后的跨模块学习副作用由bootstrap连接，按来源幂等；学习生成失败不倒回已经完成的训练，也不递归触发。
 
-## 前端模块映射
+学习路线完成shell与固定PBL分析同事务写入。HTTP响应后后台调度仅传不可变locator，使用独立Session；先提交有时限claim，再进行外部调用，响应以token/版本/期限CAS写回。已发布内容不可重新生成，迟到响应不能覆盖。最终答卷、结果和证据事件同事务提交；证据失败整笔回滚。
 
-| 业务模块  | 领域/应用拥有者                                         | API/Demo infrastructure                                                  | 页面公开入口                   |
-| --------- | ------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------ |
-| identity  | `features/identity/domain`、`application/session.ts`    | `sessionDependencies.ts`、`remoteAuth.ts`                                | `features/identity/public.ts`  |
-| qa        | `features/qa/domain`、`application/medicalAssistant.ts` | `apiQaRepository.ts`、`demoQaRepository.ts`、会话/问答 store             | `features/qa/public.ts`        |
-| reports   | `features/reports/domain`、`application/reportDraft.ts` | `apiReportRepository.ts`、`demoReportRepository.ts`、report mapper/store | `features/reports/public.ts`   |
-| content   | `features/content/domain`                               | `apiContentRepository.ts`、病例/题目 store、case mapper                  | `features/content/public.ts`   |
-| training  | `features/training/domain`（含确定性评分）              | `apiTrainingRepository.ts`、`demoCaseStore.ts`、case mapper              | `features/training/public.ts`  |
-| learning  | `features/learning/domain`                              | `apiLearningRepository.ts`、`demoLearningRepository.ts`                  | `features/learning/public.ts`  |
-| classroom | `features/classroom/domain`                             | `apiClassroomRepository.ts`、`demoClassroomRepository.ts`                | `features/classroom/public.ts` |
-| analytics | `features/analytics/domain`                             | `apiAnalyticsRepository.ts`、`demoAnalyticsRepository.ts`                | `features/analytics/public.ts` |
-| pbl       | `features/pbl/domain`                                   | `apiPblRepository.ts`、`demoPblRepository.ts`                            | `features/pbl/public.ts`       |
+## API/Demo与会话
 
-跨模块依赖只向领域 port 或公开接口收敛；实际 API/Demo 选择和跨模块对象连接集中在 `bootstrap/wiring.ts`。`types/domain.ts` 的中文状态和 `types/records.ts` 的稳定英文状态由 `shared/mappers/presentation.ts` 转换，避免 DTO、存储值和页面标签混用。
+`VITE_APP_MODE=demo|api`在启动时选定。API失败显式报错，禁止自动fallback、混写两套数据或迁移Demo数据进API。
 
-## 后端目录职责
+API业务数据不持久化到客户端离线仓库。Demo与本地会话按用户和schema版本隔离；合法旧数据先成功写入新版本再删除旧项，损坏数据保留原值并明确失败，不静默覆写。现行版本与迁移能力查store实现。
 
-```text
-backend/
-├── app/modules/<module>/
-│   ├── api/           FastAPI router 与该模块 HTTP schema
-│   ├── application/   用例、port、事务编排与 record
-│   ├── domain/        无框架状态、评分、安全与可见性策略
-│   ├── infrastructure/ ORM、repository、query/外部服务 adapter
-│   ├── public.py      跨模块公开合同与 view mapper
-│   └── wiring.py      模块实现装配入口
-├── app/bootstrap/    app/router、模型注册、开发 seed 与跨模块 composition root
-├── app/platform/     数据库 Base、UoW/AI 等平台适配
-├── app/shared/       Actor、AppError、稳定基础合同
-├── app/api/          旧 HTTP 导入兼容 alias，不拥有路由实现
-├── app/models/       旧 ORM 导入兼容 re-export，不定义表
-├── app/schemas/      旧 schema 导入兼容 re-export，不定义合同
-├── app/services/     旧 facade、测试/开发 seed 兼容入口，不是生产业务实现
-├── app/db.py         数据库连接与 metadata 初始化入口
-├── app/dependencies.py 认证依赖与 User→Actor 适配
-└── tests/            后端 API、领域、迁移与安全测试
-```
+仅GET缓存：普通列表/详情30秒、线程15秒、分析最长60秒，最多128项；相同用户、method、path和query并发去重，各消费者仍执行schema校验。写入按相关前缀失效；token变化、401和登出清空缓存并增加会话revision。旧请求不得回写新会话、重新填充缓存或覆盖新版列表。
 
-八个业务模块为 `identity`、`qa`、`reports`、`content`、`training`、`learning`、`classroom`、`analytics`。生产 `app.main` 直接装配各模块 `api` router；`app/bootstrap/model_registry.py` 是唯一跨模块 ORM metadata 注册汇合点。中央兼容目录仍因历史调用方存在，但没有 ORM/Pydantic 定义或生产业务逻辑。R05 进一步规定：一个模块的 `api` 只能由另一模块的 `api` 或 `wiring` 直接引用；application/domain/infrastructure 跨模块协作必须通过 `public.py` 合同或明确 port。`backend/scripts/check_boundaries.py` 与 `config/backend-boundaries.json` 负责检查这项规则。
+分页默认20、最大100，以updated_at降序/id降序稳定排序；摘要预览160字符。追加按ID去重，错误重试保留已有列表并校验请求版本。offset不是数据库快照，写入期间可能移动记录，不承诺稳定快照游标。
 
-## 当前接入状态
+## 运行时与生成契约
 
-配置 `VITE_APP_MODE=api` 和 `VITE_API_BASE_URL` 后，前端以下链路会走 FastAPI：
+服务端错误使用`{detail:{code,message,reason?}}`；受控reason用于状态冲突，旧流程写入为RETIRED_FLOW；前端兼容历史字符串detail，新接口维持统一合同。缺失字段用undefined，确实可空的历史写入用null；非法值不能被mapper默默兜底。
 
-- Demo 登录与 token 保存
-- AI 问答
-- 对话保存与历史记录
-- 报告生成、提交和教师批阅
-- 教师题目创建、编辑、发布、拒绝
-- 学生题目列表与作答线程
-- 结构化病例五阶段训练、医学审核和 clone version
-- 班级管理、病例/学生学情分析与日期范围下钻
-- 个性化学习计划、微训练、复盘和站内通知
-- 题目统计中的作答数量
+OpenAPI、生成类型、DTO mapper及运行时schema一起更新。`docs/openapi.json`与`src/data/contracts/openapi.generated.ts`经`npm run contract:generate`生成，禁止手改；`contract:check`在临时目录重生成比较，不改源码。
 
-`VITE_APP_MODE=demo` 时前端使用确定性本地数据；两种模式不会在运行中混写。
+`src/main.ts`首先导入`src/platform/contracts/validationRuntime.ts`，让微信jitless运行时关闭Zod动态代码编译，仍完整执行schema校验。同步异常先检查引入和编译产物顺序，不跳过校验。
 
-# 第二阶段服务边界
+列表提供必要摘要，详情按需读取；避免用逐条详情请求补列表字段形成N+1。跨模块查询经最小只读port，不共享ORM内部对象。
 
-`modules/classroom` 负责班级 owner/member 隔离；`modules/content` 负责病例审核状态机和 digest；`modules/analytics` 负责固定时间范围、eligible/started/completed pair 和 current/baseline assessment 口径。前端 `features/analytics` 只通过 infrastructure mapper 消费 DTO，统计结果由后端生成。旧 `app/services/analytics.py` 仅转发到 analytics application。
+教师PBL、学情、内容保留原根地址，三个薄入口挂载TeacherWorkspaceDeck；容器按PBL/总览/知识/学生/内容组织真实正文，当前与邻项提前初始化并保留已访问实例。横向切换提交当前索引，不调用reLaunch；底栏是Deck自身原生节点，tap从currentTarget.dataset读取工作区并立即激活目标；正文索引与底栏选中/图标在同一渲染层更新，不经外层Frame插槽/props；页签点击复用激活逻辑，取消原动画提交；详情路径/返回参数不变。正文经teacherScreenContext接收初始合法查询、当前项状态及页面show刷新，等待实例原生$nextTick后读取组件ref；只有当前项在详情返回后刷新。身份变化按generation重建正文并拒绝旧ready回调。各工作区独立拥有筛选与请求状态，三学情正文共享范围且仅当前项保存面板偏好，经各自 feature public 访问业务；待办只消费 Learning 待审队列和 Content 最小资源动作摘要。旧教师统计与课堂进度地址仅解析合法上下文并重定向学情，不保留第二套聚合适配。轻量班级、面板、课堂、日期及资源筛选按用户/工作区分别保存，不存业务正文。新的队列、资源摘要与学情投影不启用 GET 缓存，旧请求不得覆盖新筛选或身份。
 
-# V3 个性化训练编排
+教师学情经 PBL public read port 读取授权原课堂的最小研讨事实，按参与开始时间统计阶段，不读取消息正文、自主研讨或私人续问；研讨参与与路线发布批次分别聚合。Demo 在 bootstrap 接入同等读取，新增参与持久化不可变开始时间，旧记录缺少时间则保持只读且不补造。内容资源按钮消费服务端实时 `allowed_actions` 投影，缺失投影按无动作处理，写入接口仍独立校验授权与状态。
 
-完整病例 assessment 完成后由 `modules/learning` application 幂等创建 `LearningPlan`，确定性选择目标维度和三项 `LearningTask`。任务启动按类型分流到完整 `CaseAttempt` 或唯一 `LearningTaskAttempt`；服务端状态机保证顺序解锁、重复提交幂等和 task-linked assessment 不递归创建新计划。learning 只依赖 `training.public.TrainingCasePort`，不穿透 training application。
+教师 Insights 由 Analytics 组合课堂范围、Learning 最小路线/完成结果及 PBL 有效完成诊断 port。发布批次进度、完成测试结果、完成诊断分别使用北京时间日期窗口；自主路线、私人续问和修订不匹配的完成诊断不进入教师投影。最终测试详情的 `current_scope_active` 由 Learning 每次读取计算，不持久化，历史可读与当前写入授权分开；写接口仍校验班级/成员活动范围。
 
-`learning.infrastructure.practice_generator` 只接收审核蓝图的公开字段，输出结构化 public definition；AI 日志保存 task/blueprint/digest 元数据，不保存 prompt 原文。没有真实凭据时由 deterministic fallback 完成同一合同。训练 AI 候选只能更新经学生答案白名单校验的反馈/下一步，不能写入确定性分数、权重、总分或 evidence。
+## 证据与统计
 
-# T09：`pbl` 是独立业务模块，拥有课堂会话、参与记录、诊断快照和教师建议题；前端只能通过 `features/pbl/public.ts`，并由 `src/bootstrap/wiring.ts` 选择 API/Demo adapter。建议题发布走 content 的公开桥接，PBL 不直接管理正式题生命周期。
+`learning_evidence_events` / `learning_evidence_metrics`为append-only：同dedupe_key同payload幂等，异payload冲突；仅记录必要指标与来源，不记录完整回答或prompt。证据可见范围见[产品](product.md#研讨回应与证据)与[安全](security.md#服务端授权)。缺失成绩为null，不能补0。课堂最终测试仅写knowledge指标，两种新来源classroom_final_test/private_final_test按冻结结果验证，不写六维过程分数；教师统计不读取自主来源。活动时长只按明确、受限的时间区间估计，不用AI猜测。
 
-# T20：知识点 PBL 学习路径与私有练习
+知识库经`KnowledgeCatalogPort`读取数据库唯一active catalog；缺失、多active、悬空、无来源或循环关系显式失败，不回退静态数据。节点/边及来源见[知识库](knowledge-base/README.md)。
 
-`content` 提供稳定知识点编码对应的版本化学习材料；`learning` 拥有学习路径、阶段解锁、自主练习、作答和复习到期时间；`pbl` 仍拥有四阶段研讨证据和学生明确提交教师的完成快照。组合根通过窄 port 装配这些能力，页面只调用 `features/learning/public.ts` 与 `features/pbl/public.ts`。
+学生学情是 Learning 所属的本人只读投影，通过 PBL public read port 读取参与与校验后的完成诊断，通过 Learning 自有仓储读取路线、阅读与完成结果，不恢复退役报告接口、不共享跨模块 ORM。接口不接收客户端 student_id，不返回回答、消息正文、隐藏病例或评分参考答案。无需新增存储；Demo 从当前持久化流程实时聚合，API/Demo 在 bootstrap 装配，页面经 Learning public 读取。学情不启用 GET 缓存，以便返回时体现最新步骤和判分结果。
 
-学生主动研讨默认私有，创建时不要求班级。只有完成四阶段且学生选择一个有效班级提交后，接收教师才能查看固定诊断快照；后续私有对话和练习不追加外发。课堂研讨继续遵循原有班级可见性。未审核 AI 练习是 `learning` 的个人记录，独立于正式题、正式评分、知识点稳定状态和 T14 自动达标；教师采用发布仍是正式教学资源的唯一入口。
+## T63 内容与复习退役边界
 
-# T21：教师 PBL 工作区与反馈闭环
+Content 活动资源仅为 guided_case 和个人题库，旧问题/教师卡读写为受角色校验的退役兼容接口；QA 的旧学生问题/问题线程关闭，通用会话助手保留。Learning 的 knowledge-map 和 Study/Routes 保持现行目录与路线合同，独立复习 HTTP 写入拒绝、队列为空。保留内部知识状态计算与历史模型，不做表或历史证据删除；Demo 仓储同步活动读取、写入拒绝和身份顺序，页面继续经 feature public，装配仍在 bootstrap/wiring。旧地址壳只导航，不再调用退役业务。
 
-`pbl` 继续拥有诊断快照、教师反馈和教师可见性。教师 PBL 页面经同一 public port 组织为“待处理、课堂、跟进”：待处理只汇总当前教师有权读取的课堂诊断及学生明确提交的固定快照；课堂只读取本人班级的课堂 session 和聚合看板；跟进只读取已发布正式任务的进度。教师反馈是不可覆盖的记录，`feedback_only`、`task_published`、`closed` 由 application 在一次事务中写入；发布动作复用 T14 的教师采用和两轮正式任务创建，不能由 AI 自动完成。
+## T64 资源删除与历史快照
 
-学生提交后只读取面向本人的反馈摘要、状态和下一步。教师不能借此取得未提交自主研讨、完整聊天或未审核个人练习；课堂 session 仍按原班级授权。`learning` 通知仅以 `pbl_session` 标识 PBL 反馈入口，不成为师生实时聊天通道。
-
-# T22：教师工作区职责收敛
-
-T22 只重组 T21 能力的前端归属：`problems` 默认承载“诊断建议”，并以“教学资源”分区保留题目、结构化病例、知识补充卡和医学审核入口；`reports` 默认承载“PBL 跟进”，并以“学情总览”和“学习记录”分区组合 analytics 与 reports 公开能力；`pbl` 只组合课堂创建、运行、关闭和逐学生阶段看板。诊断与跟进虽然显示在其他工作区，领域所有权、公开 port、权限和隐私校验仍属于 `features/pbl`。
-
-教师工作台根组件加载一次负责班级范围，并把同一筛选上下文传给诊断、跟进、统计与课堂容器。各分区首次打开才挂载，已打开分区通过 `v-show` 保留筛选、分页、详情和错误状态；列表与详情请求使用独立请求令牌，过期响应不能覆盖新筛选。旧 PBL section 在入口统一规范化，旧 analytics 页面只校验教师身份并跳转到 `reports&section=analytics`，不再渲染第二份统计页面。T22 不改变 API/Demo 装配、后端路由、schema、迁移、OpenAPI、AI 合同或 T14/T20/T21 业务规则。
-
-# T14：PBL 参与级阶段与自动巩固
-
-每个 `PblParticipation` 独立维护明确问题、提出假设、讨论证据、总结解释和完成状态。AI schema v3 只提出当前阶段的 `continue/advance/complete`，PBL application 与 repository 共同校验当前阶段开始后的学生消息证据和相邻推进；完成后新消息被锁定，相同消息 ID 仍返回原结果。
-
-教师采用发布仍是医学教学内容进入学生端的唯一入口。content 在事务内提供 `pathology-general-v3` 两轮已审核资源，learning 预建 cycle 1/2；cycle 2 初始 inactive。learning 的确定性 `pbl-mastery-v1` 按知识再测 100、推理微训练 70、病例目标维度 70 逐项判定，首轮失败仅激活失败目标，二轮失败进入耗尽且需要线下支持。教师结果区只读，旧阶段 PATCH 和 verify POST 仅保留 deprecated 冲突合同。
-
-# T15：学生 PBL 学情报告读模型
-
-`pbl` application 通过窄 port 读取本人 participation/阶段快照和本人 learning plans，将同一 session 的个人讨论、课堂共同训练、任务、attempt 与不可覆盖的轮次评价组装为只读报告。报告状态和说明由确定性规则生成，不调用 AI、不计算综合分。前端 `features/pbl` 的 API/Demo adapter 实现同一 `reports/report` 合同，“学情”总览与详情页面只经 `features/pbl/public.ts` 读取。
-
-# T16：前端信息架构与导航
-
-学生一级导航固定为课堂、学习、学情、答疑，对应 `StudentPrimaryRoute` 的四个根页面；病例训练、知识地图和练习题继续使用既有 `studentCases` 路径，但由 `view=cases|knowledge|questions` 在学习模块的二级资源页中切换。一级切换使用 `reLaunch`，一级进入详情使用 `navigateTo`，连续训练步骤使用 `redirectTo`；二级页通过明确的逻辑父页面处理直接打开和返回兜底。
-
-教师工作区仍使用 `overview|reports|problems|pbl` 内部 key 和 `?tab=` 深链接，并以 `v-show` 保留切换状态；展示标签收敛为待办、学情、内容、PBL。微信原生导航栏是一级页面唯一可见标题，正文使用不可见页面标题和紧凑上下文条提供无障碍名称，不重复渲染同义 Hero。此变化只影响前端路由语义、页面组合和样式，不改变 feature API、API/Demo 装配、后端接口或数据合同。
-
-# T17：统一学习研讨
-
-`pbl` 继续是学生研讨会话的唯一业务拥有者。教师课堂和学生主动研讨共用 participation 级四阶段状态机、结构化诊断、教师采用发布、两轮巩固和学情报告；`guided`/`direct` 只是 participation 上固定的沟通策略，不形成第二套学习模式。前端只经 `features/pbl/public.ts` 使用统一会话能力，API/Demo 仍由 `bootstrap/wiring.ts` 唯一选择。
-
-学生一级导航收敛为研讨、学习、学情。旧 `studentChat` 路径继续存在，但只读取旧 conversation；无 conversation ID 时转到研讨，续开只携带经目录确认的知识点和可编辑起始问题，旧消息不进入 PBL 证据链。
+Content教师病例保存校验完整definition/rubric后即教学可用，allowed_actions仅本人edit/delete；活动列表/详情和新课堂选用排除逻辑删除。已有PBL课堂opening与版本/digest快照保持，独立病例训练新增内部problem_snapshot JSON，创建attempt时冻结，旧attempt在资源首次编辑/删除前经Training公有port补快照，后续训练用自身快照，不泄露隐藏定义。Content跨模块冻结由bootstrap装配，Demo通过对应公有helper/回调在wiring装配，不能从内容仓储直接读取训练内部存储。个人题库沿用archived内部存储标记删除，API/Demo活动读取均隐藏；不提供恢复、不回写原测试，版本及请求幂等校验保留。旧专家审核记录保留但不再阻挡教师个人资源保存。

@@ -1,0 +1,56 @@
+{
+  "queried_date": "2026-10-04",
+  "purpose": "Selected public GitHub API response fields; popularity is not evidence of a universal standard.",
+  "repositories": [
+    {
+      "endpoint": "https://api.github.com/repos/google/styleguide",
+      "full_name": "google/styleguide",
+      "html_url": "https://github.com/google/styleguide",
+      "stargazers_count": 39646,
+      "forks_count": 12930,
+      "archived": false,
+      "default_branch": "gh-pages",
+      "pushed_at": "2026-10-01T18:32:00Z"
+    },
+    {
+      "endpoint": "https://api.github.com/repos/alan2207/bulletproof-react",
+      "full_name": "alan2207/bulletproof-react",
+      "html_url": "https://github.com/alan2207/bulletproof-react",
+      "stargazers_count": 35939,
+      "forks_count": 3262,
+      "archived": false,
+      "default_branch": "master",
+      "pushed_at": "2026-05-14T13:53:04Z"
+    },
+    {
+      "endpoint": "https://api.github.com/repos/zhanymkanov/fastapi-best-practices",
+      "full_name": "zhanymkanov/fastapi-best-practices",
+      "html_url": "https://github.com/zhanymkanov/fastapi-best-practices",
+      "stargazers_count": 18138,
+      "forks_count": 1323,
+      "archived": false,
+      "default_branch": "master",
+      "pushed_at": "2026-08-27T12:54:52Z"
+    },
+    {
+      "endpoint": "https://api.github.com/repos/github/gitignore",
+      "full_name": "github/gitignore",
+      "html_url": "https://github.com/github/gitignore",
+      "stargazers_count": 176016,
+      "forks_count": 82143,
+      "archived": false,
+      "default_branch": "main",
+      "pushed_at": "2026-10-02T20:59:38Z"
+    },
+    {
+      "endpoint": "https://api.github.com/repos/audreyfeldroy/cookiecutter-pypackage",
+      "full_name": "audreyfeldroy/cookiecutter-pypackage",
+      "html_url": "https://github.com/audreyfeldroy/cookiecutter-pypackage",
+      "stargazers_count": 4603,
+      "forks_count": 1789,
+      "archived": false,
+      "default_branch": "main",
+      "pushed_at": "2026-09-30T11:08:12Z"
+    }
+  ]
+}

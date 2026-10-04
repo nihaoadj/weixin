@@ -1,179 +1,80 @@
 import type { AnalyticsRepository } from '@/features/analytics/domain/ports'
 import {
-  apiAnalyticsCaseSchema,
-  apiAnalyticsDimensionSchema,
-  apiAnalyticsKnowledgeSchema,
-  apiAnalyticsOverviewSchema,
-  apiAnalyticsStudentSchema,
-} from '@/platform/contracts/teacher'
+  apiTeacherInsightsDiagnosticsSchema,
+  apiTeacherInsightsKnowledgeSchema,
+  apiTeacherInsightsOverviewSchema,
+  apiTeacherInsightsStudentSchema,
+  apiTeacherInsightsStudentsSchema,
+} from '@/platform/contracts/teacherInsights'
 import { apiRequest, encodePathSegment } from '@/platform/http/apiClient'
-import type {
-  AnalyticsCase,
-  AnalyticsDimension,
-  AnalyticsKnowledge,
-  AnalyticsOverview,
-  AnalyticsStudent,
-} from '@/types/teacher'
+import { AppError } from '@/types/errors'
+import type { TeacherInsightsFilters, TeacherInsightsStudentFilters } from '../domain/teacherInsights'
+import {
+  mapTeacherInsightsDiagnostics,
+  mapTeacherInsightsKnowledge,
+  mapTeacherInsightsOverview,
+  mapTeacherInsightsStudent,
+  mapTeacherInsightsStudents,
+} from './teacherInsightsMapper'
 
-const ANALYTICS_TTL = 60_000
-
-function toDimension(value: ReturnType<typeof apiAnalyticsDimensionSchema.parse>): AnalyticsDimension {
+function teacherInsightsQuery(filters: TeacherInsightsFilters = {}) {
+  let sessionId = filters.sessionId
+  if (typeof sessionId === 'string') {
+    if (!/^[1-9]\d*$/.test(sessionId)) throw new AppError('课堂编号无效', { code: 'VALIDATION_ERROR' })
+    sessionId = Number(sessionId)
+  }
   return {
-    dimensionId: value.dimension_id,
-    label: value.label,
-    averageScore: value.average_score,
-    baselineScore: value.baseline_score,
-    currentScore: value.current_score,
-    delta: value.delta,
-    studentCount: value.student_count,
-    rate: value.rate,
+    class_id: filters.classId,
+    session_id: sessionId,
+    date_from: filters.dateFrom,
+    date_to: filters.dateTo,
   }
 }
 
 export const apiAnalyticsRepository: AnalyticsRepository = {
-  async getAnalyticsOverview(classId?: number, dateFrom?: string, dateTo?: string): Promise<AnalyticsOverview> {
-    const value = await apiRequest({
-      path: '/analytics/overview',
-      query: { class_id: classId, date_from: dateFrom, date_to: dateTo },
-      cacheTtlMs: ANALYTICS_TTL,
-      schema: apiAnalyticsOverviewSchema,
-    })
-    return {
-      scope: {
-        classId: value.scope.class_id,
-        className: value.scope.class_name,
-        dateFrom: value.scope.date_from,
-        dateTo: value.scope.date_to,
-      },
-      studentCount: value.student_count,
-      publishedCaseCount: value.published_case_count,
-      eligiblePairs: value.eligible_pairs,
-      startedPairs: value.started_pairs,
-      completedPairs: value.completed_pairs,
-      completionRate: value.completion_rate,
-      currentAverageScore: value.current_average_score,
-      averageImprovement: value.average_improvement,
-      dimensions: value.dimensions.map(toDimension),
-      weakDimensions: value.weak_dimensions.map(toDimension),
-      cases: value.cases.map((item) => ({
-        problemId: item.problem_id,
-        title: item.title,
-        completed: item.completed,
-        assigned: item.assigned,
-        averageScore: item.average_score,
-      })),
-      students: value.students.map((item) => ({
-        studentId: item.student_id,
-        nickname: item.nickname,
-        completed: item.completed,
-        assigned: item.assigned,
-        averageScore: item.average_score,
-      })),
-    }
+  async getTeacherInsightsOverview(filters = {}) {
+    return mapTeacherInsightsOverview(
+      await apiRequest({
+        path: '/analytics/teacher-insights/overview',
+        query: teacherInsightsQuery(filters),
+        schema: apiTeacherInsightsOverviewSchema,
+      }),
+    )
   },
-  async getAnalyticsCase(
-    problemId: number,
-    classId?: number,
-    dateFrom?: string,
-    dateTo?: string,
-  ): Promise<AnalyticsCase> {
-    const value = await apiRequest({
-      path: `/analytics/cases/${encodePathSegment(problemId)}`,
-      query: { class_id: classId, date_from: dateFrom, date_to: dateTo },
-      cacheTtlMs: ANALYTICS_TTL,
-      schema: apiAnalyticsCaseSchema,
-    })
-    return {
-      problem: value.problem,
-      eligiblePairs: value.eligible_pairs,
-      startedPairs: value.started_pairs,
-      completedPairs: value.completed_pairs,
-      completionRate: value.completion_rate,
-      currentAverageScore: value.current_average_score,
-      averageImprovement: value.average_improvement,
-      averageDurationMinutes: value.average_duration_minutes,
-      dimensions: value.dimensions.map(toDimension),
-      distribution: value.distribution,
-      students: value.students.map((item) => ({
-        studentId: item.student_id,
-        nickname: item.nickname,
-        status: item.status,
-        baseline: item.baseline,
-        current: item.current,
-        delta: item.delta,
-        focusStage: item.focus_stage,
-        lastAssessedAt: item.last_assessed_at,
-      })),
-    }
+  async getTeacherInsightsStudents(filters = {}, limit = 20, offset = 0) {
+    return mapTeacherInsightsStudents(
+      await apiRequest({
+        path: '/analytics/teacher-insights/students',
+        query: { ...teacherInsightsQuery(filters), limit, offset },
+        schema: apiTeacherInsightsStudentsSchema,
+      }),
+    )
   },
-  async getAnalyticsStudent(
-    studentId: number,
-    classId?: number,
-    dateFrom?: string,
-    dateTo?: string,
-  ): Promise<AnalyticsStudent> {
-    const value = await apiRequest({
-      path: `/analytics/students/${encodePathSegment(studentId)}`,
-      query: { class_id: classId, date_from: dateFrom, date_to: dateTo },
-      cacheTtlMs: ANALYTICS_TTL,
-      schema: apiAnalyticsStudentSchema,
-    })
-    return {
-      student: value.student,
-      assigned: value.assigned,
-      started: value.started,
-      completed: value.completed,
-      completionRate: value.completion_rate,
-      currentAverageScore: value.current_average_score,
-      averageImprovement: value.average_improvement,
-      dimensions: value.dimensions.map(toDimension),
-      cases: value.cases.map((item) => ({
-        problemId: item.problem_id,
-        title: item.title,
-        version: item.version,
-        firstScore: item.first_score,
-        latestScore: item.latest_score,
-        delta: item.delta,
-        attemptCount: item.attempt_count,
-        focusStage: item.focus_stage,
-        lastAssessedAt: item.last_assessed_at,
-      })),
-      timeline: value.timeline.map((item) => ({
-        attemptId: item.attempt_id,
-        problemId: item.problem_id,
-        score: item.score,
-        assessedAt: item.assessed_at,
-      })),
-      learningPlan: value.learning_plan
-        ? {
-            id: value.learning_plan.id,
-            status: value.learning_plan.status,
-            targetDimensionIds: value.learning_plan.target_dimension_ids,
-            dueAt: value.learning_plan.due_at,
-          }
-        : null,
-      practiceMastery: Object.fromEntries(
-        Object.entries(value.practice_mastery).map(([key, item]) => [
-          key,
-          { averageScore: item.average_score, attemptCount: item.attempt_count },
-        ]),
-      ),
-    }
+  async getTeacherInsightsStudent(studentId, filters: TeacherInsightsStudentFilters) {
+    return mapTeacherInsightsStudent(
+      await apiRequest({
+        path: `/analytics/teacher-insights/students/${encodePathSegment(studentId)}`,
+        query: teacherInsightsQuery(filters),
+        schema: apiTeacherInsightsStudentSchema,
+      }),
+    )
   },
-  async getAnalyticsKnowledge(classId: number): Promise<AnalyticsKnowledge> {
-    const value = await apiRequest({
-      path: `/analytics/classes/${encodePathSegment(classId)}/knowledge`,
-      cacheTtlMs: ANALYTICS_TTL,
-      schema: apiAnalyticsKnowledgeSchema,
-    })
-    return {
-      classId: value.class_id,
-      className: value.class_name,
-      participantCount: value.participant_count,
-      dueBacklog: value.due_backlog,
-      objectiveCorrectRate: value.objective_correct_rate,
-      weakPoints: value.weak_points.map((item) => ({ pointCode: item.point_code, studentCount: item.student_count })),
-      rankingsSuppressed: value.rankings_suppressed,
-    }
+  async getTeacherInsightsKnowledge(filters = {}) {
+    return mapTeacherInsightsKnowledge(
+      await apiRequest({
+        path: '/analytics/teacher-insights/knowledge',
+        query: teacherInsightsQuery(filters),
+        schema: apiTeacherInsightsKnowledgeSchema,
+      }),
+    )
+  },
+  async getTeacherInsightsDiagnostics(filters = {}, limit = 20, offset = 0) {
+    return mapTeacherInsightsDiagnostics(
+      await apiRequest({
+        path: '/analytics/teacher-insights/diagnostics',
+        query: { ...teacherInsightsQuery(filters), limit, offset },
+        schema: apiTeacherInsightsDiagnosticsSchema,
+      }),
+    )
   },
 }

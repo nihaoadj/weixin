@@ -1,0 +1,213 @@
+{
+  "createdAt": "2026-10-03T22:56:43.248893+08:00",
+  "purpose": "T65 QA retired repository cleanup pre-edit snapshot",
+  "scope": [
+    "backend/app/modules/content/api/problems.py",
+    "backend/app/modules/qa/__init__.py",
+    "backend/app/modules/qa/api/__init__.py",
+    "backend/app/modules/qa/api/ai.py",
+    "backend/app/modules/qa/api/conversations.py",
+    "backend/app/modules/qa/api/medical_schemas.py",
+    "backend/app/modules/qa/api/question_schemas.py",
+    "backend/app/modules/qa/api/schemas.py",
+    "backend/app/modules/qa/api/student_questions.py",
+    "backend/app/modules/qa/application/__init__.py",
+    "backend/app/modules/qa/application/medical_chat.py",
+    "backend/app/modules/qa/application/ports.py",
+    "backend/app/modules/qa/application/records.py",
+    "backend/app/modules/qa/application/use_cases.py",
+    "backend/app/modules/qa/domain/__init__.py",
+    "backend/app/modules/qa/domain/safety.py",
+    "backend/app/modules/qa/infrastructure/__init__.py",
+    "backend/app/modules/qa/infrastructure/conversation_repository.py",
+    "backend/app/modules/qa/infrastructure/medical_chat_audit.py",
+    "backend/app/modules/qa/infrastructure/medical_chat_gateway.py",
+    "backend/app/modules/qa/infrastructure/models.py",
+    "backend/app/modules/qa/infrastructure/question_repository.py",
+    "backend/app/modules/qa/public.py",
+    "backend/app/modules/qa/wiring.py",
+    "backend/app/modules/qa/wiring_question.py",
+    "backend/tests/test_api.py",
+    "backend/tests/test_case_hardening.py",
+    "backend/tests/test_characterization.py",
+    "backend/tests/test_data_layer.py",
+    "backend/tests/test_t63_content_learning_pruning.py"
+  ],
+  "entries": [
+    {
+      "path": "backend/app/modules/content/api/problems.py",
+      "bytes": 7260,
+      "sha256": "50bf23021dcffc099828aa0fc408ab1ef726753d9482448df1c105cc7500b6be"
+    },
+    {
+      "path": "backend/app/modules/qa/__init__.py",
+      "bytes": 88,
+      "sha256": "f7a93c4051869ff30c85cd806eb3f6546a1a309dcaca6a3beef5730add066318"
+    },
+    {
+      "path": "backend/app/modules/qa/api/__init__.py",
+      "bytes": 92,
+      "sha256": "990717a9c5ab3aa2c433116e8b99d2220e5b23ef138f6f3df860689df490afc0"
+    },
+    {
+      "path": "backend/app/modules/qa/api/ai.py",
+      "bytes": 1202,
+      "sha256": "ec84afceb818865b651a214ccf2b50481af10ea1c9c72f1247e4aaf35ea5d369"
+    },
+    {
+      "path": "backend/app/modules/qa/api/conversations.py",
+      "bytes": 4419,
+      "sha256": "1ed04f58e1ea541d6276e10d7e71dfef8cb9c10edce1690641c4e86411cf67b8"
+    },
+    {
+      "path": "backend/app/modules/qa/api/medical_schemas.py",
+      "bytes": 443,
+      "sha256": "e011fbddb170f35a3ad40f89db61a3a019236e00010d6324f52da865efc1a89c"
+    },
+    {
+      "path": "backend/app/modules/qa/api/question_schemas.py",
+      "bytes": 806,
+      "sha256": "e211b5e8d1459a6a01c28a9e807f790ab7f0a67cd2ed0624e52a3dab5e8607ef"
+    },
+    {
+      "path": "backend/app/modules/qa/api/schemas.py",
+      "bytes": 1541,
+      "sha256": "6970148aa53665d6710e3049b384ab6c456c7769ba3f792addb7169035b58d35"
+    },
+    {
+      "path": "backend/app/modules/qa/api/student_questions.py",
+      "bytes": 1114,
+      "sha256": "80e00222d67bb5799a0eae9087da97cc3be9349c98d4730e2e7ae8451f20e5a1"
+    },
+    {
+      "path": "backend/app/modules/qa/application/__init__.py",
+      "bytes": 160,
+      "sha256": "6f8f2c3c370be504ca02ebf4e50f35965638dba99a19c4c069cdce12ef341062"
+    },
+    {
+      "path": "backend/app/modules/qa/application/medical_chat.py",
+      "bytes": 1753,
+      "sha256": "7d972f28184ae3f9a1b47d7ed8d556b2bb35f0a883f186e8eebead8f47b8768e"
+    },
+    {
+      "path": "backend/app/modules/qa/application/ports.py",
+      "bytes": 2378,
+      "sha256": "435eca374d83b744e753f45b590dfc45a6d28513500fcb5de238609f961115bb"
+    },
+    {
+      "path": "backend/app/modules/qa/application/records.py",
+      "bytes": 1866,
+      "sha256": "067b4e21aa22b4aad12f8494f5797722b784dfac34455245349fba7d2483ed5b"
+    },
+    {
+      "path": "backend/app/modules/qa/application/use_cases.py",
+      "bytes": 4477,
+      "sha256": "1f74b65802943040cf680cb46d27487cb384845187f5dc3014771abe79523f68"
+    },
+    {
+      "path": "backend/app/modules/qa/domain/__init__.py",
+      "bytes": 52,
+      "sha256": "55a41f4b26387b6a14b2c124bb964ff88a726ee84617a360bc8341bf65c9441d"
+    },
+    {
+      "path": "backend/app/modules/qa/domain/safety.py",
+      "bytes": 1341,
+      "sha256": "fa15831ffdfe16579b5f0f5c0540b0ff5f1f8013bfab414f12d88eef9b328b7a"
+    },
+    {
+      "path": "backend/app/modules/qa/infrastructure/__init__.py",
+      "bytes": 519,
+      "sha256": "0eb071b7b88a18020be8809593ce5d9d99c80450a150a9ac9dc77995f161679e"
+    },
+    {
+      "path": "backend/app/modules/qa/infrastructure/conversation_repository.py",
+      "bytes": 7338,
+      "sha256": "e9874a01144f07af04a9b5350478edbe15bad29e4a83ab08a5feb855accfbab4"
+    },
+    {
+      "path": "backend/app/modules/qa/infrastructure/medical_chat_audit.py",
+      "bytes": 934,
+      "sha256": "e4a46b13fc7619fc213eabeefdc521b651b3dd71c0b91a719b5632af5330fb4d"
+    },
+    {
+      "path": "backend/app/modules/qa/infrastructure/medical_chat_gateway.py",
+      "bytes": 4017,
+      "sha256": "d6efceb1e153b27e96820339197bf2f2ab0411d1817e2af8c3bb986c5536cb69"
+    },
+    {
+      "path": "backend/app/modules/qa/infrastructure/models.py",
+      "bytes": 4601,
+      "sha256": "9dd1a76531c267a9520254f074e3f38d8059bef8b5d2fd99a18c768089d0600f"
+    },
+    {
+      "path": "backend/app/modules/qa/infrastructure/question_repository.py",
+      "bytes": 5781,
+      "sha256": "35d1580cb00d52e8af1b510d82f895b2cf7a45f434aafa320bf330f133191998"
+    },
+    {
+      "path": "backend/app/modules/qa/public.py",
+      "bytes": 2258,
+      "sha256": "4baa2876ef438fdacd934a4196b6ee6d3c753460019f47cfd874eb1260cd7878"
+    },
+    {
+      "path": "backend/app/modules/qa/wiring.py",
+      "bytes": 1413,
+      "sha256": "6b41e36b7c42f0f9a7b404153f99fa05fa919d5f5440ff5e9ba1b1958c09735b"
+    },
+    {
+      "path": "backend/app/modules/qa/wiring_question.py",
+      "bytes": 180,
+      "sha256": "4f3e1a91baf05841755e1741845f2a0aae7256390291166608bb53c4528495c0"
+    },
+    {
+      "path": "backend/tests/test_api.py",
+      "bytes": 9140,
+      "sha256": "f6e608f7c290a53ca1ee2c7674d542e8caea79c772408de5c6d8351958063ec4"
+    },
+    {
+      "path": "backend/tests/test_case_hardening.py",
+      "bytes": 8973,
+      "sha256": "12eb50fb94f6966d413acdb1e414489eb56f71c155c4f04ec11fc8b1448da5a1"
+    },
+    {
+      "path": "backend/tests/test_characterization.py",
+      "bytes": 8797,
+      "sha256": "38d14205b333fccec78b7af10f0333ca46be85897f7837eb3beb60667945167e"
+    },
+    {
+      "path": "backend/tests/test_data_layer.py",
+      "bytes": 9965,
+      "sha256": "a140180f2a0e28efb71d27d263e7a2a16cebba05c8d357cdbd0dc34c0b3a2d59"
+    },
+    {
+      "path": "backend/tests/test_t63_content_learning_pruning.py",
+      "bytes": 8669,
+      "sha256": "7e933050d3eaadcd65df128812f0c0220554df5f86c5bece820e13a71e699bfe"
+    },
+    {
+      "path": "snapshot/git-status-before.txt",
+      "bytes": 97134,
+      "sha256": "39a15cd0d7fec0267bc90831fd8cf323ca1f5d2780e61ce3ab72320367738608"
+    },
+    {
+      "path": "snapshot/git-status-scope-before.txt",
+      "bytes": 457,
+      "sha256": "0fcb4df699fcf38b480a3239dcc8ec461ae595f6e061a999e10eb0e088f6360c"
+    },
+    {
+      "path": "snapshot/staged-index-diff-before.patch",
+      "bytes": 28433,
+      "sha256": "b5f3f08d86f2e08add194963c07da05b2a5c2736b8b19f8dba36e78068ac136f"
+    },
+    {
+      "path": "snapshot/unstaged-worktree-diff-before.patch",
+      "bytes": 30850,
+      "sha256": "d59c85702c8d9a6a50ddb55c4dc85f30001b746e088161d147c6801e6d510df8"
+    }
+  ],
+  "archive": {
+    "path": "qa-retirement-before.zip",
+    "bytes": 60341,
+    "sha256": "d3c8bf8a67dbfb375891773c7d0d5962a034274405af842d4b2b4c9314fd3732"
+  }
+}

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { storage, storageKeys } from '@/platform/storage/storage'
 import { ensureDemoData, getConversationsAsync } from '@/features/qa/public'
-import { getReportsAsync } from '@/features/reports/public'
+import { findReportByConversationAsync } from '@/features/reports/public'
 import { saveSession } from '@/features/identity/public'
 
 const student = {
@@ -22,17 +22,20 @@ const teacher = {
 }
 
 describe('demo data', () => {
-  it('provides the seeded student conversation and teacher report without duplication', async () => {
+  it('provides the seeded student conversations and retained history without duplication', async () => {
     ensureDemoData()
     ensureDemoData()
 
     saveSession(student)
-    expect(await getConversationsAsync()).toHaveLength(1)
-    expect(await getReportsAsync()).toHaveLength(1)
+    // Reports are retained only as private, read-only student history.
+    expect(await getConversationsAsync()).toHaveLength(2)
+    expect((await findReportByConversationAsync('pathology-demo-conversation-v2'))?.status).toBe('待批阅')
+    expect((await findReportByConversationAsync('pathology-demo-draft-conversation'))?.status).toBe('草稿')
 
     saveSession(teacher)
-    expect(await getReportsAsync()).toHaveLength(1)
-    expect((await getReportsAsync())[0]?.status).toBe('待批阅')
+    await expect(findReportByConversationAsync('pathology-demo-conversation-v2')).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    })
   })
 })
 
@@ -89,10 +92,12 @@ describe('legacy report migration ownership', () => {
       createdAt: new Date(0).toISOString(),
     })
 
-    // conv-a 的报告被学生 A 认领；conv-b 无法归属，不得串到 A 名下。
-    const reports = await getReportsAsync()
-    expect(reports).toHaveLength(1)
-    expect(reports[0]?.conversationId).toBe('conv-a')
-    expect(reports[0]?.studentId).toBe('student-a')
+    // Historical reports remain private to the student whose conversation
+    // uniquely proves ownership; unrelated legacy records stay hidden.
+    await expect(findReportByConversationAsync('conv-a')).resolves.toMatchObject({
+      conversationId: 'conv-a',
+      studentId: 'student-a',
+    })
+    await expect(findReportByConversationAsync('conv-b')).resolves.toBeUndefined()
   })
 })

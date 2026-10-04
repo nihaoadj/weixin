@@ -21,6 +21,7 @@ class CaseAttempt(Base):
     problem_id: Mapped[int] = mapped_column(ForeignKey("problems.id"), index=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     problem_version: Mapped[int] = mapped_column(Integer)
+    problem_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="in_progress")
     current_stage: Mapped[str] = mapped_column(String(40), default="history")
     retry_of_id: Mapped[int | None] = mapped_column(ForeignKey("case_attempts.id"), nullable=True)

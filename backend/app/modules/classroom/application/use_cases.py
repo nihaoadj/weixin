@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from app.modules.classroom.application.ports import ClassroomRepository
 from app.modules.classroom.application.records import ClassCommand, ClassRecord, ClassStudentRecord, ClassUpdateCommand
 from app.modules.classroom.domain.policy import ClassroomPolicy
@@ -7,16 +9,27 @@ from app.shared.actor import Actor
 from app.shared.errors import AppError, PersistenceConflict
 from app.shared.uow import UnitOfWork
 
+if TYPE_CHECKING:
+    from app.modules.classroom.public import ClassroomScope
+
 
 class ClassroomApplication:
-    def __init__(self, repository: ClassroomRepository, uow: UnitOfWork) -> None:
+    def __init__(self, repository: ClassroomRepository, uow: UnitOfWork, scope=None) -> None:
         self._repository = repository
         self._uow = uow
         self._policy = ClassroomPolicy()
+        self._scope = scope
 
     def list(self, actor: Actor) -> tuple[ClassRecord, ...]:
         self._policy.require_teacher(actor)
         return self._repository.list_for_teacher(actor.id)
+
+    def student_active_classes(self, actor: Actor) -> tuple[ClassroomScope, ...]:
+        # Read-only membership fact for the student's own report submission.
+        actor.require_role("student")
+        if self._scope is None:
+            raise AppError("SERVICE_ERROR", "班级范围服务不可用", 500)
+        return self._scope.active_classes_for_student(actor.id)
 
     def create(self, actor: Actor, command: ClassCommand) -> ClassRecord:
         self._policy.require_teacher(actor)

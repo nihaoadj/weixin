@@ -1,20 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import ChatComposer from './ChatComposer.vue'
-import ChatWelcome from './ChatWelcome.vue'
 
 const stubs = { MedIcon: true, StudentNav: true, SafetyBanner: true }
 
 describe('chat presentation', () => {
-  it('exposes suggested questions as named buttons', async () => {
-    const question = '如何整理鉴别诊断？'
-    const wrapper = mount(ChatWelcome, { props: { questions: [question] }, global: { stubs } })
-    const action = wrapper.get('button.quick-item')
-    expect(action.attributes('aria-label')).toBe(`提问：${question}`)
-    await action.trigger('click')
-    expect(wrapper.emitted('ask')).toEqual([[question]])
-  })
-
   it('labels the input and send action, preserving the model value', async () => {
     const wrapper = mount(ChatComposer, {
       props: { modelValue: '', loading: false, canGenerateReport: false, canRetry: false },
@@ -49,5 +39,53 @@ describe('chat presentation', () => {
     expect(wrapper.emitted('retry')).toHaveLength(1)
     await wrapper.setProps({ canRetry: false })
     expect(wrapper.find('.retry-button').exists()).toBe(false)
+  })
+
+  it('uses the compact two-level composer only for dialogue pages', () => {
+    const wrapper = mount(ChatComposer, {
+      props: { modelValue: '阶段证据', loading: false, multiline: true, appearance: 'dialogue' },
+      global: { stubs },
+    })
+    expect(wrapper.get('.composer').classes()).toContain('is-dialogue')
+    expect(wrapper.get('.composer-context').text()).toBe('阶段作答')
+    expect(wrapper.find('.send-button-surface').exists()).toBe(true)
+    expect(wrapper.get('.send-glyph').text()).toBe('↑')
+    expect(wrapper.get('.send-button').attributes('aria-label')).toBe('发送消息')
+  })
+
+  it('replaces the default dialogue context with a named slot', () => {
+    const wrapper = mount(ChatComposer, {
+      props: { modelValue: '阶段证据', loading: false, multiline: true, appearance: 'dialogue' },
+      slots: { context: '<text class="custom-context">本轮回应方式</text>' },
+      global: { stubs },
+    })
+    expect(wrapper.get('.custom-context').text()).toBe('本轮回应方式')
+    expect(wrapper.find('.composer-context').exists()).toBe(false)
+  })
+
+  it('keeps a quoted selection inside the dialogue bubble', () => {
+    const wrapper = mount(ChatComposer, {
+      props: { modelValue: '', loading: false, multiline: true, appearance: 'dialogue' },
+      slots: { quote: '<view class="quote-preview">引用内容</view>' },
+      global: { stubs },
+    })
+    expect(wrapper.get('.composer-bar').find('.quote-preview').text()).toBe('引用内容')
+  })
+
+  it('moves the dialogue composer above the mobile keyboard and restores it after blur', async () => {
+    const wrapper = mount(ChatComposer, {
+      props: { modelValue: '', loading: false, multiline: true, appearance: 'dialogue' },
+      global: { stubs },
+    })
+    const textarea = wrapper.get('textarea')
+    expect(textarea.attributes('adjust-position')).toBe('false')
+
+    await textarea.trigger('keyboardheightchange', { detail: { height: 280 } })
+    expect(wrapper.get('.composer').classes()).toContain('is-keyboard-open')
+    expect(wrapper.emitted('keyboard-height-change')).toEqual([[280]])
+
+    await textarea.trigger('blur')
+    expect(wrapper.get('.composer').classes()).not.toContain('is-keyboard-open')
+    expect(wrapper.emitted('keyboard-height-change')).toEqual([[280], [0]])
   })
 })

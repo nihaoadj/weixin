@@ -8,6 +8,11 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      '.contract-tmp/**',
+      'artifacts/**',
+      'output/**',
+      'tmp/**',
+      'data/**',
       'node_modules/**',
       'coverage/**',
       'backend/.venv*/**',

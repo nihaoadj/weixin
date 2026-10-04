@@ -19,28 +19,33 @@ export const ROUTES = {
   studentCaseTraining: '/pages/student/case-training/case-training',
   studentCaseReport: '/pages/student/case-report/case-report',
   studentQuestionDetail: '/pages/student/question-detail/question-detail',
-  studentLearningPlan: '/pages/student/learning/plan',
-  studentLearningDrill: '/pages/student/learning/drill',
-  studentLearningReview: '/pages/student/learning/review',
+  studentLearningPlans: '/pages/student/learning/plans',
+  studentLearningPlanDetail: '/pages/student/learning/plan-detail',
+  studentRouteReading: '/pages/student/learning/route-reading',
+  studentRouteCase: '/pages/student/learning/route-case',
+  studentFinalTest: '/pages/student/learning/final-test',
+  studentLearningResult: '/pages/student/learning/learning-result',
   studentKnowledgeLoop: '/pages/student/learning/knowledge-loop',
   studentKnowledgeNode: '/pages/student/learning/knowledge-node',
+  studentSourceView: '/pages/student/learning/source-view',
   studentInsightDetail: '/pages/student/insights/detail',
   studentReport: '/pages/report/report',
   // 教师端
   teacherWorkspace: '/pages/teacher/index/index',
-  teacherLegacyReports: '/pages/teacher/list/list',
-  teacherReportDetail: '/pages/teacher/detail/detail',
+  teacherPbl: '/pages/teacher/pbl/index',
+  teacherTestQueue: '/pages/teacher/pbl/test-queue',
+  teacherInsights: '/pages/teacher/insights/index',
+  teacherContent: '/pages/teacher/content/index',
+  teacherQuestionBankImport: '/pages/teacher/content/import-question',
+  teacherPblDiagnosticDetail: '/pages/teacher/pbl-diagnostic-detail/pbl-diagnostic-detail',
+  teacherLearningFinalTest: '/pages/teacher/learning/final-test',
+  teacherInsightsResult: '/pages/teacher/insights/result',
   teacherProblemEdit: '/pages/teacher/problem-edit/problem-edit',
   teacherCaseEdit: '/pages/teacher/case-edit/case-edit',
   teacherProblemDetail: '/pages/teacher/problem-detail/problem-detail',
-  teacherProblemStats: '/pages/teacher/problem-stats/problem-stats',
-  teacherAnalytics: '/pages/teacher/analytics/index',
-  teacherAnalyticsCaseDetail: '/pages/teacher/analytics/case-detail',
-  teacherAnalyticsStudentDetail: '/pages/teacher/analytics/student-detail',
-  teacherReviewList: '/pages/teacher/medical-review/review-list',
-  teacherReviewDetail: '/pages/teacher/medical-review/review-detail',
-  teacherClasses: '/pages/teacher/classes/classes',
-  teacherKnowledgeCards: '/pages/teacher/knowledge-cards/knowledge-cards',
+  teacherInsightsStudentDetail: '/pages/teacher/insights/student-detail',
+  teacherQuestionBank: '/pages/teacher/question-bank/index',
+  teacherQuestionBankDetail: '/pages/teacher/question-bank/detail',
 } as const
 
 export type StudentPrimaryRoute =
@@ -51,7 +56,7 @@ type BackPressSource = 'backbutton' | 'navigateBack'
 
 export function roleHome(role: UserRole | null | undefined): string {
   if (role === 'student') return ROUTES.studentPbl
-  if (role === 'teacher') return ROUTES.teacherWorkspace
+  if (role === 'teacher') return ROUTES.teacherPbl
   return ROUTES.login
 }
 

@@ -29,6 +29,12 @@ def upgrade() -> None:
                 )
                 batch.create_index("ix_problems_medical_review_status", ["medical_review_status"])
     metadata = sa.MetaData()
+    # These two referenced pilot tables live in a different SQLAlchemy
+    # metadata registry.  Local stubs let this revision retain its original
+    # explicit CREATE TABLE behavior after revision 0001 stops creating every
+    # current runtime table up front.
+    sa.Table("users", metadata, sa.Column("id", sa.Integer, primary_key=True))
+    sa.Table("problems", metadata, sa.Column("id", sa.Integer, primary_key=True))
     classes = sa.Table(
         "classes",
         metadata,

@@ -2,6 +2,9 @@
 export type UserRole = 'student' | 'teacher'
 export type MessageRole = 'user' | 'assistant'
 export type ReportStatus = 'draft' | 'pending_review' | 'reviewed'
+// The only kind in the reports table for now; PBL objects keep their own
+// lifecycle and must not be folded into this contract.
+export type ReportKind = 'qa_learning_report'
 export type ProblemStatus = 'draft' | 'published' | 'rejected'
 // The API stores this as a display label and may add teaching content types.
 // Keep known labels discoverable while preserving forward compatibility.
@@ -75,9 +78,12 @@ export interface Report {
   studentId: string
   studentName: string
   status: ReportStatus
+  kind: ReportKind
   teacherScore?: number
   teacherFeedback?: string
   reviewTopicCodes?: string[]
+  classId?: string
+  className?: string
 }
 
 export interface ReportSummary {
@@ -86,10 +92,13 @@ export interface ReportSummary {
   studentId: string
   studentName: string
   status: ReportStatus
+  kind: ReportKind
   aiScore: number
   teacherScore?: number
   messagePreview: string
   messageCount: number
+  classId?: string
+  className?: string
   createdAt: string
   updatedAt: string
 }
@@ -120,8 +129,9 @@ export interface Problem {
   estimatedMinutes?: number
   version?: number
   authorId?: number
+  allowedActions?: Array<'edit' | 'delete' | 'submit_medical_review' | 'publish' | 'reject'>
   parentProblemId?: number
-  medicalReviewStatus?: 'not_submitted' | 'pending' | 'approved' | 'rejected'
+  medicalReviewStatus?: 'not_required' | 'not_submitted' | 'pending' | 'approved' | 'rejected'
   opening?: import('./case').CaseOpening
   capabilityTags?: string[]
   knowledgePointCodes?: string[]

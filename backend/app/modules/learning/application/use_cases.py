@@ -25,6 +25,7 @@ from app.modules.learning.domain.policy import (
     stage_for_dimension,
     target_dimensions,
 )
+from app.modules.learning.public import LearningEvidencePort
 from app.modules.training.public import CaseAttemptContract
 from app.shared.actor import Actor
 from app.shared.errors import AppError, PersistenceConflict
@@ -40,39 +41,64 @@ class LearningApplication:
         uow: UnitOfWork,
         practice_generator: PracticeGenerator,
         case_attempts: CaseAttemptPort,
+        learning_evidence: LearningEvidencePort | None = None,
     ) -> None:
         self._repository = repository
         self._uow = uow
         self._practice_generator = practice_generator
         self._case_attempts = case_attempts
+        self._learning_evidence = learning_evidence
 
     def ensure_for_case_completion(self, actor: Actor, attempt_id: int) -> LearningPlanRecord | None:
         actor.require_role("student")
         source = self._source(actor, attempt_id)
         if source.attempt.learning_task_id is not None:
-            self._repository.mark_task_completed(actor.id, source.attempt.learning_task_id, self._now())
-            self._uow.commit()
+            try:
+                self._repository.mark_task_completed(actor.id, source.attempt.learning_task_id, self._now())
+                self._uow.commit()
+            except PersistenceConflict as error:
+                self._uow.rollback()
+                raise AppError("STATE_CONFLICT", "病例任务完成边界不一致，请返回任务包核对", 409) from error
             return self._repository.find_active_plan(actor.id)
-        return self._ensure_plan(actor, source)
+        # Independent cases remain student training analyses, not new formal plans.
+        return None
+
+    def classroom_case_attempt_context(self, actor: Actor, attempt_id: int) -> dict[str, object]:
+        """Resolve a case attempt's classroom return path from persisted ownership, never route parameters."""
+        actor.require_role("student")
+        source = self._source(actor, attempt_id)
+        learning_task_id = source.attempt.learning_task_id
+        if learning_task_id is None:
+            return {"is_classroom_task": False, "task_id": None, "package_id": None}
+        task = self._task(actor, learning_task_id)
+        if task.task_type != "focused_retry" or task.plan_source_type != "classroom_package":
+            return {"is_classroom_task": False, "task_id": None, "package_id": None}
+        if (
+            task.plan_source_id is None
+            or task.problem_id != source.attempt.problem.id
+            or source.attempt.learning_task_id != task.id
+        ):
+            raise AppError("STATE_CONFLICT", "病例任务归属记录不一致，无法返回课堂任务包", 409)
+        return {"is_classroom_task": True, "task_id": task.id, "package_id": task.plan_source_id}
 
     def ensure_for_assessment(self, actor: Actor, attempt_id: int) -> LearningPlanRecord:
         actor.require_role("student")
         source = self._source(actor, attempt_id)
         if source.attempt.learning_task_id is not None:
             raise AppError("STATE_CONFLICT", "Task-linked assessment cannot create a new plan", 409)
-        return self._ensure_plan(actor, source)
+        raise AppError("STATE_CONFLICT", "独立病例不再生成正式学习计划", 409)
 
     def current_plan(self, actor: Actor) -> LearningPlanRecord:
         actor.require_role("student")
         plan = self._repository.find_active_plan(actor.id)
-        if plan is None:
+        if plan is None or plan.source_type in {"pbl_suggestion", "classroom_package"}:
             raise AppError("RESOURCE_NOT_FOUND", "RESOURCE_NOT_FOUND", 404)
         return plan
 
     def get_plan(self, actor: Actor, plan_id: int) -> LearningPlanRecord:
         actor.require_role("student")
         plan = self._repository.find_plan(actor.id, plan_id)
-        if plan is None:
+        if plan is None or plan.source_type in {"pbl_suggestion", "classroom_package"}:
             raise AppError("RESOURCE_NOT_FOUND", "RESOURCE_NOT_FOUND", 404)
         return plan
 
@@ -81,7 +107,21 @@ class LearningApplication:
     ) -> tuple[LearningTaskRecord, CaseAttemptContract | LearningTaskAttemptRecord]:
         actor.require_role("student")
         task = self._task(actor, task_id)
-        require_unlocked(task.position, task.previous_status)
+        if task.plan_source_type == "classroom_package":
+            plan = self._repository.find_plan(actor.id, task.plan_id)
+            if plan is None or plan.status != "active" or task.cycle_number != plan.current_cycle:
+                raise AppError("STATE_CONFLICT", "该轮课堂任务不可启动", 409)
+            if task.task_type != "focused_retry":
+                raise AppError("STATE_CONFLICT", "请从课堂任务包提交该题", 409)
+            if any(
+                previous.cycle_number == task.cycle_number
+                and previous.position < task.position
+                and previous.status not in {"completed", "skipped"}
+                for previous in plan.tasks
+            ):
+                raise AppError("STATE_CONFLICT", "请先完成前面的课堂题目", 409)
+        else:
+            require_unlocked(task.position, task.previous_status)
         if task.status == "completed":
             raise AppError("STATE_CONFLICT", "STATE_CONFLICT", 409)
 
@@ -133,6 +173,9 @@ class LearningApplication:
         attempt = self._repository.find_task_attempt(actor.id, attempt_id)
         if attempt is None:
             raise AppError("RESOURCE_NOT_FOUND", "RESOURCE_NOT_FOUND", 404)
+        task = self._repository.find_task(actor.id, attempt.task_id)
+        if task is None or task.plan_source_type in {"pbl_suggestion", "classroom_package"}:
+            raise AppError("RESOURCE_NOT_FOUND", "资源不存在", 404)
         return attempt
 
     def submit_micro_task(self, actor: Actor, attempt_id: int, answer: dict[str, object]) -> LearningTaskAttemptRecord:
@@ -160,7 +203,14 @@ class LearningApplication:
 
     def complete_plan(self, actor: Actor, plan_id: int) -> LearningPlanRecord:
         actor.require_role("student")
-        plan = self.get_plan(actor, plan_id)
+        old_plan = self._repository.find_plan(actor.id, plan_id)
+        if old_plan is not None and old_plan.source_type in {"pbl_suggestion", "classroom_package"}:
+            from app.modules.learning.public import retired_learning_flow
+
+            retired_learning_flow()
+        if old_plan is None:
+            raise AppError("RESOURCE_NOT_FOUND", "RESOURCE_NOT_FOUND", 404)
+        plan = old_plan
         if any(task.status != "completed" for task in plan.tasks):
             raise AppError("STATE_CONFLICT", "STATE_CONFLICT", 409)
         if plan.status == "completed":
@@ -407,6 +457,10 @@ class LearningApplication:
         task = self._repository.find_task(actor.id, task_id)
         if task is None:
             raise AppError("RESOURCE_NOT_FOUND", "RESOURCE_NOT_FOUND", 404)
+        if task.plan_source_type in {"pbl_suggestion", "classroom_package"}:
+            from app.modules.learning.public import retired_learning_flow
+
+            retired_learning_flow()
         return task
 
     def _source(self, actor: Actor, attempt_id: int) -> LearningSourceRecord:

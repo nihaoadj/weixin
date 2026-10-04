@@ -4,7 +4,6 @@ from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.bootstrap.composition import learning_application
 from app.bootstrap.seed import seed_showcase_case, showcase_draft
 from app.modules.classroom.infrastructure.models import ClassMember, ClassRoom
 from app.modules.content.infrastructure.models import Problem
@@ -95,7 +94,7 @@ def _question(db: Session) -> Problem:
     return problem
 
 
-def _conversation_and_report(db: Session, student: User) -> None:
+def _conversation_and_report(db: Session, student: User, classroom: ClassRoom) -> None:
     conversation = db.scalar(
         select(Conversation).where(
             Conversation.client_id == TEST_CONVERSATION_CLIENT_ID,
@@ -139,6 +138,8 @@ def _conversation_and_report(db: Session, student: User) -> None:
                     "strengths": ["能够依据形态建立初步解释"],
                     "general_suggestions": ["按照观察、假设与证据核对的顺序讨论"],
                 },
+                class_id=classroom.id,
+                class_name_snapshot=classroom.name,
             )
         )
 
@@ -261,11 +262,10 @@ def seed_test_data(db: Session) -> dict[str, int]:
 
     pending_case = _pending_case(db, teacher)
     question = _question(db)
-    _conversation_and_report(db, student)
+    _conversation_and_report(db, student, classroom)
     _question_thread(db, student, question)
-    assessment = _seed_assessed_attempt(db, student, showcase_case)
-    if assessment is not None:
-        learning_application(db).ensure_for_assessment(Actor.from_user(student), assessment.attempt_id)
+    # Independent case assessment remains available to the student without a formal plan.
+    _seed_assessed_attempt(db, student, showcase_case)
     db.commit()
 
     return {

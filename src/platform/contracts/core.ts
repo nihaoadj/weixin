@@ -63,6 +63,9 @@ export const apiReportSchema = z.object({
   student_id: z.number().int(),
   student_name: z.string().nullable().optional(),
   status: z.enum(['draft', 'pending_review', 'reviewed']),
+  // The reports table only holds QA learning reports; an unknown kind must be
+  // rejected instead of being folded into this contract.
+  report_kind: z.literal('qa_learning_report'),
   ai_score: z.number(),
   ai_summary: z.string(),
   analysis: reportAnalysisSchema.nullable().optional(),
@@ -71,6 +74,9 @@ export const apiReportSchema = z.object({
   teacher_feedback: z.string().nullable().optional(),
   reviewer_id: z.number().int().nullable().optional(),
   review_topic_codes: z.array(z.string().min(1)).max(3).optional().default([]),
+  // Drafts and legacy unattributed history keep null class fields.
+  class_id: z.number().int().positive().nullable().optional(),
+  class_name: z.string().min(1).nullable().optional(),
   created_at: timestamp,
   updated_at: timestamp,
 })
@@ -84,10 +90,13 @@ const reportSummarySchema = z.object({
   student_id: z.number().int(),
   student_name: z.string(),
   status: z.enum(['draft', 'pending_review', 'reviewed']),
+  report_kind: z.literal('qa_learning_report'),
   ai_score: z.number(),
   teacher_score: z.number().nullable().optional(),
   message_preview: z.string().optional().default(''),
   message_count: z.number().int().nonnegative().optional().default(0),
+  class_id: z.number().int().positive().nullable().optional(),
+  class_name: z.string().min(1).nullable().optional(),
   created_at: timestamp,
   updated_at: timestamp,
 })
@@ -130,7 +139,13 @@ export const apiProblemSchema = z.object({
   version: z.number().int().positive().optional().default(1),
   parent_problem_id: z.number().int().nullable().optional(),
   author_id: z.number().int().nullable().optional(),
-  medical_review_status: z.enum(['not_submitted', 'pending', 'approved', 'rejected']).default('not_submitted'),
+  allowed_actions: z
+    .array(z.enum(['edit', 'delete', 'submit_medical_review', 'publish', 'reject']))
+    .optional()
+    .default([]),
+  medical_review_status: z
+    .enum(['not_required', 'not_submitted', 'pending', 'approved', 'rejected'])
+    .default('not_submitted'),
   opening: openingSchema.nullable().optional(),
   capability_tags: z.array(z.string()).optional().default([]),
   knowledge_point_codes: z.array(z.string()).optional().default([]),

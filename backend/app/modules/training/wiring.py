@@ -12,6 +12,8 @@ def training_application(
     *,
     patient_gateway: PatientReplyGateway | None = None,
     assessment_gateway: AssessmentGateway | None = None,
+    learning_evidence=None,
+    classroom_scope=None,
 ) -> TrainingApplication:
     gateway = CaseAiGateway()
     return TrainingApplication(
@@ -19,4 +21,10 @@ def training_application(
         uow=SqlAlchemyUnitOfWork(session),
         patient_gateway=patient_gateway or gateway,
         assessment_gateway=assessment_gateway or gateway,
+        learning_evidence=learning_evidence,
+        classroom_scope=classroom_scope,
     )
+
+
+def case_snapshot_port(session: Session) -> SqlAlchemyTrainingRepository:
+    return SqlAlchemyTrainingRepository(session)

@@ -44,21 +44,6 @@
       "reason": "medical QA audit optionally links a case attempt"
     },
     {
-      "path": "app/modules/qa/infrastructure/question_repository.py",
-      "module": "app.modules.classroom.infrastructure.models",
-      "reason": "question visibility reads class membership"
-    },
-    {
-      "path": "app/modules/qa/infrastructure/question_repository.py",
-      "module": "app.modules.content.infrastructure.models",
-      "reason": "question threads are keyed by content problems"
-    },
-    {
-      "path": "app/modules/qa/infrastructure/question_repository.py",
-      "module": "app.modules.identity.infrastructure.models",
-      "reason": "question threads resolve student ownership"
-    },
-    {
       "path": "app/modules/learning/infrastructure/repositories.py",
       "module": "app.modules.classroom.infrastructure.models",
       "reason": "learning selects a visible transfer case by class"
@@ -132,6 +117,11 @@
       "path": "app/modules/analytics/infrastructure/reader.py",
       "module": "app.modules.training.infrastructure.models",
       "reason": "analytics read model joins case assessment outcomes"
+    },
+    {
+      "path": "app/modules/pbl/infrastructure/repositories.py",
+      "module": "app.modules.classroom.infrastructure.models",
+      "reason": "PBL visibility query checks classroom membership and ownership"
     },
     {
       "path": "app/modules/content/infrastructure/audit.py",

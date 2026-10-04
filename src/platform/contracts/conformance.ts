@@ -28,12 +28,21 @@ import {
   apiLearningTaskStartSchema,
   apiNotificationPageSchema,
 } from './learning'
+import { apiTeacherClassSchema } from './teacher'
+import { teacherContentActionSummarySchema } from './contentActions'
 import {
-  apiTeacherClassSchema,
-  apiAnalyticsOverviewSchema,
-  apiAnalyticsCaseSchema,
-  apiAnalyticsStudentSchema,
-} from './teacher'
+  routePageSchema,
+  routeDetailSchema,
+  readingStepSchema,
+  routeCaseSchema,
+  routeCaseMessageResultSchema,
+  studentFinalTestSchema,
+  teacherFinalTestSchema,
+  learningResultSchema,
+  teacherLearningResultReadSchema,
+  learningRouteGenerationSchema,
+  finalTestReleaseSchema,
+} from './learningRoutes'
 
 // Compile-time output compatibility: backend DTO changes must also update runtime validators.
 type ContractSchema<T> = z.ZodType<T, unknown>
@@ -61,6 +70,15 @@ apiLearningTaskAttemptSchema satisfies ContractSchema<components['schemas']['Lea
 apiLearningTaskStartSchema satisfies ContractSchema<components['schemas']['LearningTaskStartRead']>
 apiNotificationPageSchema satisfies ContractSchema<components['schemas']['NotificationListRead']>
 apiTeacherClassSchema satisfies ContractSchema<components['schemas']['ClassRead']>
-apiAnalyticsOverviewSchema satisfies ContractSchema<components['schemas']['AnalyticsOverview']>
-apiAnalyticsCaseSchema satisfies ContractSchema<components['schemas']['AnalyticsCaseRead']>
-apiAnalyticsStudentSchema satisfies ContractSchema<components['schemas']['AnalyticsStudentRead']>
+teacherContentActionSummarySchema satisfies ContractSchema<components['schemas']['TeacherContentActionSummary']>
+routePageSchema satisfies ContractSchema<components['schemas']['RoutePage']>
+routeDetailSchema satisfies ContractSchema<components['schemas']['RouteDetail']>
+readingStepSchema satisfies ContractSchema<components['schemas']['ReadingStep']>
+routeCaseSchema satisfies ContractSchema<components['schemas']['CaseRead']>
+routeCaseMessageResultSchema satisfies ContractSchema<components['schemas']['CaseMessageResult']>
+studentFinalTestSchema satisfies ContractSchema<components['schemas']['StudentTest']>
+teacherFinalTestSchema satisfies ContractSchema<components['schemas']['TeacherTest']>
+learningResultSchema satisfies ContractSchema<components['schemas']['LearningResult']>
+teacherLearningResultReadSchema satisfies ContractSchema<components['schemas']['TeacherLearningResult']>
+learningRouteGenerationSchema satisfies ContractSchema<components['schemas']['RetryReceipt']>
+finalTestReleaseSchema satisfies ContractSchema<components['schemas']['ReleaseReceipt']>

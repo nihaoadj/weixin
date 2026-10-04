@@ -1,193 +1,191 @@
-import { describe, expect, it } from 'vitest'
-import { DemoPblRepository } from './demoPblRepository'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DemoPblRepository, configureDemoLearningRouteCompletion } from './demoPblRepository'
 import { saveSession } from '@/features/identity/public'
-import { ensureDemoData } from '@/features/qa/public'
-import { findProblemAsync } from '@/features/content/public'
 import { DemoContentRepository } from '@/features/content/infrastructure/demoContentRepository'
 
-const login = (role: 'student' | 'teacher', openid: string) =>
-  saveSession({
-    role,
-    openid,
-    nickName: openid,
-    avatarUrl: '',
-    createdAt: new Date(0).toISOString(),
-    classIds: ['demo_class_1'],
-  })
-describe('PBL Demo contract', () => {
-  it('shows a synthetic pending diagnostic and exhausted follow-up in the teacher default workspaces', async () => {
-    ensureDemoData()
-    const repository = new DemoPblRepository(new DemoContentRepository())
+const routeId = '11111111-1111-4111-8111-111111111111'
+const testId = '22222222-2222-4222-8222-222222222222'
+const completion = vi.fn(async () => ({
+  learningRouteId: routeId,
+  finalTestId: testId,
+  routeGenerationState: 'published',
+  testGenerationState: 'ready',
+}))
+function login(role: 'student' | 'teacher', openid: string) {
+  saveSession({ role, openid, nickName: openid, avatarUrl: '', createdAt: new Date(0).toISOString() })
+}
+const repository = () => {
+  const repo = new DemoPblRepository(new DemoContentRepository())
+  configureDemoLearningRouteCompletion(completion)
+  return repo
+}
+beforeEach(() => {
+  vi.clearAllMocks()
+  uni.removeStorageSync('pbl:t44-demo')
+  configureDemoLearningRouteCompletion(completion)
+  login('student', 'demo_student')
+})
+describe('T44 Demo PBL completion and persistence', () => {
+  it('persists participation starts and keeps undated history readonly without manufacturing timestamps', async () => {
+    const repo = repository()
+    login('student', 'new-discussion-student')
+    const joined = await repo.participation('demo-pbl-1')
+    expect(joined.startedAt).toBeTruthy()
+    const reopened = repository()
+    expect((await reopened.participation('demo-pbl-1')).startedAt).toBe(joined.startedAt)
+    await expect(reopened.teacherDiscussionRecords()).rejects.toMatchObject({ code: 'FORBIDDEN' })
     login('teacher', 'demo_teacher')
-
-    const diagnostics = await repository.workItems({ workStatus: 'pending' })
-    expect(diagnostics.items).toHaveLength(1)
-    expect(diagnostics.items[0]).toMatchObject({
-      student: { name: '演示学生·林晓' },
-      status: 'pending',
-      topic: 'pathology.inflammation',
+    const facts = await reopened.teacherDiscussionRecords()
+    const fresh = facts.find((item) => item.startedAt === joined.startedAt)!
+    expect(fresh).toMatchObject({
+      startedAt: joined.startedAt,
+      phase: 'problem_framing',
+      status: 'active',
+      completedAt: null,
     })
-    expect((await repository.diagnostic(diagnostics.items[0].snapshotId)).safetyNotice).toContain('Demo 合成教学记录')
-
-    const followUps = await repository.followUps()
-    expect(followUps.items).toEqual([
-      expect.objectContaining({
-        studentName: '演示学生·周宁',
-        status: 'support_needed',
-        currentCycle: 2,
-        automationExhausted: true,
-      }),
-    ])
-  })
-
-  it('uses one dialogue contract for direct and guided communication', async () => {
-    ensureDemoData()
-    const repository = new DemoPblRepository(new DemoContentRepository())
-    login('student', 'demo_student')
-    expect(await repository.classes()).toEqual([{ id: '1', name: '病理学演示班', code: 'demo-class' }])
-    const input = {
-      clientSessionId: 'direct-1',
-      classId: '1',
-      interactionStyle: 'direct' as const,
-      goalPointCodes: ['pathology.inflammation.vascular'],
-    }
-    const created = await repository.createDialogue(input)
-    expect((await repository.createDialogue(input)).session.id).toBe(created.session.id)
-    expect(created.session.sessionKind).toBe('student_initiated')
-    expect(created.participation?.interactionStyle).toBe('direct')
-    await expect(repository.startDialogue(created.session.id, 'guided')).rejects.toMatchObject({
-      code: 'STATE_CONFLICT',
-    })
-    const first = await repository.message(created.session.id, '为什么会局部红肿？', 'direct-message-1')
-    expect(first.diagnostic?.assistantReply).toContain('先说明')
-    expect(first.diagnostic?.knowledgeGaps).toEqual([])
-  })
-
-  it('returns private submission feedback only to its student through the same contract as the API adapter', async () => {
-    ensureDemoData()
-    const repository = new DemoPblRepository(new DemoContentRepository())
-    login('student', 'demo_student')
-    const created = await repository.createDialogue({
-      clientSessionId: 'private-feedback-21',
-      classId: '1',
-      interactionStyle: 'guided',
-      goalPointCodes: ['pathology.inflammation.vascular'],
-    })
-    for (const [index, message] of ['问题表征', '机制假设', '证据和限制', '综合解释'].entries())
-      await repository.message(created.session.id, message, `private-feedback-message-${index}`)
-    const preview = await repository.dialogueSubmission(created.session.id)
-    await repository.submitDialogue({
-      id: created.session.id,
-      snapshotId: preview.snapshotId,
-      classId: '1',
-      clientSubmissionId: 'private-feedback-submit',
-    })
-    login('teacher', 'demo_teacher')
-    const item = (await repository.workItems({ source: 'student_submission', classId: '1' })).items.find(
-      (value) => value.sessionId === created.session.id,
+    expect(facts.every((item) => item.sessionId === 'demo-pbl-1')).toBe(true)
+    expect(Object.keys(fresh).sort()).toEqual(
+      [
+        'participationId',
+        'sessionId',
+        'classId',
+        'studentId',
+        'studentName',
+        'phase',
+        'status',
+        'startedAt',
+        'completedAt',
+      ].sort(),
     )
-    expect(item).toBeDefined()
-    expect(item?.class).toMatchObject({ id: '1', name: '病理学演示班' })
-    await repository.feedback({
-      snapshotId: item!.snapshotId,
-      clientFeedbackId: 'private-feedback-response',
-      body: '请先把形态证据和机制解释分开整理。',
-      actionType: 'feedback_only',
-    })
-    login('student', 'demo_student')
-    const responded = await repository.dialogueSubmission(created.session.id)
-    expect(responded.teacherStatus).toBe('responded')
-    expect(responded.submission?.submittedAt).toBeTruthy()
-    expect(responded.feedbacks?.map((item) => item.body)).toEqual(['请先把形态证据和机制解释分开整理。'])
-    expect(responded.nextAction).toBe('按反馈开启新一轮研讨')
-    const notifications = await repository.teacherFeedbackNotifications()
-    expect(notifications).toEqual([
-      expect.objectContaining({
-        sessionId: created.session.id,
-        actionType: 'feedback_only',
-      }),
-    ])
-    expect((await repository.report(created.session.id)).timeline.map((item) => item.type)).toEqual(
-      expect.arrayContaining(['submitted_to_teacher', 'teacher_feedback']),
-    )
+    const stored = uni.getStorageSync('pbl:t44-demo') as { histories: Array<[string, { startedAt?: string }]> }
+    for (const [, participation] of stored.histories) delete participation.startedAt
+    uni.setStorageSync('pbl:t44-demo', stored)
+    const historical = repository()
+    expect((await historical.teacherDiscussionRecords()).every((item) => item.startedAt === null)).toBe(true)
+    login('teacher', 'other-teacher')
+    await expect(historical.teacherDiscussionRecords()).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' })
   })
 
-  it('keeps message retries stable, adopts edited content and returns learning evidence to the teacher', async () => {
-    ensureDemoData()
-    const repository = new DemoPblRepository(new DemoContentRepository())
-    login('student', 'demo_student')
-    const first = await repository.message('demo-pbl-1', '合成问题', 'first')
-    await repository.message('demo-pbl-1', '补充自己的解释', 'second')
-    await repository.message('demo-pbl-1', '列出支持与反对证据及限制', 'third')
-    await repository.message('demo-pbl-1', '整合机制、证据与剩余疑问', 'fourth')
-    expect(await repository.message('demo-pbl-1', '合成问题', 'first')).toEqual(first)
-    expect((await repository.report('demo-pbl-1')).status).toBe('awaiting_learning')
+  it('projects only effective classroom completion findings for teacher insights', async () => {
+    const repo = repository()
+    await repo.message('demo-pbl-1', '课堂最终推理', 't53-classroom', 'guided')
+    await repo.message('demo-pbl-1', 'PRIVATE FOLLOW UP', 't53-private', 'direct')
+    await repo.message('demo-t44-autonomous', 'PRIVATE AUTONOMOUS', 't53-autonomous', 'guided')
     login('teacher', 'demo_teacher')
-    const diagnostic = (await repository.diagnostics()).items[0]
-    const suggestion = { ...diagnostic.recommendedQuestions![0], title: '当前编辑标题' }
-    const published = await repository.adopt(suggestion)
-    expect(await repository.adopt(suggestion)).toEqual(published)
-    expect((await findProblemAsync(published.problemId!))?.title).toBe('当前编辑标题')
+    const facts = await repo.teacherInsightsRecords()
+    expect(facts).toHaveLength(1)
+    expect(facts[0]).toMatchObject({ sessionId: 'demo-pbl-1', classId: 1, studentId: 1 })
+    expect(facts[0].knowledgeGaps[0]).toEqual({
+      code: 'pathology.inflammation.vascular',
+      summary: '血管变化的解释不完整',
+    })
+    expect(JSON.stringify(facts)).not.toMatch(/PRIVATE|evidence_message_ids|evidence_summary|messages/)
+    const persisted = uni.getStorageSync('pbl:t44-demo')
+    const history = persisted.histories.find(([key]: [string, unknown]) => key === 'demo_student:demo-pbl-1')
+    history[1].evidenceCompletedRevision += 1
+    uni.setStorageSync('pbl:t44-demo', persisted)
+    expect(await repository().teacherInsightsRecords()).toEqual([])
+    login('teacher', 'other-teacher')
+    expect(await repo.teacherInsightsRecords()).toEqual([])
+    login('student', 'demo_student')
+    await expect(repo.teacherInsightsRecords()).rejects.toMatchObject({ code: 'ROLE_REQUIRED' })
+  })
+  it.each([
+    ['demo-t44-autonomous', 'autonomous'],
+    ['demo-pbl-1', 'classroom'],
+  ])('completes the visible synthesis seed %s exactly once', async (id, kind) => {
+    const repo = repository()
+    const seed = await repo.dialogue(id)
+    expect(seed.participation).toMatchObject({
+      currentPhase: 'synthesis',
+      evidenceLocked: false,
+      diagnostic: { schemaVersion: 8 },
+    })
+    expect(seed.participation?.messages.filter((message) => message.role === 'student')).toHaveLength(3)
+    const content = '血管通透性增加导致富含蛋白的渗出，结合组织形态与局部肿胀核对机制，还需确认其他原因。'
+    const result = await repo.message(id, content, 'original-completion', 'guided')
+    expect(result).toMatchObject({
+      currentPhase: 'completed',
+      evidenceLocked: true,
+      learningRouteId: routeId,
+      finalTestId: testId,
+      diagnostic: { schemaVersion: 8, recommendedQuestions: [] },
+    })
+    expect(completion).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: id, sourceKind: kind, studentOpenid: 'demo_student' }),
+    )
+    const reopened = repository()
+    expect((await reopened.dialogue(id)).participation).toEqual(resultWithoutResponse(result))
+    expect(await reopened.message(id, content, 'original-completion', 'guided')).toEqual(result)
+    expect(completion).toHaveBeenCalledTimes(1)
+    login('teacher', 'demo_teacher')
+    expect((await reopened.workItems()).items).toHaveLength(kind === 'classroom' ? 1 : 0)
+  })
+  it('keeps autonomous history inaccessible to another student and classroom teacher reads', async () => {
+    const repo = repository()
     login('student', 'demo_student_b')
-    expect(await repository.plans()).toEqual([])
-    login('student', 'demo_student')
-    let plan = (await repository.plans())[0]
-    for (const task of plan.tasks.filter((item) => item.status === 'pending')) {
-      plan = await repository.submitTask(
-        task.id,
-        String(task.id),
-        task.public_definition.options ? { selected_option: 0 } : { text: '形态与机制的依据' },
-      )
-    }
-    expect(plan.verification_status).toBe('improved')
-    const report = await repository.report('demo-pbl-1')
-    expect(report.status).toBe('improved')
-    expect(report.plans[0].evaluations).toHaveLength(1)
-    expect((await repository.reports()).summary.statusCounts.improved).toBe(1)
-    login('teacher', 'demo_teacher')
-    expect((await repository.summary((await repository.active())[0])).objective_retest_count).toBe(3)
+    expect((await repo.dialogues()).items.some((item) => item.id === 'demo-t44-autonomous')).toBe(false)
+    expect((await repo.active()).some((item) => item.id === 'demo-t44-autonomous')).toBe(false)
+    await expect(repo.message('demo-t44-autonomous', '另一个学生的输入', 'foreign', 'guided')).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    })
+    login('teacher', 'other-teacher')
+    await expect(repo.dashboard('1', 'demo-pbl-1')).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' })
   })
-
-  it('activates only the second-cycle variant and exhausts after a repeated failed retest', async () => {
-    ensureDemoData()
-    const repository = new DemoPblRepository(new DemoContentRepository())
-    login('student', 'demo_student')
-    for (const [index, content] of ['问题表征', '机制假设与不确定性', '支持反对证据与限制', '综合解释'].entries())
-      await repository.message('demo-pbl-1', content, `cycle-${index}`)
+  it('preserves frozen classroom diagnosis during private follow-up and replays after reopening', async () => {
+    const repo = repository()
+    const done = await repo.message('demo-pbl-1', '整合病理机制和证据', 'finish', 'guided')
+    const later = await repo.message('demo-pbl-1', '怎样进一步区分渗出和漏出？', 'private-original', 'direct')
+    expect(later).toMatchObject({
+      responseKind: 'private_follow_up',
+      diagnostic: done.diagnostic,
+      evidenceCompletedRevision: done.evidenceCompletedRevision,
+    })
+    expect(completion).toHaveBeenCalledTimes(1)
+    expect(
+      await repository().message('demo-pbl-1', '怎样进一步区分渗出和漏出？', 'private-original', 'direct'),
+    ).toEqual(later)
     login('teacher', 'demo_teacher')
-    const diagnostic = (await repository.diagnostics()).items[0]
-    await repository.adopt(diagnostic.recommendedQuestions![0])
-    login('student', 'demo_student')
-    let plan = (await repository.plans())[0]
-    const firstVariants = plan.tasks.filter((task) => task.cycle_number === 1).map((task) => task.variant_code)
-    for (const task of plan.tasks.filter((item) => item.status === 'pending')) {
-      plan = await repository.submitTask(
-        task.id,
-        `first-${task.id}`,
-        task.public_definition.options
-          ? { selected_option: task.task_type === 'retest' ? 1 : 0 }
-          : { text: '首轮证据' },
-      )
-    }
-    expect(plan.current_cycle).toBe(2)
-    expect(plan.decision_basis.result).toBe('next_cycle_activated')
-    const second = plan.tasks.filter((task) => task.cycle_number === 2 && task.status === 'pending')
-    expect(second.some((task) => firstVariants.includes(task.variant_code))).toBe(false)
-    for (const task of second) {
-      plan = await repository.submitTask(
-        task.id,
-        `second-${task.id}`,
-        task.public_definition.options
-          ? { selected_option: task.task_type === 'retest' ? 1 : 0 }
-          : { text: '第二轮证据' },
-      )
-    }
-    expect(plan.verification_status).toBe('needs_reinforcement')
-    expect(plan.automation_exhausted).toBe(true)
-    expect(plan.decision_basis.offline_support_required).toBe(true)
-    const report = await repository.report('demo-pbl-1')
-    expect(report.status).toBe('support_needed')
-    expect(report.plans[0].evaluations.map((item) => item.cycle_number)).toEqual([1, 2])
-    expect(report.targetProgress[0].cycles.map((item) => item.passed)).toEqual([false, false])
+    const queue = await repository().workItems()
+    expect(queue.items).toHaveLength(1)
+    expect(queue.items[0].snapshotId).toBe(done.diagnostic?.id)
+  })
+  it('rejects changed replay payloads and retains new discussion progress across reopening', async () => {
+    const repo = repository()
+    const created = await repo.createDialogue({
+      clientSessionId: 'new-own',
+      interactionStyle: 'direct',
+      goalPointCodes: ['pathology.inflammation.vascular'],
+    })
+    const first = await repo.message(created.session.id, '先观察局部病理改变', 'phase-original', 'direct')
+    expect(first.currentPhase).toBe('hypothesis')
+    const reopened = repository()
+    expect((await reopened.dialogue(created.session.id)).participation?.currentPhase).toBe('hypothesis')
+    await expect(
+      reopened.message(created.session.id, '修改了原始输入', 'phase-original', 'direct'),
+    ).rejects.toMatchObject({ code: 'STATE_CONFLICT' })
+  })
+  it('resets only malformed PBL storage and preserves independent resources', async () => {
+    const repo = repository()
+    await repo.message('demo-pbl-1', '整合证据', 'complete', 'guided')
+    const stored = uni.getStorageSync('pbl:t44-demo')
+    stored.responses[0][1].result.diagnostic.schemaVersion = 5
+    uni.setStorageSync('pbl:t44-demo', stored)
+    uni.setStorageSync('caseAttempts:preserve', { id: 'independent-case' })
+    expect((await repository().dialogue('demo-pbl-1')).participation?.currentPhase).toBe('synthesis')
+    expect(uni.getStorageSync('caseAttempts:preserve')).toEqual({ id: 'independent-case' })
+  })
+  it('preserves retired student reads and refuses old double-round execution', async () => {
+    const repo = repository()
+    expect(await repo.plans()).toEqual([])
+    expect((await repo.reports()).items).toEqual([])
+    await expect(repo.submitTask(1, 'old-task', { selected_option: 0 })).rejects.toMatchObject({
+      code: 'STATE_CONFLICT',
+      statusCode: 409,
+    })
   })
 })
+function resultWithoutResponse(value: Awaited<ReturnType<DemoPblRepository['message']>>) {
+  const { responseKind: _kind, turnScope: _scope, privateFollowUp: _followup, ...participation } = value
+  return participation
+}

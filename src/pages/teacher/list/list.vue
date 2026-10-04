@@ -8,11 +8,11 @@
 <script setup lang="ts">
 import { onShow } from '@dcloudio/uni-app'
 import { requireRole } from '@/features/identity/public'
-import { goReplace, ROUTES } from '@/platform/navigation'
+import { relaunchToTeacherWorkspace } from '@/platform/navigation/teacher'
 
 onShow(() => {
   if (!requireRole('teacher')) return
-  goReplace(ROUTES.teacherWorkspace)
+  relaunchToTeacherWorkspace({ workspace: 'overview' })
 })
 </script>
 
@@ -25,7 +25,7 @@ onShow(() => {
   gap: 20rpx;
 }
 .title {
-  color: #637985;
+  color: var(--med-muted);
 }
 .redirect-mark {
   color: var(--med-brand);

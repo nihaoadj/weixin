@@ -18,6 +18,7 @@ const report = (
     createdAt: '2026-09-07T08:00:00Z',
   },
   status: 'improved',
+  visibility: 'private',
   phaseProgress: [],
   diagnosis: { createdAt, knowledgeGaps, reasoningIssues },
   plans: [],
@@ -25,6 +26,7 @@ const report = (
   taskProgress: { completed: 0, total: 0 },
   summaryText: '已完成。',
   nextAction: { kind: 'none', label: '已完成' },
+  teacherFeedbacks: [],
   timeline: [],
   updatedAt: `2026-09-07T08:0${id}:00Z`,
 })
@@ -60,6 +62,17 @@ describe('demo PBL report aggregation', () => {
 
     expect(page.summary.totalReports).toBe(3)
     expect(page.summary.completedPersonalDiscussions).toBe(2)
+    expect(page.summary.dashboard).toMatchObject({
+      dataBasis: 'synthetic_demo',
+      masteryScore: 78,
+      studyMinutes: 750,
+      planCompletionRate: 87,
+      masteredKnowledgeCount: 56,
+      aiDiagnosticCount: 8,
+    })
+    expect(page.summary.dashboard.trend.at(-1)?.score).toBe(78)
+    expect(page.summary.dashboard.trend).toHaveLength(4)
+    expect(page.summary.dashboard.weaknesses.map((item) => item.label)).toEqual(['呼吸系统', '药理学', '诊断学'])
     expect(page.summary.recurringTargets).toEqual([
       {
         targetType: 'knowledge_gap',

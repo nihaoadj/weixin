@@ -1,4 +1,4 @@
-import type { TeacherClass, TeacherStudent } from '@/types/teacher'
+import type { StudentActiveClass, TeacherClass, TeacherStudent } from '@/types/teacher'
 
 export interface ClassroomRepository {
   getTeacherClasses(): Promise<TeacherClass[]>
@@ -7,4 +7,6 @@ export interface ClassroomRepository {
   getClassStudents(classId: number): Promise<TeacherStudent[]>
   addStudentToClass(classId: number, studentExternalId: string): Promise<void>
   removeStudentFromClass(classId: number, studentId: number): Promise<void>
+  /** The signed-in student's own active classes; server-verified membership. */
+  getStudentActiveClasses(): Promise<StudentActiveClass[]>
 }

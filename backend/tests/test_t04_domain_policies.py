@@ -208,9 +208,9 @@ def test_application_use_cases_recheck_resource_ownership_without_http() -> None
         student_application.save_draft(
             _actor(actor_id=99), ReportDraftCommand(conversation_id=12, ai_score=80, ai_summary="x", analysis=None)
         )
-    assert (report_error.value.code, report_error.value.status_code) == ("RESOURCE_NOT_FOUND", 404)
+    assert (report_error.value.code, report_error.value.status_code) == ("STATE_CONFLICT", 409)
 
-    content_application = ContentApplication(ContentRepository(), Uow())
+    content_application = ContentApplication(ContentRepository(), Uow(), object())
     with pytest.raises(AppError) as content_error:
         content_application.authoring(_actor(role="teacher", actor_id=99), 12)
     assert (content_error.value.code, content_error.value.status_code) == ("RESOURCE_NOT_FOUND", 404)
@@ -266,8 +266,13 @@ def test_medical_chat_audit_failure_rolls_back_and_maps_to_application_error() -
         def rollback(self) -> None:
             self.rollbacks += 1
 
+    class Catalog:
+        @staticmethod
+        def contains_points(_codes) -> bool:
+            return True
+
     uow = Uow()
-    application = MedicalChatApplication(Gateway(), Audit(), uow)
+    application = MedicalChatApplication(Gateway(), Audit(), uow, Catalog())
     with pytest.raises(AppError, match="AI audit") as error:
         application.reply(_actor(), MedicalChatRequestRecord("问题", None, ()))
     assert (error.value.code, error.value.status_code, uow.rollbacks) == ("SERVICE_ERROR", 503, 1)

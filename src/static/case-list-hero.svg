@@ -1,0 +1,40 @@
+<svg width="360" height="220" viewBox="0 0 360 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="microscope" x1="155" y1="25" x2="226" y2="181" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#74BDF1" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#BDE7F8" stop-opacity="0.92"/>
+    </linearGradient>
+    <linearGradient id="cell" x1="57" y1="74" x2="131" y2="158" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D6F2FC" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#A9DCF2" stop-opacity="0.52"/>
+    </linearGradient>
+  </defs>
+  <g opacity="0.82">
+    <circle cx="88" cy="79" r="29" stroke="#9DD7F0" stroke-width="2"/>
+    <circle cx="76" cy="69" r="7" fill="#B9E5F7"/>
+    <circle cx="98" cy="67" r="8" fill="#C8EBF8"/>
+    <circle cx="88" cy="88" r="10" fill="#ACDDF2"/>
+    <circle cx="109" cy="88" r="5" fill="#C3EAF8"/>
+    <circle cx="59" cy="132" r="35" fill="url(#cell)" stroke="#A8DDF1" stroke-width="2"/>
+    <circle cx="48" cy="122" r="9" fill="#B4E2F4"/>
+    <circle cx="70" cy="119" r="11" fill="#C7EBF8"/>
+    <circle cx="58" cy="143" r="12" fill="#A9DCEE"/>
+  </g>
+  <g opacity="0.88">
+    <path d="M161 39L188 50L171 91L143 80L161 39Z" fill="url(#microscope)"/>
+    <path d="M166 26L194 38L188 52L160 40L166 26Z" fill="#89C9F2"/>
+    <path d="M173 13L201 25L194 39L166 27L173 13Z" fill="#A1D7F5"/>
+    <path d="M145 78L174 90L166 108L137 96L145 78Z" fill="#9ED5F3"/>
+    <path d="M184 85C221 93 236 123 221 153" stroke="#81C8EB" stroke-width="17" stroke-linecap="round"/>
+    <circle cx="190" cy="91" r="16" fill="#B7E2F5" stroke="#78BFE9" stroke-width="6"/>
+    <path d="M134 110H195" stroke="#A6DAF2" stroke-width="13" stroke-linecap="round"/>
+    <path d="M168 111V145" stroke="#A1D7F1" stroke-width="13" stroke-linecap="round"/>
+    <path d="M149 145H222" stroke="#9DD3EE" stroke-width="14" stroke-linecap="round"/>
+    <path d="M137 162H233" stroke="#C1E7F6" stroke-width="15" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.84" fill="#4F78BE" font-family="STKaiti, KaiTi, serif" font-style="italic">
+    <text x="226" y="67" font-size="22" textLength="122" lengthAdjust="spacingAndGlyphs" transform="rotate(-8 226 67)">从形态到思维</text>
+    <text x="228" y="98" font-size="22" textLength="128" lengthAdjust="spacingAndGlyphs" transform="rotate(-8 228 98)">让每一例更清晰</text>
+  </g>
+  <path d="M230 119C266 106 304 101 342 103" stroke="#7297D4" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+</svg>

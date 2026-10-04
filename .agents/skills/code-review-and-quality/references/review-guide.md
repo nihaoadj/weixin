@@ -1,6 +1,6 @@
 # Detailed Review Guide
 
-Read the sections that match the review target. The repository `AGENTS.md` and project engineering skill remain authoritative.
+Read the sections that match the review target. Use the repository [AGENTS.md](../../../../AGENTS.md) and relevant [development](../../../../docs/development.md) sections.
 
 ## Context and evidence
 
@@ -119,7 +119,7 @@ List code that appears orphaned, but distinguish confirmed dead code from compat
 
 ## High-value warning signs
 
-- approving WeChat rendering solely from DOM tests, a successful build, SDK handshake or an uninspected screenshot; see [WeChat validation](../../../../docs/operations/wechat-validation.md);
+- approving WeChat rendering solely from DOM tests, a successful build, SDK handshake or an uninspected screenshot; see [WeChat validation](../../../../docs/wechat.md);
 - claiming API authorization or full coverage equivalence from narrower Demo checks; require explicit gaps and the applicable API/contract evidence.
 
 - approval based only on a green test suite;

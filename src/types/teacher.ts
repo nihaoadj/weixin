@@ -14,6 +14,13 @@ export interface TeacherStudent {
   joinedAt: string
 }
 
+/** Minimal student-facing class membership fact for report submission (T29). */
+export interface StudentActiveClass {
+  id: number
+  name: string
+  code: string
+}
+
 export interface AnalyticsDimension {
   dimensionId: string
   label: string
@@ -23,10 +30,81 @@ export interface AnalyticsDimension {
   delta?: number | null
   studentCount?: number
   rate?: number | null
+  sampleCount?: number
+}
+
+export interface AnalyticsCoverage {
+  studentCount: number
+  participantCount: number
+  evidenceCount: number
+  updatedAt: string | null
+}
+
+export interface AnalyticsCompletion {
+  formalTaskRate: number | null
+  formalTaskCompleted: number
+  formalTaskAttempted: number
+  classroomPblRate: number | null
+  classroomPblCompleted: number
+  classroomPblStarted: number
+  caseRate: number | null
+  caseCompleted: number
+}
+
+export interface AnalyticsAttentionItem {
+  kind: string
+  studentCount: number
+  route: string
+}
+
+export interface AnalyticsAttention {
+  supportNeeded: number
+  formalRepeatedFailure: number
+  inactive: number
+  items: AnalyticsAttentionItem[]
+}
+
+export interface AnalyticsKnowledgeRow {
+  pointCode: string
+  label?: string
+  participantCount: number
+  evidenceCount: number
+  correctCount?: number
+  rate: number | null
+  trend?: number | null
+}
+
+export interface AnalyticsActivitySource {
+  sourceType: string
+  eventCount: number
+  participantCount: number
+}
+
+export interface AnalyticsStudentSummary {
+  studentId: number
+  nickname: string
+  formalActivityCompleted: number
+  formalActivityExpected: number | null
+  formalActivityRate: number | null
+  recentResult: string | null
+  attentionCodes: string[]
+  pblStatus: string | null
+  lastEvidenceAt: string | null
+  completed: number
+  assigned: number | null
+  averageScore: number | null
 }
 
 export interface AnalyticsOverview {
   scope: { classId: number | null; className: string | null; dateFrom: string; dateTo: string }
+  coverage: AnalyticsCoverage
+  completion: AnalyticsCompletion
+  attention: AnalyticsAttention
+  knowledge: AnalyticsKnowledgeRow[]
+  activitySources: AnalyticsActivitySource[]
+  sourceSummary: AnalyticsActivitySource[]
+  privacy: { minimumCohortSize: number; rankingsSuppressed: boolean }
+  updatedAt: string | null
   studentCount: number
   publishedCaseCount: number
   eligiblePairs: number
@@ -37,21 +115,21 @@ export interface AnalyticsOverview {
   averageImprovement: number | null
   dimensions: AnalyticsDimension[]
   weakDimensions: AnalyticsDimension[]
-  cases: Array<{ problemId: number; title: string; completed: number; assigned: number; averageScore: number | null }>
-  students: Array<{
-    studentId: number
-    nickname: string
+  cases: Array<{
+    problemId: number
+    title: string
     completed: number
-    assigned: number
+    assigned: number | null
     averageScore: number | null
   }>
+  students: AnalyticsStudentSummary[]
 }
 
 export interface AnalyticsCase {
   problem: { id: number; title: string; version: number; slug?: string | null }
-  eligiblePairs: number
-  startedPairs: number
-  completedPairs: number
+  eligiblePairs: number | null
+  startedPairs: number | null
+  completedPairs: number | null
   completionRate: number | null
   currentAverageScore: number | null
   averageImprovement: number | null
@@ -72,9 +150,9 @@ export interface AnalyticsCase {
 
 export interface AnalyticsStudent {
   student: { id: number; nickname: string }
-  assigned: number
-  started: number
-  completed: number
+  assigned: number | null
+  started: number | null
+  completed: number | null
   completionRate: number | null
   currentAverageScore: number | null
   averageImprovement: number | null
@@ -99,7 +177,7 @@ export interface AnalyticsKnowledge {
   classId: number
   className: string
   participantCount: number
-  dueBacklog: number
+  dueBacklog: number | null
   objectiveCorrectRate: number | null
   weakPoints: Array<{ pointCode: string; studentCount: number }>
   rankingsSuppressed: boolean

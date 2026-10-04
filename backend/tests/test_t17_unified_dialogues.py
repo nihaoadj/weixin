@@ -18,11 +18,13 @@ def _create_dialogue(client, token: str, class_id: int, client_id: str = "dialog
     )
 
 
-def test_student_dialogue_requires_active_class_and_lists_classes(client, monkeypatch) -> None:
+def test_student_dialogue_is_private_without_a_class_and_classroom_lists_remain_scoped(client, monkeypatch) -> None:
     _configure_gateway(monkeypatch)
     student = _login(client, "student", "t17-no-class")
     assert client.get("/student/classes", headers=_headers(student)).json() == []
-    assert _create_dialogue(client, student, 999).status_code == 404
+    created = _create_dialogue(client, student, 999)
+    assert created.status_code == 201
+    assert created.json()["session"]["class_id"] is None
 
     teacher = _login(client, "teacher", "t17-class-owner")
     first_id = _classroom(client, teacher, "t17-no-class")
@@ -55,29 +57,26 @@ def test_student_dialogue_creation_style_and_message_are_idempotent(client, db, 
     assert db.scalar(select(func.count(PblParticipation.id))) == 1
 
     conflict = _create_dialogue(client, student, class_id, style="guided")
-    assert conflict.status_code == 409
+    assert conflict.status_code == 201
+    assert conflict.json()["participation"]["interaction_style"] == "direct"
     session_id = first.json()["session"]["id"]
     payload = {"client_message_id": "message-once", "content": "炎症为什么会局部红肿？"}
-    sent = client.post(
-        f"/student/learning-dialogues/{session_id}/messages", headers=_headers(student), json=payload
-    )
-    resent = client.post(
-        f"/student/learning-dialogues/{session_id}/messages", headers=_headers(student), json=payload
-    )
+    sent = client.post(f"/student/learning-dialogues/{session_id}/messages", headers=_headers(student), json=payload)
+    resent = client.post(f"/student/learning-dialogues/{session_id}/messages", headers=_headers(student), json=payload)
     assert sent.status_code == resent.status_code == 200
     assert gateway.calls == 1
     assert sent.json()["diagnostic"]["knowledge_gaps"] == []
-    assert "先说明" in sent.json()["diagnostic"]["assistant_reply"]
+    reply = sent.json()["diagnostic"]["assistant_reply"]
+    assert reply.startswith("回应\n合成教学演示")
+    assert "关键要点" in reply and "下一步" in reply
 
 
-def test_classroom_start_fixes_each_students_interaction_style(client, db, monkeypatch) -> None:
+def test_classroom_start_updates_next_turn_preference(client, db, monkeypatch) -> None:
     _configure_gateway(monkeypatch)
     teacher = _login(client, "teacher", "t17-start-owner")
     student = _login(client, "student", "t17-start-student")
     class_id = _classroom(client, teacher, "t17-start-student")
-    created = client.post(
-        f"/classes/{class_id}/pbl-sessions", headers=_headers(teacher), json=_session_payload(db)
-    )
+    created = client.post(f"/classes/{class_id}/pbl-sessions", headers=_headers(teacher), json=_session_payload(db))
     session_id = created.json()["id"]
 
     before = client.get(f"/student/learning-dialogues/{session_id}", headers=_headers(student))
@@ -98,7 +97,9 @@ def test_classroom_start_fixes_each_students_interaction_style(client, db, monke
         json={"interaction_style": "direct"},
     )
     assert start.status_code == repeated.status_code == 200
-    assert changed.status_code == 409
+    assert changed.status_code == 200
+    assert changed.json()["participation"]["interaction_style"] == "direct"
+    assert changed.json()["participation"]["revision"] == 0
     assert start.json()["participation"]["style_selected_at"]
 
 
@@ -144,7 +145,9 @@ def test_student_dialogue_rejects_mixed_topic_points(client, monkeypatch) -> Non
 
 @pytest.mark.parametrize("style", ["guided", "direct"])
 def test_both_styles_enter_the_same_teacher_and_learning_loop(client, monkeypatch, style: str) -> None:
-    _configure_gateway(monkeypatch)
+    from tests.test_t44_learning_routes import configure as configure_route_gateway
+
+    configure_route_gateway(monkeypatch)
     teacher = _login(client, "teacher", f"t17-loop-owner-{style}")
     student = _login(client, "student", f"t17-loop-student-{style}")
     class_id = _classroom(client, teacher, f"t17-loop-student-{style}")
@@ -163,39 +166,35 @@ def test_both_styles_enter_the_same_teacher_and_learning_loop(client, monkeypatc
     assert queue.status_code == 200
     assert all(item["session_id"] != session_id for item in queue.json()["items"])
     preview = client.get(f"/student/learning-dialogues/{session_id}/submission", headers=_headers(student))
-    assert preview.status_code == 200
+    assert preview.status_code == 404
     submitted = client.post(
         f"/student/learning-dialogues/{session_id}/submission",
         headers=_headers(student),
         json={
-            "snapshot_id": preview.json()["snapshot_id"],
+            "snapshot_id": sent.json()["diagnostic"]["id"],
             "class_id": class_id,
             "client_submission_id": f"loop-share-{style}",
         },
     )
-    assert submitted.status_code == 200
+    assert submitted.status_code == 409
+    assert submitted.json()["detail"]["reason"] == "RETIRED_FLOW"
     queue = client.get("/teacher/pbl-diagnostics", headers=_headers(teacher))
-    diagnostic = next(item for item in queue.json()["items"] if item["session_id"] == session_id)
-    assert diagnostic["schema_version"] == 4
-    assert diagnostic["session_kind"] == "student_initiated"
-    assert diagnostic["interaction_style"] == style
-    suggestion = diagnostic["recommended_questions"][0]
-    adopted = client.post(
-        f"/teacher/pbl-question-suggestions/{suggestion['id']}/adopt-and-publish",
-        headers=_headers(teacher),
-        json={"version": suggestion["version"], "title": suggestion["title"], "prompt": suggestion["prompt"]},
-    )
-    assert adopted.status_code == 200
+    assert all(item["session_id"] != session_id for item in queue.json()["items"])
     plans = client.get("/student/pbl-learning-plans", headers=_headers(student))
-    assert plans.status_code == 200
-    assert len(plans.json()) == 1
-    assert plans.json()[0]["source_context"]["session_id"] == session_id
-    assert {task["cycle_number"] for task in plans.json()[0]["tasks"]} == {1, 2}
-    assert all(task["public_definition"].get("target_label") for task in plans.json()[0]["tasks"])
+    assert plans.status_code == 200 and plans.json() == []
+
+    route_id = sent.json()["learning_route_id"]
+    assert route_id
+    routes = client.get("/learning/routes", headers=_headers(student))
+    assert routes.status_code == 200, routes.text
+    assert routes.json()["total"] == 1
+    assert routes.json()["items"][0]["id"] == route_id
+    route = client.get(f"/learning/routes/{route_id}", headers=_headers(student))
+    assert route.status_code == 200, route.text
+    assert route.json()["summary"]["generation_state"] == "published"
 
     report_page = client.get("/student/pbl-learning-reports", headers=_headers(student))
     assert report_page.status_code == 200, report_page.text
-    assert report_page.json()["summary"]["completed_personal_discussions"] == 1
+    assert report_page.json()["items"] == [] and report_page.json()["total"] == 0
     report = client.get(f"/student/pbl-learning-reports/{session_id}", headers=_headers(student))
-    assert report.status_code == 200, report.text
-    assert report.json()["diagnosis"]["created_at"] is not None
+    assert report.status_code == 404

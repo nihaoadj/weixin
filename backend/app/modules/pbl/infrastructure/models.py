@@ -16,17 +16,20 @@ class PblSession(Base):
         Index("ix_pbl_sessions_class_status", "class_id", "status"),
         UniqueConstraint("created_by_student_id", "client_session_id", name="uq_pbl_session_student_client"),
         CheckConstraint("session_kind IN ('classroom', 'student_initiated')", name="ck_pbl_session_kind"),
+        CheckConstraint("ai_schema_version = 8", name="ck_pbl_session_ai_schema_version"),
         CheckConstraint(
             "(session_kind = 'classroom' AND created_by_student_id IS NULL AND client_session_id IS NULL) OR "
             "(session_kind = 'student_initiated' AND created_by_student_id IS NOT NULL "
             "AND client_session_id IS NOT NULL)",
             name="ck_pbl_session_student_origin",
         ),
+        {"sqlite_autoincrement": True},
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     class_id: Mapped[int | None] = mapped_column(ForeignKey("classes.id"), nullable=True, index=True)
     teacher_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     session_kind: Mapped[str] = mapped_column(String(30), default="classroom", server_default="classroom")
+    ai_schema_version: Mapped[int] = mapped_column(Integer, default=8, server_default="8", nullable=False)
     created_by_student_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", name="fk_pbl_session_created_student"), nullable=True, index=True
     )
@@ -51,6 +54,7 @@ class PblParticipation(Base):
     __table_args__ = (
         UniqueConstraint("session_id", "student_id", name="uq_pbl_participation_student"),
         CheckConstraint("interaction_style IN ('guided', 'direct')", name="ck_pbl_participation_interaction_style"),
+        {"sqlite_autoincrement": True},
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     session_id: Mapped[int] = mapped_column(ForeignKey("pbl_sessions.id", ondelete="CASCADE"), index=True)
@@ -66,6 +70,16 @@ class PblParticipation(Base):
     phase_started_revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     phase_status: Mapped[str] = mapped_column(String(20), default="active", server_default="active", nullable=False)
     phase_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completion_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "pbl_diagnostic_snapshots.id",
+            name="fk_pbl_participation_completion_snapshot",
+            ondelete="SET NULL",
+            use_alter=True,
+        ),
+        nullable=True,
+    )
+    evidence_completed_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -75,15 +89,24 @@ class PblParticipation(Base):
 class PblMessage(Base):
     __tablename__ = "pbl_messages"
     __table_args__ = (
+        CheckConstraint("interaction_style IN ('guided', 'direct')", name="ck_pbl_message_interaction_style"),
+        CheckConstraint("turn_scope IN ('evidence', 'private_follow_up')", name="ck_pbl_message_turn_scope"),
         UniqueConstraint("participation_id", "client_message_id", name="uq_pbl_message_client_id"),
         UniqueConstraint("participation_id", "sequence", name="uq_pbl_message_sequence"),
+        UniqueConstraint("reply_to_message_id", name="uq_pbl_message_reply_to"),
         Index("ix_pbl_messages_participation_sequence", "participation_id", "sequence"),
+        Index("ix_pbl_messages_participation_scope_id", "participation_id", "turn_scope", "id"),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     participation_id: Mapped[int] = mapped_column(ForeignKey("pbl_participations.id", ondelete="CASCADE"), index=True)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    interaction_style: Mapped[str] = mapped_column(String(20), default="guided", server_default="guided")
+    turn_scope: Mapped[str] = mapped_column(String(30), default="evidence", server_default="evidence", nullable=False)
+    reply_to_message_id: Mapped[int | None] = mapped_column(
+        ForeignKey("pbl_messages.id", name="fk_pbl_message_reply_to", ondelete="CASCADE"), nullable=True
+    )
     request_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
     processing_status: Mapped[str] = mapped_column(String(20), default="pending", server_default="legacy")
     result_snapshot_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -93,11 +116,16 @@ class PblMessage(Base):
 
 class PblDiagnosticSnapshot(Base):
     __tablename__ = "pbl_diagnostic_snapshots"
-    __table_args__ = (UniqueConstraint("participation_id", "revision", name="uq_pbl_snapshot_revision"),)
+    __table_args__ = (
+        UniqueConstraint("participation_id", "revision", name="uq_pbl_snapshot_revision"),
+        CheckConstraint("interaction_style IN ('guided', 'direct')", name="ck_pbl_snapshot_interaction_style"),
+        {"sqlite_autoincrement": True},
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     participation_id: Mapped[int] = mapped_column(ForeignKey("pbl_participations.id", ondelete="CASCADE"), index=True)
     revision: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(32))
+    interaction_style: Mapped[str] = mapped_column(String(20), default="guided", server_default="guided")
     schema_version: Mapped[int] = mapped_column(Integer, default=3, server_default="1")
     phase: Mapped[str | None] = mapped_column(String(40), nullable=True)
     phase_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -110,9 +138,39 @@ class PblDiagnosticSnapshot(Base):
     follow_up_question: Mapped[str | None] = mapped_column(Text, nullable=True)
     knowledge_gaps: Mapped[list[dict[str, object]]] = mapped_column(JSON, default=list, nullable=False)
     reasoning_issues: Mapped[list[dict[str, object]]] = mapped_column(JSON, default=list, nullable=False)
+    diagnosis_outcome: Mapped[str | None] = mapped_column(String(30), nullable=True)
     provider_metadata: Mapped[dict[str, object]] = mapped_column(JSON, default=dict, nullable=False)
     failure_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PblPrivateFollowUpResult(Base):
+    __tablename__ = "pbl_private_follow_up_results"
+    __table_args__ = (
+        CheckConstraint("interaction_style IN ('guided', 'direct')", name="ck_pbl_private_follow_up_interaction_style"),
+        CheckConstraint(
+            "processing_status IN ('completed', 'unavailable')", name="ck_pbl_private_follow_up_processing_status"
+        ),
+        UniqueConstraint("student_message_id", name="uq_pbl_private_follow_up_student_message"),
+        UniqueConstraint("assistant_message_id", name="uq_pbl_private_follow_up_assistant_message"),
+        Index("ix_pbl_private_follow_up_participation_created", "participation_id", "created_at"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    participation_id: Mapped[int] = mapped_column(
+        ForeignKey("pbl_participations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    student_message_id: Mapped[int] = mapped_column(ForeignKey("pbl_messages.id", ondelete="CASCADE"), nullable=False)
+    assistant_message_id: Mapped[int] = mapped_column(ForeignKey("pbl_messages.id", ondelete="CASCADE"), nullable=False)
+    interaction_style: Mapped[str] = mapped_column(String(20), nullable=False)
+    schema_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1", nullable=False)
+    processing_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    safety_status: Mapped[str] = mapped_column(String(30), nullable=False)
+    safety_notice: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    provider_name: Mapped[str] = mapped_column(String(40), nullable=False)
+    provider_mode: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    fallback_used: Mapped[bool] = mapped_column(default=False, server_default="0", nullable=False)
+    failure_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class PblQuestionSuggestion(Base):
@@ -159,6 +217,10 @@ class PblTeacherFeedback(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     snapshot_id: Mapped[int] = mapped_column(ForeignKey("pbl_diagnostic_snapshots.id"), nullable=False)
     plan_id: Mapped[int | None] = mapped_column(ForeignKey("learning_plans.id"), nullable=True)
+    package_id: Mapped[int | None] = mapped_column(
+        ForeignKey("classroom_task_packages.id", name="fk_pbl_teacher_feedback_package", ondelete="RESTRICT"),
+        nullable=True,
+    )
     student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"), nullable=False)
     teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

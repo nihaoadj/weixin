@@ -179,6 +179,7 @@ export function demoReportDetail(
   return {
     session: reportSession(session),
     status,
+    visibility: session.sessionKind === 'student_initiated' ? (submittedAt ? 'legacy_shared' : 'private') : 'classroom',
     currentPhase: participation?.currentPhase,
     phaseStatus: participation?.phaseStatus,
     phaseProgress: participation
@@ -221,6 +222,13 @@ export function demoReportDetail(
     },
     summaryText: summaryOf(status),
     nextAction: actionOf(status),
+    teacherFeedbacks: teacherFeedbacks.map((feedback) => ({
+      id: feedback.id,
+      planId: feedback.planId,
+      actionType: feedback.actionType,
+      body: feedback.body,
+      createdAt: feedback.createdAt,
+    })),
     timeline,
     updatedAt: timeline.at(-1)?.occurredAt ?? createdAt,
   }
@@ -258,12 +266,68 @@ export function demoReportPage(reports: PblLearningReport[], limit: number, offs
     }
   }
   const next = ordered.find((item) => ['learning_cycle_2', 'learning_cycle_1', 'discussing'].includes(item.status))
+  const today = new Date()
+  const monday = new Date(today)
+  monday.setHours(0, 0, 0, 0)
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  const isoDate = (value: Date) =>
+    `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+  const trendScores = [35, 48, 62, 78]
+  const trend = trendScores.map((score, index) => {
+    const start = new Date(monday)
+    start.setDate(monday.getDate() - (trendScores.length - 1 - index) * 7)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 6)
+    return { periodStart: isoDate(start), periodEnd: isoDate(end), score, sampleCount: index + 1 }
+  })
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
   return {
     summary: {
       totalReports: ordered.length,
       completedPersonalDiscussions,
       statusCounts,
       recurringTargets: [...recurring.values()].sort((a, b) => b.occurrences - a.occurrences).slice(0, 6),
+      dashboard: {
+        dataBasis: 'synthetic_demo',
+        periodStart: isoDate(monday),
+        periodEnd: isoDate(sunday),
+        masteryScore: 78,
+        masteryDelta: 12,
+        masterySampleCount: 8,
+        studyMinutes: 750,
+        studyDurationBasis: 'synthetic_demo',
+        planCompletionRate: 87,
+        masteredKnowledgeCount: 56,
+        aiDiagnosticCount: 8,
+        statusLabel: '优秀',
+        trend,
+        weaknesses: [
+          {
+            targetType: 'knowledge_gap',
+            targetCode: 'pathology.respiratory',
+            label: '呼吸系统',
+            occurrences: 3,
+            masteryPercentage: 42,
+          },
+          {
+            targetType: 'knowledge_gap',
+            targetCode: 'pathology.pharmacology',
+            label: '药理学',
+            occurrences: 2,
+            masteryPercentage: 55,
+          },
+          {
+            targetType: 'reasoning_issue',
+            targetCode: 'differential_diagnosis',
+            label: '诊断学',
+            occurrences: 2,
+            masteryPercentage: 60,
+          },
+        ],
+        aiSummary:
+          '你本周的学习状态良好，呼吸系统和抗感染治疗相关知识掌握明显提升，临床思维更加清晰。继续保持，并结合病例与高频考点进行针对性练习。',
+      },
       nextAction: next
         ? { ...next.nextAction, sessionId: next.session.id, caseTitle: next.session.caseTitle }
         : undefined,

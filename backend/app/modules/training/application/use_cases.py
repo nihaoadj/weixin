@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
+from app.modules.classroom.public import ClassroomScopePort
+from app.modules.learning.public import LearningEvidenceCommand, LearningEvidenceMetricCommand, LearningEvidencePort
 from app.modules.training.application.ports import (
     AssessmentGateway,
     PatientReplyGateway,
@@ -34,11 +38,15 @@ class TrainingApplication:
         uow: UnitOfWork,
         patient_gateway: PatientReplyGateway,
         assessment_gateway: AssessmentGateway,
+        learning_evidence: LearningEvidencePort | None = None,
+        classroom_scope: ClassroomScopePort | None = None,
     ) -> None:
         self._repository = repository
         self._uow = uow
         self._patient_gateway = patient_gateway
         self._assessment_gateway = assessment_gateway
+        self._learning_evidence = learning_evidence
+        self._classroom_scope = classroom_scope
 
     def list_attempts(self, actor: Actor, problem_id: int | None) -> tuple[AttemptSummaryRecord, ...]:
         actor.require_role("student")
@@ -182,6 +190,7 @@ class TrainingApplication:
                 failure_reason=draft.failure_reason,
             )
             assessment = self._repository.save_assessment(actor.id, attempt.id, draft)
+            self._append_case_evidence(actor.id, attempt, assessment)
             self._uow.commit()
             return assessment
         except PersistenceConflict:
@@ -193,6 +202,38 @@ class TrainingApplication:
         except Exception as error:
             self._uow.rollback()
             raise AppError("SERVICE_ERROR", "AI audit is temporarily unavailable", 503) from error
+
+    def _append_case_evidence(self, student_id: int, attempt: AttemptRecord, assessment: AssessmentRecord) -> None:
+        if self._learning_evidence is None or attempt.problem.medical_review_status != "approved":
+            return
+        # A linked case is assessed through its published package, never as a second teacher result.
+        if attempt.learning_task_id is not None:
+            return
+        metrics: list[LearningEvidenceMetricCommand] = []
+        for item in attempt.problem.knowledge_point_codes:
+            metrics.append(LearningEvidenceMetricCommand("knowledge", item, result="observed"))
+        for dimension in assessment.dimensions:
+            code = str(dimension.get("dimension_id") or "")
+            if not code:
+                continue
+            raw_score = dimension.get("score")
+            score = float(raw_score) if isinstance(raw_score, int | float) and not isinstance(raw_score, bool) else None
+            metrics.append(LearningEvidenceMetricCommand("dimension", code, score, "observed", score is not None))
+        self._learning_evidence.append(
+            LearningEvidenceCommand(
+                student_id=student_id,
+                class_id=None,
+                source_type="case_assessment",
+                source_id=str(assessment.id),
+                source_version=attempt.problem_version,
+                authority_level="reviewed_practice",
+                visibility_scope="student_only",
+                event_kind="assessment",
+                occurred_at=assessment.created_at or datetime.now(UTC),
+                dedupe_key=f"case-assessment:{assessment.id}:v{attempt.problem_version}:personal",
+                metrics=tuple(metrics),
+            )
+        )
 
     def assessment(self, actor: Actor, attempt_id: int) -> AssessmentRecord:
         actor.require_role("student")

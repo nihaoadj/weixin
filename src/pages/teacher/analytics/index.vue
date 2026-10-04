@@ -13,13 +13,14 @@
 import { onBackPress, onLoad } from '@dcloudio/uni-app'
 import MedState from '@/components/ui/MedState.vue'
 import { requireRole } from '@/features/identity/public'
-import { handleBackPress, relaunchTo, ROUTES } from '@/platform/navigation'
+import { handleBackPress, ROUTES } from '@/platform/navigation'
+import { parseTeacherWorkspaceTarget, relaunchToTeacherWorkspace } from '@/platform/navigation/teacher'
 
-onLoad(() => {
+onLoad((query) => {
   if (!requireRole('teacher')) return
-  relaunchTo(ROUTES.teacherWorkspace, { tab: 'reports', section: 'analytics' })
+  relaunchToTeacherWorkspace(parseTeacherWorkspaceTarget({ ...query, tab: 'insights' }))
 })
-onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherWorkspace, { tab: 'reports', section: 'analytics' }))
+onBackPress(({ from }) => handleBackPress(from, ROUTES.teacherInsights))
 </script>
 
 <style scoped>

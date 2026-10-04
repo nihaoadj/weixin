@@ -1,8 +1,8 @@
-from datetime import datetime
-from typing import Literal
+from datetime import date, datetime
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
+from pydantic import AfterValidator, BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -16,14 +16,28 @@ from app.modules.pbl.application.records import (
 )
 from app.modules.pbl.infrastructure.provider_schema import KnowledgeGap, ReasoningIssue
 from app.modules.pbl.wiring import pbl_application
+from app.shared.errors import AppError
 
 router = APIRouter(tags=["pbl"])
+
+
+def _non_blank_client_request_id(value: str) -> str:
+    if not value.strip():
+        raise ValueError("client_request_id must not be blank")
+    return value
+
+
+ClientRequestId = Annotated[
+    str,
+    Field(min_length=1, max_length=100),
+    AfterValidator(_non_blank_client_request_id),
+]
 
 
 class Create(BaseModel):
     topic_code: str = Field(min_length=1, max_length=120)
     case_id: int = Field(gt=0)
-    goal_point_codes: list[str] = Field(min_length=1, max_length=3)
+    goal_point_codes: list[str] = Field(min_length=1, max_length=1)
 
 
 class Phase(BaseModel):
@@ -43,13 +57,14 @@ class Adopt(BaseModel):
 class Message(BaseModel):
     client_message_id: str = Field(min_length=1, max_length=100)
     content: str = Field(min_length=1, max_length=2000)
+    interaction_style: Literal["guided", "direct"] | None = None
 
 
 class DialogueCreate(BaseModel):
     client_session_id: str = Field(min_length=1, max_length=100)
     class_id: int | None = Field(default=None, gt=0)
-    interaction_style: Literal["guided", "direct"]
-    goal_point_codes: list[str] = Field(min_length=1, max_length=3)
+    interaction_style: Literal["guided", "direct"] = "guided"
+    goal_point_codes: list[str] = Field(min_length=1, max_length=1)
 
 
 class DialogueStart(BaseModel):
@@ -82,6 +97,10 @@ class SessionResponse(BaseModel):
     session_kind: Literal["classroom", "student_initiated"] = "classroom"
     interaction_style: Literal["guided", "direct"] | None = None
     style_selected_at: datetime | None = None
+    evidence_locked: bool = False
+    conversation_mode: Literal["evidence", "private_follow_up"] = "evidence"
+    completion_snapshot_id: int | None = None
+    evidence_completed_revision: int | None = None
 
 
 class MessageResponse(BaseModel):
@@ -90,18 +109,23 @@ class MessageResponse(BaseModel):
     processing_status: str
     role: str
     content: str
+    interaction_style: Literal["guided", "direct"]
     client_message_id: str | None = None
+    turn_scope: Literal["evidence", "private_follow_up"]
+    reply_to_message_id: int | None = None
 
 
 class StudentDiagnosticResponse(BaseModel):
     id: int
     revision: int
+    interaction_style: Literal["guided", "direct"]
     diagnostic_status: str
     assistant_reply: str
     follow_up_question: str | None
     knowledge_gaps: list[KnowledgeGap]
     reasoning_issues: list[ReasoningIssue]
     schema_version: int
+    diagnosis_outcome: Literal["identified_gaps", "no_clear_gaps"] | None = None
     safety_notice: str
     safety_status: str
     created_at: datetime | None
@@ -136,6 +160,10 @@ class SuggestionResponse(BaseModel):
 
 
 class ParticipationResponse(BaseModel):
+    learning_route_id: str | None = None
+    final_test_id: str | None = None
+    route_generation_state: str | None = None
+    test_generation_state: str | None = None
     session_id: int
     messages: list[MessageResponse]
     revision: int
@@ -146,6 +174,10 @@ class ParticipationResponse(BaseModel):
     phase_completed_at: datetime | None
     interaction_style: Literal["guided", "direct"]
     style_selected_at: datetime | None
+    evidence_locked: bool
+    conversation_mode: Literal["evidence", "private_follow_up"]
+    completion_snapshot_id: int | None
+    evidence_completed_revision: int | None
 
 
 class StudentClassResponse(BaseModel):
@@ -166,7 +198,21 @@ class DialoguePageResponse(BaseModel):
     offset: int
 
 
+class PrivateFollowUpResponse(BaseModel):
+    student_message_id: int
+    assistant_message_id: int
+    processing_status: Literal["completed", "unavailable"]
+    safety_status: str
+    fallback_used: bool
+
+
 class MessageSubmissionResponse(BaseModel):
+    learning_route_id: str | None = None
+    final_test_id: str | None = None
+    route_generation_state: str | None = None
+    test_generation_state: str | None = None
+    response_kind: Literal["evidence_assessment", "private_follow_up"]
+    turn_scope: Literal["evidence", "private_follow_up"]
     messages: list[MessageResponse]
     diagnostic: StudentDiagnosticResponse
     current_phase: str
@@ -174,6 +220,12 @@ class MessageSubmissionResponse(BaseModel):
     phase_completed_at: datetime | None
     interaction_style: Literal["guided", "direct"]
     style_selected_at: datetime | None
+    phase_started_revision: int
+    evidence_locked: bool
+    conversation_mode: Literal["evidence", "private_follow_up"]
+    completion_snapshot_id: int | None
+    evidence_completed_revision: int | None
+    private_follow_up: PrivateFollowUpResponse | None = None
 
 
 class DiagnosticPageResponse(BaseModel):
@@ -224,7 +276,12 @@ class WorkItemActor(BaseModel):
 
 
 class WorkItemResponse(BaseModel):
+    learning_route_id: str | None = None
+    final_test_id: str | None = None
+    test_generation_state: str | None = None
+    test_review_state: str | None = None
     snapshot_id: int
+    package_id: int | None = None
     session_id: int
     source: Literal["student_submission", "classroom_diagnostic"]
     status: Literal["pending", "responded", "task_published", "closed"]
@@ -236,6 +293,7 @@ class WorkItemResponse(BaseModel):
     knowledge_gap_count: int
     reasoning_issue_count: int
     next_action: str
+    read_only: bool = False
 
     model_config = {"populate_by_name": True}
 
@@ -244,6 +302,143 @@ class WorkItemDetailResponse(BaseModel):
     work_item: WorkItemResponse | None
     diagnostic: TeacherDiagnosticResponse
     feedbacks: list[TeacherFeedbackResponse]
+
+
+class EnsureClassroomPackageRequest(BaseModel):
+    client_request_id: ClientRequestId
+
+
+class ClassroomPackageItemResponse(BaseModel):
+    id: int
+    stable_key: str
+    candidate_key: str | None
+    position: int
+    cycle_number: int
+    task_type: str
+    primary_point_code: str
+    point_codes: list[str]
+    dimension_ids: list[str]
+    target_type: str
+    target_code: str
+    public_definition: dict
+    private_rubric: dict
+    resource_ref: dict | None = None
+    medical_status: str | None
+    included_in_package: bool
+    source_digest: str
+
+
+class ClassroomPackageResponse(BaseModel):
+    id: int
+    student_id: int
+    class_id: int
+    session_id: int
+    snapshot_id: int
+    publication_status: str
+    diagnosis_outcome: str
+    version: int
+    draft_digest: str | None
+    reviewed_version: int | None
+    published_version: int | None
+    plan_id: int | None
+    feedback_draft: str
+    published_at: datetime | None
+    items: list[ClassroomPackageItemResponse]
+    blocking_issues: list[dict]
+
+
+class ReviewedClassroomResourceVariantResponse(BaseModel):
+    cycle_number: Literal[1, 2]
+    resource_ref: dict
+    public_definition: dict | None = None
+    private_rubric: dict | None = None
+    medical_review_status: str | None = None
+
+
+class ReviewedClassroomResourceResponse(BaseModel):
+    resource_key: str
+    label: str
+    kind: str
+    medical_review_status: str
+    variants: list[ReviewedClassroomResourceVariantResponse] = Field(min_length=2, max_length=2)
+
+
+class ReviewedClassroomResourcesResponse(BaseModel):
+    package_id: int
+    version: int
+    point_code: str
+    task_type: str
+    dimension_id: str | None
+    resources: list[ReviewedClassroomResourceResponse]
+
+
+class ClassroomPackageItemEdit(BaseModel):
+    id: int = Field(gt=0)
+    stable_key: str
+    cycle_number: Literal[1, 2]
+    task_type: str
+    primary_point_code: str
+    point_codes: list[str]
+    dimension_ids: list[str]
+    target_type: str
+    target_code: str
+    included_in_package: bool
+    public_definition: dict
+    private_rubric: dict
+    resource_ref: dict | None = None
+
+
+class SaveClassroomPackageRequest(BaseModel):
+    version: int = Field(ge=1)
+    items: list[ClassroomPackageItemEdit] = Field(min_length=1, max_length=60)
+    feedback_draft: str = Field(default="", max_length=1000)
+
+
+class SubmitPackageMedicalReviewRequest(BaseModel):
+    version: int = Field(ge=1)
+    item_ids: list[int] = Field(min_length=1, max_length=60)
+    client_request_id: ClientRequestId
+
+
+class PackageMedicalResourceResponse(BaseModel):
+    item_id: int
+    resource_id: int
+    content_digest: str
+    status: str
+
+
+class PackageMedicalSubmissionResponse(BaseModel):
+    package_id: int
+    version: int
+    resources: list[PackageMedicalResourceResponse]
+
+
+class TeacherBankSourceResponse(BaseModel):
+    item_id: int
+    source_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    task_type: Literal["retest", "knowledge_review", "discussion", "micro_drill"]
+    point_codes: list[str]
+    dimension_ids: list[str]
+    public_definition: dict
+    answer: dict
+    explanation: str
+    medical_review_status: str
+
+
+class PublishClassroomPackageRequest(BaseModel):
+    client_request_id: ClientRequestId
+    version: int = Field(ge=1)
+    draft_digest: str = Field(min_length=64, max_length=64)
+    reviewed_all: Literal[True]
+    feedback: str | None = Field(default=None, max_length=1000)
+
+
+class PublishedClassroomPackageResponse(BaseModel):
+    package_id: int
+    plan_id: int
+    student_id: int
+    published_version: int
+    published_at: datetime
 
 
 class TeacherSessionListItem(BaseModel):
@@ -392,8 +587,11 @@ class DashboardStudentRow(BaseModel):
     snapshot_id: int | None
     work_item_status: str | None
     task_progress: "TaskProgressResponse"
-    current_cycle: int | None
-    verification_status: str | None
+    learning_route_id: str | None
+    final_test_id: str | None
+    result_id: str | None
+    route_status: str | None
+    score: float | None
 
 
 class TaskProgressResponse(BaseModel):
@@ -410,17 +608,11 @@ class DashboardSessionResponse(BaseModel):
 class DashboardSummaryResponse(BaseModel):
     participants: int
     diagnoses: int
-    published_suggestions: int
-    plans: int
-    tasks: int
-    completed_tasks: int
-    pending_verification: int
-    improved: int
-    needs_reinforcement: int
-    objective_retest_count: int
-    objective_retest_average: float | None
+    published_routes: int
+    completed_routes: int
+    completion_rate: float | None
+    average_score: float | None
     phase_counts: dict[str, int]
-    automation_exhausted: int
 
 
 class DashboardResponse(BaseModel):
@@ -451,6 +643,10 @@ def _session(value: PblSessionRecord, participation=None, phase_counts=None) -> 
                 "phase_status": participation.phase_status,
                 "interaction_style": participation.interaction_style,
                 "style_selected_at": participation.style_selected_at,
+                "evidence_locked": participation.evidence_locked,
+                "conversation_mode": participation.conversation_mode,
+                "completion_snapshot_id": participation.completion_snapshot_id,
+                "evidence_completed_revision": participation.evidence_completed_revision,
             }
         )
     if phase_counts is not None:
@@ -464,16 +660,18 @@ def _snapshot(value: PblSnapshotRecord, *, teacher: bool = False) -> dict[str, o
         "id": value.id,
         "revision": value.revision,
         "diagnostic_status": value.status,
+        "interaction_style": value.interaction_style,
         "assistant_reply": value.assistant_reply,
         "follow_up_question": value.follow_up_question,
-        "knowledge_gaps": value.knowledge_gaps if value.schema_version in {3, 4} else [],
-        "reasoning_issues": value.reasoning_issues if value.schema_version in {3, 4} else [],
+        "knowledge_gaps": value.knowledge_gaps if value.schema_version in {3, 4, 5, 6, 7} else [],
+        "reasoning_issues": value.reasoning_issues if value.schema_version in {3, 4, 5, 6, 7} else [],
         "schema_version": value.schema_version,
+        "diagnosis_outcome": value.diagnosis_outcome,
         "safety_notice": value.safety_notice,
         "safety_status": value.safety_status,
         "created_at": value.created_at,
         "legacy_findings": {"knowledge_gaps": value.knowledge_gaps, "reasoning_issues": value.reasoning_issues}
-        if value.schema_version not in {3, 4}
+        if value.schema_version not in {3, 4, 5, 6, 7}
         else None,
         "phase": value.phase,
         "phase_decision": value.phase_decision,
@@ -485,8 +683,9 @@ def _snapshot(value: PblSnapshotRecord, *, teacher: bool = False) -> dict[str, o
     return response
 
 
-def _participation(value, snapshot: PblSnapshotRecord | None) -> dict[str, object]:
+def _participation(value, snapshot: PblSnapshotRecord | None, db=None) -> dict[str, object]:
     return {
+        **(_route_locator(db, value.id) if db is not None else {}),
         "session_id": value.session_id,
         "messages": value.messages,
         "revision": value.revision,
@@ -497,6 +696,57 @@ def _participation(value, snapshot: PblSnapshotRecord | None) -> dict[str, objec
         "phase_completed_at": value.phase_completed_at,
         "interaction_style": value.interaction_style,
         "style_selected_at": value.style_selected_at,
+        "evidence_locked": value.evidence_locked,
+        "conversation_mode": value.conversation_mode,
+        "completion_snapshot_id": value.completion_snapshot_id,
+        "evidence_completed_revision": value.evidence_completed_revision,
+    }
+
+
+def _route_locator(db, participation_id):
+    from app.modules.learning.wiring import learning_route_application
+
+    return learning_route_application(db).store.completion_locator(participation_id)
+
+
+def _message_submission(value, db=None) -> dict[str, object]:
+    private = value.private_follow_up
+    return {
+        **(
+            _route_locator(db, value.participation.id)
+            if db is not None
+            else {
+                "learning_route_id": value.learning_route_id,
+                "final_test_id": value.final_test_id,
+                "route_generation_state": value.route_generation_state,
+                "test_generation_state": value.test_generation_state,
+            }
+        ),
+        "response_kind": value.response_kind,
+        "turn_scope": value.turn_scope,
+        "messages": value.participation.messages,
+        "diagnostic": _snapshot(value.diagnostic),
+        "current_phase": value.participation.current_phase,
+        "phase_started_revision": value.participation.phase_started_revision,
+        "phase_status": value.participation.phase_status,
+        "phase_completed_at": value.participation.phase_completed_at,
+        "interaction_style": value.participation.interaction_style,
+        "style_selected_at": value.participation.style_selected_at,
+        "evidence_locked": value.participation.evidence_locked,
+        "conversation_mode": value.participation.conversation_mode,
+        "completion_snapshot_id": value.participation.completion_snapshot_id,
+        "evidence_completed_revision": value.participation.evidence_completed_revision,
+        "private_follow_up": (
+            {
+                "student_message_id": private.student_message_id,
+                "assistant_message_id": private.assistant_message_id,
+                "processing_status": private.processing_status,
+                "safety_status": private.safety_status,
+                "fallback_used": private.fallback_used,
+            }
+            if private
+            else None
+        ),
     }
 
 
@@ -575,7 +825,7 @@ def create_learning_dialogue(
     )
     return {
         "session": _session(session_value, participation=participation_value),
-        "participation": _participation(participation_value, None),
+        "participation": _participation(participation_value, None, db),
     }
 
 
@@ -591,7 +841,7 @@ def start_learning_dialogue(
     )
     return {
         "session": _session(session_value, participation=participation_value),
-        "participation": _participation(participation_value, snapshot),
+        "participation": _participation(participation_value, snapshot, db),
     }
 
 
@@ -604,7 +854,7 @@ def learning_dialogue(
     session_value, participation_value, snapshot = pbl_application(db).dialogue(student.id, session_id)
     return {
         "session": _session(session_value, participation=participation_value),
-        "participation": _participation(participation_value, snapshot) if participation_value else None,
+        "participation": _participation(participation_value, snapshot, db) if participation_value else None,
     }
 
 
@@ -612,19 +862,15 @@ def learning_dialogue(
 def learning_dialogue_message(
     session_id: int,
     payload: Message,
+    background_tasks: BackgroundTasks,
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ):
-    value, snapshot = pbl_application(db).message(student.id, session_id, payload.client_message_id, payload.content)
-    return {
-        "messages": value.messages,
-        "diagnostic": _snapshot(snapshot),
-        "current_phase": value.current_phase,
-        "phase_status": value.phase_status,
-        "phase_completed_at": value.phase_completed_at,
-        "interaction_style": value.interaction_style,
-        "style_selected_at": value.style_selected_at,
-    }
+    value = pbl_application(db).message(
+        student.id, session_id, payload.client_message_id, payload.content, payload.interaction_style
+    )
+    _dispatch_learning_route(db, value, background_tasks)
+    return _message_submission(value, db)
 
 
 @router.get("/student/pbl-sessions", response_model=list[SessionResponse], deprecated=True)
@@ -640,27 +886,35 @@ def active(student: User = Depends(require_student), db: Session = Depends(get_d
 @router.get("/student/pbl-sessions/{session_id}/participation", response_model=ParticipationResponse, deprecated=True)
 def participation(session_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)):
     value, snapshot = pbl_application(db).participation(student.id, session_id)
-    return _participation(value, snapshot)
+    return _participation(value, snapshot, db)
 
 
 @router.post("/student/pbl-sessions/{session_id}/messages", response_model=MessageSubmissionResponse, deprecated=True)
-def message(session_id: int, payload: Message, student: User = Depends(require_student), db: Session = Depends(get_db)):
-    value, snapshot = pbl_application(db).message(
+def message(
+    session_id: int,
+    payload: Message,
+    background_tasks: BackgroundTasks,
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    value = pbl_application(db).message(
         student.id,
         session_id,
         payload.client_message_id,
         payload.content,
+        payload.interaction_style,
         allow_implicit_guided_start=True,
     )
-    return {
-        "messages": value.messages,
-        "diagnostic": _snapshot(snapshot),
-        "current_phase": value.current_phase,
-        "phase_status": value.phase_status,
-        "phase_completed_at": value.phase_completed_at,
-        "interaction_style": value.interaction_style,
-        "style_selected_at": value.style_selected_at,
-    }
+    _dispatch_learning_route(db, value, background_tasks)
+    return _message_submission(value, db)
+
+
+def _dispatch_learning_route(db, value, background_tasks):
+    if value.learning_route_created and value.learning_route_id:
+        from app.bootstrap.composition import learning_route_generation_dispatch
+
+        dispatch = learning_route_generation_dispatch(db)
+        background_tasks.add_task(dispatch.generate, value.learning_route_id)
 
 
 def _diagnostic(value: PblDiagnosticRecord) -> dict[str, object]:
@@ -751,32 +1005,96 @@ def work_item(snapshot_id: int, teacher: User = Depends(require_teacher), db: Se
     }
 
 
-@router.post("/teacher/pbl-work-items/{snapshot_id}/feedback", response_model=TeacherFeedbackResponse)
-def work_item_feedback(
+@router.post("/teacher/pbl-work-items/{snapshot_id}/task-package", response_model=None)
+def ensure_classroom_task_package(
     snapshot_id: int,
-    payload: TeacherFeedbackRequest,
+    _payload: EnsureClassroomPackageRequest,
     teacher: User = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
-    return _feedback(
-        pbl_application(db).feedback(
-            teacher.id,
-            snapshot_id,
-            payload.client_feedback_id,
-            payload.body,
-            payload.action_type,
-            payload.suggestion_id,
-            payload.suggestion_version,
-            payload.title,
-            payload.prompt,
-            tuple(payload.target_student_ids),
-            payload.whole_class,
-            payload.include_case_retry,
-        )
-    )
+    return _retired()
 
 
-@router.get("/teacher/pbl-follow-ups", response_model=FollowUpPageResponse)
+@router.get("/teacher/classroom-task-packages/{package_id}", response_model=None)
+def teacher_classroom_task_package(
+    package_id: int,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _missing()
+
+
+@router.get(
+    "/teacher/classroom-task-packages/{package_id}/reviewed-resources",
+    response_model=None,
+)
+def teacher_reviewed_classroom_resources(
+    package_id: int,
+    point_code: str = Query(min_length=1, max_length=120),
+    task_type: Literal["retest", "knowledge_review", "micro_drill", "focused_retry"] = Query(...),
+    dimension_id: str | None = Query(default=None, max_length=80),
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _missing()
+
+
+@router.get("/teacher/classroom-package-items/{item_id}/bank-source", response_model=None)
+def teacher_classroom_package_bank_source(
+    item_id: int,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _missing()
+
+
+@router.put("/teacher/classroom-task-packages/{package_id}", response_model=None)
+def save_classroom_task_package(
+    package_id: int,
+    payload: dict[str, object] | None = None,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _retired()
+
+
+@router.post(
+    "/teacher/classroom-task-packages/{package_id}/submit-medical-review",
+    response_model=None,
+)
+def submit_classroom_package_medical_review(
+    package_id: int,
+    payload: dict[str, object] | None = None,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _retired()
+
+
+@router.post(
+    "/teacher/classroom-task-packages/{package_id}/publish",
+    response_model=None,
+)
+def publish_classroom_package(
+    package_id: int,
+    payload: dict[str, object] | None = None,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _retired()
+
+
+@router.post("/teacher/pbl-work-items/{snapshot_id}/feedback", response_model=None)
+def work_item_feedback(
+    snapshot_id: int,
+    payload: dict[str, object] | None = None,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _retired()
+
+
+@router.get("/teacher/pbl-follow-ups", response_model=None)
 def follow_ups(
     class_id: int | None = Query(default=None, gt=0),
     session_id: int | None = Query(default=None, gt=0),
@@ -787,30 +1105,22 @@ def follow_ups(
     teacher: User = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
-    return pbl_application(db).follow_ups(
-        teacher.id,
-        limit,
-        offset,
-        {"class_id": class_id, "session_id": session_id, "student_id": student_id, "status": status},
-    )
+    return {"items": [], "total": 0, "limit": limit, "offset": offset}
 
 
-@router.get("/teacher/pbl-follow-ups/{plan_id}", response_model=FollowUpDetailResponse)
+@router.get("/teacher/pbl-follow-ups/{plan_id}", response_model=None)
 def follow_up(plan_id: int, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
-    value = pbl_application(db).follow_up(teacher.id, plan_id)
-    return {"plan": value["plan"], "feedbacks": [_feedback(item) for item in value["feedbacks"]]}
+    return _missing()
 
 
-@router.post("/teacher/pbl-follow-ups/{plan_id}/feedback", response_model=TeacherFeedbackResponse)
+@router.post("/teacher/pbl-follow-ups/{plan_id}/feedback", response_model=None)
 def follow_up_feedback(
     plan_id: int,
-    payload: FollowUpFeedbackRequest,
+    payload: dict[str, object] | None = None,
     teacher: User = Depends(require_teacher),
     db: Session = Depends(get_db),
 ):
-    return _feedback(
-        pbl_application(db).follow_up_feedback(teacher.id, plan_id, payload.client_feedback_id, payload.body)
-    )
+    return _retired()
 
 
 @router.get("/teacher/pbl-sessions", response_model=TeacherSessionPageResponse)
@@ -832,29 +1142,24 @@ def session_dashboard(
     return pbl_application(db).session_dashboard(teacher.id, class_id, session_id)
 
 
-@router.patch("/teacher/pbl-question-suggestions/{suggestion_id}", response_model=SuggestionResponse)
-def edit(suggestion_id: int, payload: Edit, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
-    return _suggestion(
-        pbl_application(db).edit_suggestion(
-            teacher.id, suggestion_id, payload.version, payload.title, payload.prompt, payload.reject
-        )
-    )
+@router.patch("/teacher/pbl-question-suggestions/{suggestion_id}", response_model=None)
+def edit(
+    suggestion_id: int,
+    payload: dict[str, object] | None = None,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _retired()
 
 
-@router.post("/teacher/pbl-question-suggestions/{suggestion_id}/adopt-and-publish", response_model=SuggestionResponse)
-def adopt(suggestion_id: int, payload: Adopt, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)):
-    return _suggestion(
-        pbl_application(db).adopt(
-            teacher.id,
-            suggestion_id,
-            payload.version,
-            payload.title,
-            payload.prompt,
-            tuple(payload.target_student_ids),
-            payload.whole_class,
-            payload.include_case_retry,
-        )
-    )
+@router.post("/teacher/pbl-question-suggestions/{suggestion_id}/adopt-and-publish", response_model=None)
+def adopt(
+    suggestion_id: int,
+    payload: dict[str, object] | None = None,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    return _retired()
 
 
 @router.patch("/classes/{class_id}/pbl-sessions/{session_id}/phase", response_model=SessionResponse, deprecated=True)
@@ -930,17 +1235,11 @@ class Verify(BaseModel):
 class Summary(BaseModel):
     participants: int
     diagnoses: int
-    published_suggestions: int
-    plans: int
-    tasks: int
-    completed_tasks: int
-    pending_verification: int
-    improved: int
-    needs_reinforcement: int
-    objective_retest_count: int
-    objective_retest_average: float | None
+    published_routes: int
+    completed_routes: int
+    completion_rate: float | None
+    average_score: float | None
     phase_counts: dict[str, int]
-    automation_exhausted: int
 
 
 ReportStatus = Literal[
@@ -975,6 +1274,35 @@ class ReportRecurringTarget(BaseModel):
     occurrences: int
 
 
+class ReportDashboardTrend(BaseModel):
+    period_start: date
+    period_end: date
+    score: int | None
+    sample_count: int = Field(ge=0)
+
+
+class ReportDashboardWeakness(ReportRecurringTarget):
+    mastery_percentage: int | None = Field(default=None, ge=0, le=100)
+
+
+class ReportDashboard(BaseModel):
+    data_basis: Literal["student_pbl_evidence", "synthetic_demo"]
+    period_start: date
+    period_end: date
+    mastery_score: int | None = Field(default=None, ge=0, le=100)
+    mastery_delta: int | None
+    mastery_sample_count: int = Field(ge=0)
+    study_minutes: int = Field(ge=0)
+    study_duration_basis: Literal["estimated_activity_intervals", "synthetic_demo"]
+    plan_completion_rate: int | None = Field(default=None, ge=0, le=100)
+    mastered_knowledge_count: int = Field(ge=0)
+    ai_diagnostic_count: int = Field(ge=0)
+    status_label: str
+    trend: list[ReportDashboardTrend]
+    weaknesses: list[ReportDashboardWeakness]
+    ai_summary: str
+
+
 class ReportPageAction(ReportAction):
     session_id: int
     case_title: str
@@ -983,6 +1311,7 @@ class ReportPageAction(ReportAction):
 class ReportListItem(BaseModel):
     session: ReportSession
     status: ReportStatus
+    visibility: Literal["private", "classroom", "legacy_shared"]
     current_phase: str | None
     phase_status: str | None
     knowledge_gap_count: int
@@ -998,6 +1327,7 @@ class ReportPageSummary(BaseModel):
     completed_personal_discussions: int
     status_counts: dict[str, int]
     recurring_targets: list[ReportRecurringTarget]
+    dashboard: ReportDashboard
     next_action: ReportPageAction | None
 
 
@@ -1120,9 +1450,18 @@ class ReportTimelineItem(BaseModel):
     occurred_at: datetime
 
 
+class ReportTeacherFeedback(BaseModel):
+    id: int
+    plan_id: int | None
+    action_type: str
+    body: str
+    created_at: datetime | None
+
+
 class ReportDetailResponse(BaseModel):
     session: ReportSession
     status: ReportStatus
+    visibility: Literal["private", "classroom", "legacy_shared"]
     current_phase: str | None
     phase_status: str | None
     phase_progress: list[ReportPhaseProgress]
@@ -1132,49 +1471,56 @@ class ReportDetailResponse(BaseModel):
     task_progress: ReportTaskProgress
     summary_text: str
     next_action: ReportAction
+    teacher_feedbacks: list[ReportTeacherFeedback]
     timeline: list[ReportTimelineItem]
     updated_at: datetime
 
 
-@router.get("/student/pbl-learning-plans", response_model=list[PlanResponse])
+@router.get("/student/pbl-learning-plans", response_model=None)
 def learning_plans(student: User = Depends(require_student), db: Session = Depends(get_db)):
-    return pbl_application(db).learning_plans(student.id)
+    return []
 
 
-@router.get("/student/pbl-learning-reports", response_model=ReportPageResponse)
+@router.get("/student/pbl-learning-reports", response_model=None)
 def learning_reports(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     student: User = Depends(require_student),
     db: Session = Depends(get_db),
 ):
-    return pbl_application(db).learning_report_page(student.id, limit, offset)
+    return {"items": [], "total": 0, "limit": limit, "offset": offset}
 
 
-@router.get("/student/pbl-learning-reports/{session_id}", response_model=ReportDetailResponse)
+@router.get("/student/pbl-learning-reports/{session_id}", response_model=None)
 def learning_report(session_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)):
-    return pbl_application(db).learning_report(student.id, session_id)
+    return _missing()
 
 
-@router.post("/student/pbl-learning-tasks/{task_id}/submit", response_model=PlanResponse)
+@router.post("/student/pbl-learning-tasks/{task_id}/submit", response_model=None)
 def submit_task(
-    task_id: int, payload: SubmitTask, student: User = Depends(require_student), db: Session = Depends(get_db)
+    task_id: int,
+    payload: dict[str, object] | None = None,
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
 ):
-    return pbl_application(db).submit_task(student.id, task_id, payload.client_submission_id, payload.answer)
+    return _retired()
 
 
-@router.get("/teacher/pbl-learning-results", response_model=list[PlanResponse])
+@router.get("/teacher/pbl-learning-results", response_model=None)
 def learning_results(
     session_id: int | None = None, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)
 ):
-    return pbl_application(db).learning_results(teacher.id, session_id)
+    return []
 
 
-@router.post("/teacher/pbl-learning-results/{plan_id}/verify", response_model=PlanResponse, deprecated=True)
+@router.post("/teacher/pbl-learning-results/{plan_id}/verify", response_model=None, deprecated=True)
 def verify_result(
-    plan_id: int, payload: Verify, teacher: User = Depends(require_teacher), db: Session = Depends(get_db)
+    plan_id: int,
+    payload: dict[str, object] | None = None,
+    teacher: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
 ):
-    return pbl_application(db).verify_learning(teacher.id, plan_id, payload.version, payload.decision, payload.note)
+    return _retired()
 
 
 @router.get("/classes/{class_id}/pbl-sessions/{session_id}/summary", response_model=Summary)
@@ -1223,15 +1569,26 @@ class SubmissionPreview(BaseModel):
     next_action: str = ""
 
 
-@router.get("/student/learning-dialogues/{session_id}/submission", response_model=SubmissionPreview)
+@router.get("/student/learning-dialogues/{session_id}/submission", response_model=None, deprecated=True)
 def submission_preview(session_id: int, student: User = Depends(require_student), db: Session = Depends(get_db)):
-    return pbl_application(db).submission_preview(student.id, session_id)
+    return _missing()
 
 
-@router.post("/student/learning-dialogues/{session_id}/submission", response_model=SubmissionPreview)
+@router.post("/student/learning-dialogues/{session_id}/submission", response_model=None, deprecated=True)
 def submit_dialogue(
-    session_id: int, payload: SubmissionRequest, student: User = Depends(require_student), db: Session = Depends(get_db)
+    session_id: int,
+    payload: dict[str, object] | None = None,
+    student: User = Depends(require_student),
+    db: Session = Depends(get_db),
 ):
-    return pbl_application(db).submit_to_teacher(
-        student.id, session_id, payload.snapshot_id, payload.class_id, payload.client_submission_id
-    )
+    return _retired()
+
+
+def _retired():
+    from app.modules.learning.public import retired_learning_flow
+
+    retired_learning_flow()
+
+
+def _missing():
+    raise AppError("RESOURCE_NOT_FOUND", "资源不存在", 404)

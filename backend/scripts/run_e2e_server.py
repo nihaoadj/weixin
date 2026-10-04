@@ -47,7 +47,7 @@ try:
     command.upgrade(config, "head")
     assert_owned_resource(resource)
     from app.db import SessionLocal  # noqa: E402
-    from app.services.test_seed import seed_test_data  # noqa: E402
+    from app.bootstrap.test_seed import seed_test_data  # noqa: E402
 
     with SessionLocal() as session:
         seed_counts = seed_test_data(session)
